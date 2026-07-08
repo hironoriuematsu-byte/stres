@@ -19,10 +19,12 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
   on public.profiles for select
   using (id = auth.uid());
 
+drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own"
   on public.profiles for update
   using (id = auth.uid())
@@ -93,15 +95,18 @@ create index if not exists idx_results_department on public.results (department)
 alter table public.results enable row level security;
 
 -- 本人は自分の結果を登録・閲覧できる
+drop policy if exists "results_insert_own" on public.results;
 create policy "results_insert_own"
   on public.results for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "results_select_own" on public.results;
 create policy "results_select_own"
   on public.results for select
   using (auth.uid() = user_id);
 
 -- 産業医事務所(office)は全件閲覧可能
+drop policy if exists "results_select_office" on public.results;
 create policy "results_select_office"
   on public.results for select
   using (
@@ -112,6 +117,7 @@ create policy "results_select_office"
   );
 
 -- 企業人事(company_hr)は本人同意済みの個人結果のみ閲覧可能(労働安全衛生法第66条の10)
+drop policy if exists "results_select_company_consented" on public.results;
 create policy "results_select_company_consented"
   on public.results for select
   using (
