@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Badge, Btn, Card, QuestionRow, ScoreBar, brand } from "@/components/ui";
+import { Badge, Btn, Card, QuestionRow, ScoreBar } from "@/components/ui";
+import { brand } from "@/lib/brand";
 import { SECTION_A, SECTION_B, SECTION_C, SECTION_D, Answers, Scores, calcScores, emptyAnswers } from "@/lib/questionnaire";
 
 type Profile = { name: string; empId: string; dept: string };

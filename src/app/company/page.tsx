@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Badge, Card, brand } from "@/components/ui";
+import { Badge, Card } from "@/components/ui";
+import { brand } from "@/lib/brand";
 
 type DeptStat = { department: string; n: number; high_count: number; avg_b: number | null };
 type ConsentedRow = {

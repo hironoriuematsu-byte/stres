@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { brand } from "@/components/ui";
+import { brand } from "@/lib/brand";
 
 export function Header({
   email,

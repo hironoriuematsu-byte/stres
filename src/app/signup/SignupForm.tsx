@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Btn, Card, brand } from "@/components/ui";
+import { Btn, Card } from "@/components/ui";
+import { brand } from "@/lib/brand";
 
 export function SignupForm() {
   const [fullName, setFullName] = useState("");

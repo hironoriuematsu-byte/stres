@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Btn, Card, brand } from "@/components/ui";
+import { Badge, Btn, Card } from "@/components/ui";
+import { brand } from "@/lib/brand";
 
 export type ResultRow = {
   id: string;

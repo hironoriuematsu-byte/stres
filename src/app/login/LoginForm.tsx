@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Btn, Card, brand } from "@/components/ui";
+import { Btn, Card } from "@/components/ui";
+import { brand } from "@/lib/brand";
 
 export function LoginForm() {
   const router = useRouter();

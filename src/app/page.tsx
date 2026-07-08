@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Badge, Card, brand } from "@/components/ui";
+import { Badge, Card } from "@/components/ui";
+import { brand } from "@/lib/brand";
 
 export default async function Home() {
   const supabase = createClient();

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card, brand } from "@/components/ui";
+import { Card } from "@/components/ui";
+import { brand } from "@/lib/brand";
 import { OfficeTable, ResultRow } from "./OfficeTable";
 
 export default async function OfficePage() {
