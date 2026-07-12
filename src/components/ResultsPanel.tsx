@@ -20,6 +20,7 @@ export function ResultsPanel({
 }) {
   const [rows, setRows] = useState<ResultRow[] | null>(null);
   const [people, setPeople] = useState<Record<string, Profile>>({});
+  const [otherYears, setOtherYears] = useState<Record<number, number>>({});
   const [onlyHigh, setOnlyHigh] = useState(false);
   const [openDetail, setOpenDetail] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export function ResultsPanel({
     setRows(null);
     setErr(null);
     (async () => {
-      const [{ data: rs, error: e1 }, { data: ps }] = await Promise.all([
+      const [{ data: rs, error: e1 }, { data: ps }, { data: allYears }] = await Promise.all([
         supabase
           .from("results")
           .select("*")
@@ -38,6 +39,8 @@ export function ResultsPanel({
           .eq("fiscal_year", fiscalYear)
           .order("created_at", { ascending: false }),
         supabase.from("profiles").select("*").eq("company_id", companyId),
+        // 年度の取り違えに気づけるよう、この企業のデータがある年度を集計する
+        supabase.from("results").select("fiscal_year").eq("company_id", companyId),
       ]);
       if (e1) {
         setErr(e1.message);
@@ -47,6 +50,11 @@ export function ResultsPanel({
       const map: Record<string, Profile> = {};
       ((ps as Profile[]) ?? []).forEach((p) => (map[p.user_id] = p));
       setPeople(map);
+      const yearCounts: Record<number, number> = {};
+      ((allYears as { fiscal_year: number }[]) ?? []).forEach((r) => {
+        yearCounts[r.fiscal_year] = (yearCounts[r.fiscal_year] ?? 0) + 1;
+      });
+      setOtherYears(yearCounts);
       setRows((rs as ResultRow[]) ?? []);
       logAccess(supabase, "view_results", `${companyName}/${fiscalYear}`, companyId);
     })();
@@ -103,6 +111,27 @@ export function ResultsPanel({
         </div>
       </div>
       {err && <div style={{ fontSize: 13, color: "#B02A2A", marginTop: 10 }}>{err}</div>}
+      {rows.length === 0 && Object.keys(otherYears).length > 0 && (
+        <div
+          style={{
+            fontSize: 13,
+            color: "#8A6B2E",
+            background: "#FBF3E3",
+            border: "1px solid #EFD9A8",
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginTop: 12,
+            lineHeight: 1.7,
+          }}
+        >
+          {fiscalYear}年度のデータはありませんが、この企業には別の年度のデータがあります:{" "}
+          {Object.entries(otherYears)
+            .sort((a, b) => Number(b[0]) - Number(a[0]))
+            .map(([y, n]) => `${y}年度(${n}件)`)
+            .join("、")}
+          。右上の年度セレクタを切り替えてください(受検は配布URLに設定された実施年度で記録されます)。
+        </div>
+      )}
       <div style={{ overflowX: "auto", marginTop: 14 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>

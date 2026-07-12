@@ -92,7 +92,9 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
           {tab === "面接指導申出" && company && (
             <InterviewPanel companyId={company.id} companyName={company.name} />
           )}
-          {tab === "集団分析" && company && <GroupAnalysis companyId={company.id} fiscalYear={year} />}
+          {tab === "集団分析" && company && (
+            <GroupAnalysis companyId={company.id} fiscalYear={year} reportHref={`/group-report/${company.id}/${year}`} />
+          )}
           {tab === "配布URL・QR" && company && (
             <CampaignPanel companyId={company.id} companyName={company.name} fiscalYear={year} manage />
           )}

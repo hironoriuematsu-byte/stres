@@ -15,7 +15,15 @@ import { Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { GroupAnalysisRow } from "@/lib/types";
 
-export function GroupAnalysis({ companyId, fiscalYear }: { companyId: string; fiscalYear: number }) {
+export function GroupAnalysis({
+  companyId,
+  fiscalYear,
+  reportHref,
+}: {
+  companyId: string;
+  fiscalYear: number;
+  reportHref?: string;
+}) {
   const [rows, setRows] = useState<GroupAnalysisRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -44,7 +52,27 @@ export function GroupAnalysis({ companyId, fiscalYear }: { companyId: string; fi
 
   return (
     <Card>
-      <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>集団分析(部署別・{fiscalYear}年度)</h3>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>集団分析(部署別・{fiscalYear}年度)</h3>
+        {reportHref && (
+          <a
+            href={reportHref}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: brand.tealDark,
+              border: `1px solid ${brand.teal}`,
+              borderRadius: 10,
+              padding: "8px 14px",
+              textDecoration: "none",
+            }}
+          >
+            📄 集団分析報告書(印刷・PDF)
+          </a>
+        )}
+      </div>
       <p style={{ fontSize: 12, color: brand.orange, fontWeight: 700, margin: "0 0 12px" }}>
         ※ 10名未満の部署は個人特定防止のため表示されません
       </p>
