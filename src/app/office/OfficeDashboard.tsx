@@ -10,8 +10,9 @@ import { InterviewPanel } from "@/components/InterviewPanel";
 import { GroupAnalysis } from "@/components/GroupAnalysis";
 import { UserAdminPanel } from "@/components/UserAdminPanel";
 import { AccessLogsPanel } from "@/components/AccessLogsPanel";
+import { CampaignPanel } from "@/components/CampaignPanel";
 
-const TABS = ["結果一覧", "面接指導申出", "集団分析", "ユーザー管理", "アクセスログ"] as const;
+const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "ユーザー管理", "アクセスログ"] as const;
 
 export function OfficeDashboard({ companies }: { companies: Company[] }) {
   const years = fiscalYearOptions();
@@ -91,6 +92,9 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
             <InterviewPanel companyId={company.id} companyName={company.name} />
           )}
           {tab === "集団分析" && company && <GroupAnalysis companyId={company.id} fiscalYear={year} />}
+          {tab === "配布URL・QR" && company && (
+            <CampaignPanel companyId={company.id} companyName={company.name} fiscalYear={year} manage />
+          )}
           {tab === "ユーザー管理" && <UserAdminPanel companies={companies} />}
           {tab === "アクセスログ" && <AccessLogsPanel />}
         </>
