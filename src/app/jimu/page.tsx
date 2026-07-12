@@ -26,6 +26,7 @@ export default async function JimuPage() {
     <JimuDashboard
       companyId={profile.company_id!}
       companyName={company?.name ?? "自社"}
+      companyCode={company?.code ?? ""}
     />
   );
 }

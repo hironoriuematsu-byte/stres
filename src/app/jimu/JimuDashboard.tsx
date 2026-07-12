@@ -7,10 +7,19 @@ import { fiscalYearOptions } from "@/lib/fiscal";
 import { ResultsPanel } from "@/components/ResultsPanel";
 import { InterviewPanel } from "@/components/InterviewPanel";
 import { GroupAnalysis } from "@/components/GroupAnalysis";
+import { UserAdminPanel } from "@/components/UserAdminPanel";
 
-const TABS = ["結果一覧", "面接指導申出", "集団分析"] as const;
+const TABS = ["結果一覧", "面接指導申出", "集団分析", "従業員招待"] as const;
 
-export function JimuDashboard({ companyId, companyName }: { companyId: string; companyName: string }) {
+export function JimuDashboard({
+  companyId,
+  companyName,
+  companyCode,
+}: {
+  companyId: string;
+  companyName: string;
+  companyCode: string;
+}) {
   const years = fiscalYearOptions();
   const [year, setYear] = useState(years[0]);
   const [tab, setTab] = useState<(typeof TABS)[number]>("結果一覧");
@@ -60,6 +69,7 @@ export function JimuDashboard({ companyId, companyName }: { companyId: string; c
       {tab === "結果一覧" && <ResultsPanel companyId={companyId} companyName={companyName} fiscalYear={year} />}
       {tab === "面接指導申出" && <InterviewPanel companyId={companyId} companyName={companyName} />}
       {tab === "集団分析" && <GroupAnalysis companyId={companyId} fiscalYear={year} />}
+      {tab === "従業員招待" && <UserAdminPanel fixedCompany={{ code: companyCode, name: companyName }} />}
     </div>
   );
 }

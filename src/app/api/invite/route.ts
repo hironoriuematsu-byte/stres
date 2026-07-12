@@ -38,12 +38,17 @@ export async function POST(req: Request) {
 
   const { data: callerProfile } = await admin
     .from("profiles")
-    .select("role")
+    .select("role, company_id")
     .eq("user_id", user.id)
     .single();
 
-  if (callerProfile?.role !== "office") {
-    return NextResponse.json({ error: "この操作は実施者(office)のみ可能です" }, { status: 403 });
+  const callerRole = callerProfile?.role;
+  // office: 全企業・全ロールを招待可 / jimu: 自社の従業員のみ招待可
+  if (callerRole !== "office" && callerRole !== "jimu") {
+    return NextResponse.json(
+      { error: "この操作は実施者(office)または実施事務従事者(jimu)のみ可能です" },
+      { status: 403 }
+    );
   }
 
   let invites: InviteInput[];
@@ -62,7 +67,13 @@ export async function POST(req: Request) {
 
   for (const inv of invites) {
     try {
-      const role = inv.role && ALLOWED_ROLES.has(inv.role) ? inv.role : "employee";
+      // jimuは従業員ロールのみ招待可(jimu/officeの発行は実施者に限定)
+      const role =
+        callerRole === "jimu"
+          ? "employee"
+          : inv.role && ALLOWED_ROLES.has(inv.role)
+            ? inv.role
+            : "employee";
       if (!inv.email || !inv.company_code) {
         throw new Error("メール・企業コードは必須です");
       }
@@ -73,6 +84,11 @@ export async function POST(req: Request) {
         .eq("code", inv.company_code)
         .single();
       if (!company) throw new Error(`企業コード「${inv.company_code}」が見つかりません`);
+
+      // jimuは自社以外の企業へ招待できない
+      if (callerRole === "jimu" && company.id !== callerProfile?.company_id) {
+        throw new Error("実施事務従事者は自社の従業員のみ招待できます");
+      }
 
       const { data: invited, error: invErr } = await admin.auth.admin.inviteUserByEmail(inv.email, {
         redirectTo: `${origin}/auth/callback?next=/account/update-password`,
@@ -93,7 +109,7 @@ export async function POST(req: Request) {
       // 招待操作をアクセスログに記録(仕様4.4)
       await admin.from("access_logs").insert({
         user_id: user.id,
-        role: "office",
+        role: callerRole,
         action: "invite_user",
         target: `${inv.email} (${role})`,
         company_id: company.id,

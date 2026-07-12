@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { Company } from "@/lib/types";
-import { parseInviteCsv } from "@/lib/parse-csv";
+import { parseCsv, parseInviteCsv } from "@/lib/parse-csv";
 
 type InvitePayload = {
   email: string;
@@ -21,10 +21,19 @@ const input = {
   borderRadius: 9,
 };
 
-export function UserAdminPanel({ companies }: { companies: Company[] }) {
+// office: companies を渡すと企業・ロールを選択可能
+// jimu: fixedCompany を渡すと自社固定・従業員ロール固定の招待画面になる
+export function UserAdminPanel({
+  companies,
+  fixedCompany,
+}: {
+  companies?: Company[];
+  fixedCompany?: { code: string; name: string };
+}) {
+  const jimuMode = Boolean(fixedCompany);
   const [form, setForm] = useState({
     email: "",
-    company_code: companies[0]?.code ?? "",
+    company_code: fixedCompany?.code ?? companies?.[0]?.code ?? "",
     role: "employee" as InvitePayload["role"],
   });
   const [busy, setBusy] = useState(false);
@@ -62,19 +71,34 @@ export function UserAdminPanel({ companies }: { companies: Company[] }) {
 
   const onCsv = async (file: File) => {
     const text = await file.text();
-    const rows = parseInviteCsv(text);
+    let rows: InvitePayload[];
+    if (jimuMode) {
+      // jimu: メールアドレスのみの1列CSV(企業は自社固定)
+      rows = parseCsv(text)
+        .filter((r) => r[0]?.includes("@"))
+        .map((r) => ({ email: r[0].trim(), company_code: fixedCompany!.code, role: "employee" as const }));
+    } else {
+      rows = parseInviteCsv(text).map((r) => ({ ...r, role: "employee" as const }));
+    }
     if (rows.length === 0) {
-      setLog(["CSVから有効な行が読み取れませんでした(メール, 企業コード の2列)"]);
+      setLog([
+        jimuMode
+          ? "CSVから有効な行が読み取れませんでした(メールアドレスの1列)"
+          : "CSVから有効な行が読み取れませんでした(メール, 企業コード の2列)",
+      ]);
       return;
     }
-    send(rows.map((r) => ({ ...r, role: "employee" as const })));
+    send(rows);
   };
 
   return (
     <Card>
-      <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>ユーザー管理(招待)</h3>
+      <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>
+        {jimuMode ? `従業員の招待(${fixedCompany!.name})` : "ユーザー管理(招待)"}
+      </h3>
       <p style={{ fontSize: 13, color: "#5B6B6A", margin: "0 0 14px", lineHeight: 1.7 }}>
-        招待メールが本人に送信され、本人がパスワードを設定するとログインできるようになります。氏名・社員番号・部署は本人が受検時に入力します(管理者側では設定しません)。
+        招待メールが本人に送信され、本人がパスワードを設定するとログインできるようになります。氏名・社員番号・部署は本人が受検時に入力します。
+        {jimuMode && "招待できるのは自社の従業員のみです。"}
       </p>
 
       <form onSubmit={submitSingle} style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
@@ -82,27 +106,31 @@ export function UserAdminPanel({ companies }: { companies: Company[] }) {
           <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>メールアドレス</label>
           <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={input} />
         </div>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>企業</label>
-          <select value={form.company_code} onChange={(e) => setForm({ ...form, company_code: e.target.value })} style={input}>
-            {companies.map((c) => (
-              <option key={c.id} value={c.code}>
-                {c.name}({c.code})
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>ロール</label>
-          <select
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value as InvitePayload["role"] })}
-            style={input}
-          >
-            <option value="employee">従業員</option>
-            <option value="jimu">実施事務従事者</option>
-          </select>
-        </div>
+        {!jimuMode && (
+          <>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>企業</label>
+              <select value={form.company_code} onChange={(e) => setForm({ ...form, company_code: e.target.value })} style={input}>
+                {(companies ?? []).map((c) => (
+                  <option key={c.id} value={c.code}>
+                    {c.name}({c.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>ロール</label>
+              <select
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value as InvitePayload["role"] })}
+                style={input}
+              >
+                <option value="employee">従業員</option>
+                <option value="jimu">実施事務従事者</option>
+              </select>
+            </div>
+          </>
+        )}
         <div style={{ alignSelf: "end" }}>
           <Btn type="submit" disabled={busy} style={{ width: "100%" }}>
             {busy ? "送信中…" : "招待を送る"}
@@ -112,7 +140,7 @@ export function UserAdminPanel({ companies }: { companies: Company[] }) {
 
       <div style={{ marginTop: 18, borderTop: `1px solid ${brand.line}`, paddingTop: 14 }}>
         <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 6 }}>
-          従業員の一括登録(CSV: メール, 企業コード)
+          {jimuMode ? "従業員の一括登録(CSV: メールアドレスの1列)" : "従業員の一括登録(CSV: メール, 企業コード)"}
         </label>
         <input
           type="file"
