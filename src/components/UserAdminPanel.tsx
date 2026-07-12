@@ -8,11 +8,8 @@ import { parseInviteCsv } from "@/lib/parse-csv";
 
 type InvitePayload = {
   email: string;
-  name: string;
-  emp_id: string;
-  dept: string;
   company_code: string;
-  role: "employee" | "jimu" | "company";
+  role: "employee" | "jimu";
 };
 
 const input = {
@@ -27,9 +24,6 @@ const input = {
 export function UserAdminPanel({ companies }: { companies: Company[] }) {
   const [form, setForm] = useState({
     email: "",
-    name: "",
-    emp_id: "",
-    dept: "",
     company_code: companies[0]?.code ?? "",
     role: "employee" as InvitePayload["role"],
   });
@@ -70,7 +64,7 @@ export function UserAdminPanel({ companies }: { companies: Company[] }) {
     const text = await file.text();
     const rows = parseInviteCsv(text);
     if (rows.length === 0) {
-      setLog(["CSVから有効な行が読み取れませんでした(氏名, メール, 社員番号, 部署, 企業コード の5列)"]);
+      setLog(["CSVから有効な行が読み取れませんでした(メール, 企業コード の2列)"]);
       return;
     }
     send(rows.map((r) => ({ ...r, role: "employee" as const })));
@@ -80,25 +74,13 @@ export function UserAdminPanel({ companies }: { companies: Company[] }) {
     <Card>
       <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>ユーザー管理(招待)</h3>
       <p style={{ fontSize: 13, color: "#5B6B6A", margin: "0 0 14px", lineHeight: 1.7 }}>
-        招待メールが本人に送信され、本人がパスワードを設定するとログインできるようになります。ロール付与は招待時に行われます。
+        招待メールが本人に送信され、本人がパスワードを設定するとログインできるようになります。氏名・社員番号・部署は本人が受検時に入力します(管理者側では設定しません)。
       </p>
 
-      <form onSubmit={submitSingle} style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+      <form onSubmit={submitSingle} style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
         <div>
           <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>メールアドレス</label>
           <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={input} />
-        </div>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>氏名</label>
-          <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={input} />
-        </div>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>社員番号</label>
-          <input value={form.emp_id} onChange={(e) => setForm({ ...form, emp_id: e.target.value })} style={input} />
-        </div>
-        <div>
-          <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>部署</label>
-          <input value={form.dept} onChange={(e) => setForm({ ...form, dept: e.target.value })} style={input} />
         </div>
         <div>
           <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>企業</label>
@@ -119,7 +101,6 @@ export function UserAdminPanel({ companies }: { companies: Company[] }) {
           >
             <option value="employee">従業員</option>
             <option value="jimu">実施事務従事者</option>
-            <option value="company">事業者担当者</option>
           </select>
         </div>
         <div style={{ alignSelf: "end" }}>
@@ -131,7 +112,7 @@ export function UserAdminPanel({ companies }: { companies: Company[] }) {
 
       <div style={{ marginTop: 18, borderTop: `1px solid ${brand.line}`, paddingTop: 14 }}>
         <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 6 }}>
-          従業員の一括登録(CSV: 氏名, メール, 社員番号, 部署, 企業コード)
+          従業員の一括登録(CSV: メール, 企業コード)
         </label>
         <input
           type="file"

@@ -6,14 +6,12 @@ export const runtime = "nodejs";
 
 type InviteInput = {
   email: string;
-  name: string;
-  emp_id?: string;
-  dept?: string;
   company_code: string;
-  role?: "employee" | "jimu" | "company";
+  role?: "employee" | "jimu";
 };
 
-const ALLOWED_ROLES = new Set(["employee", "jimu", "company"]);
+// 事業者担当者(company)は現在の運用では発行しない
+const ALLOWED_ROLES = new Set(["employee", "jimu"]);
 
 export async function POST(req: Request) {
   // 1) 呼び出し元が office ロールであることを検証(セッションCookieベース)
@@ -65,8 +63,8 @@ export async function POST(req: Request) {
   for (const inv of invites) {
     try {
       const role = inv.role && ALLOWED_ROLES.has(inv.role) ? inv.role : "employee";
-      if (!inv.email || !inv.name || !inv.company_code) {
-        throw new Error("メール・氏名・企業コードは必須です");
+      if (!inv.email || !inv.company_code) {
+        throw new Error("メール・企業コードは必須です");
       }
 
       const { data: company } = await admin
@@ -81,12 +79,13 @@ export async function POST(req: Request) {
       });
       if (invErr) throw new Error(invErr.message);
 
+      // 氏名・社員番号・部署は本人が受検時に入力する(管理者側では設定しない)
       const { error: profErr } = await admin.from("profiles").upsert({
         user_id: invited.user.id,
         role,
-        name: inv.name,
-        emp_id: inv.emp_id || null,
-        dept: inv.dept || null,
+        name: "未設定",
+        emp_id: null,
+        dept: null,
         company_id: company.id,
       });
       if (profErr) throw new Error(profErr.message);

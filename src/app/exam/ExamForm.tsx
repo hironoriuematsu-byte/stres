@@ -15,13 +15,16 @@ type ExamProfile = {
   empId: string;
   dept: string;
   companyId: string;
+  companyName: string;
 };
 
 const sections = { 1: SECTION_A, 2: SECTION_B, 4: SECTION_D } as const;
 
 export function ExamForm({ profile }: { profile: ExamProfile }) {
   const router = useRouter();
-  const [step, setStep] = useState(0); // 0=確認 1=A 2=B 3=C 4=D 5=同意 6=結果 7=年度重複
+  const [step, setStep] = useState(0); // 0=受検者情報 1=A 2=B 3=C 4=D 5=同意 6=結果 7=年度重複
+  const [name, setName] = useState(profile.name);
+  const [empId, setEmpId] = useState(profile.empId);
   const [dept, setDept] = useState(profile.dept);
   const [ans, setAns] = useState<Answers>(emptyAnswers());
   const [consent, setConsent] = useState(false);
@@ -46,6 +49,13 @@ export function ExamForm({ profile }: { profile: ExamProfile }) {
     setSaveError(null);
     const scores = calcScores(ans);
     const supabase = createClient();
+
+    // 本人が入力した氏名・社員番号・部署をプロフィールへ反映
+    // (失敗しても受検自体は続行する)
+    await supabase
+      .from("profiles")
+      .update({ name, emp_id: empId, dept })
+      .eq("user_id", profile.userId);
 
     const { error } = await supabase.from("results").insert({
       user_id: profile.userId,
@@ -77,44 +87,58 @@ export function ExamForm({ profile }: { profile: ExamProfile }) {
     setStep(6);
   };
 
-  // 受検者情報確認
+  // 受検者情報(本人入力)
   if (step === 0) {
+    const input = {
+      width: "100%",
+      boxSizing: "border-box" as const,
+      padding: "10px 12px",
+      fontSize: 15,
+      border: `1px solid ${brand.line}`,
+      borderRadius: 10,
+    };
     return (
       <Card style={{ maxWidth: 560, margin: "0 auto" }}>
         <Badge>STEP 1 / 6</Badge>
-        <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 4px" }}>受検者情報の確認</h2>
-        <p style={{ fontSize: 13, color: "#5B6B6A", marginBottom: 18 }}>
-          {fiscalYear}年度のストレスチェックを開始します。所属部署に変更がある場合は修正してください。
+        <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 4px" }}>受検者情報</h2>
+        <p style={{ fontSize: 13, color: "#5B6B6A", marginBottom: 14 }}>
+          ストレスチェックを開始します。氏名・社員番号・部署を入力してください。
         </p>
-        <div style={{ fontSize: 14, color: brand.ink, lineHeight: 2, marginBottom: 12 }}>
-          <div>
-            <strong>氏名:</strong> {profile.name}
-          </div>
-          <div>
-            <strong>社員番号:</strong> {profile.empId || "未登録"}
-          </div>
-        </div>
-        <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
-          部署
-        </label>
-        <input
-          value={dept}
-          onChange={(e) => setDept(e.target.value)}
-          placeholder="例: 製造部"
+        <div
           style={{
-            width: "100%",
-            boxSizing: "border-box",
-            padding: "10px 12px",
-            fontSize: 15,
-            border: `1px solid ${brand.line}`,
+            fontSize: 14,
+            color: brand.ink,
+            background: "#EDF6F5",
             borderRadius: 10,
+            padding: "10px 14px",
+            marginBottom: 16,
           }}
-        />
+        >
+          <strong>会社名:</strong> {profile.companyName || "(未登録)"}
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
+            氏名
+          </label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 山田 太郎" style={input} />
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
+            社員番号
+          </label>
+          <input value={empId} onChange={(e) => setEmpId(e.target.value)} placeholder="例: 10234" style={input} />
+        </div>
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
+            部署
+          </label>
+          <input value={dept} onChange={(e) => setDept(e.target.value)} placeholder="例: 製造部" style={input} />
+        </div>
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
           <Btn tone="ghost" onClick={() => router.push("/my")}>
             戻る
           </Btn>
-          <Btn onClick={() => setStep(1)} disabled={!dept}>
+          <Btn onClick={() => setStep(1)} disabled={!name || !empId || !dept}>
             回答をはじめる
           </Btn>
         </div>
@@ -256,9 +280,9 @@ export function ExamForm({ profile }: { profile: ExamProfile }) {
       <Card style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 18 }}>
           {result.highStress ? <Badge tone="red">高ストレス判定</Badge> : <Badge>判定: 高ストレスに該当せず</Badge>}
-          <h2 style={{ fontSize: 22, color: brand.ink, margin: "12px 0 4px" }}>{profile.name} さんの結果</h2>
+          <h2 style={{ fontSize: 22, color: brand.ink, margin: "12px 0 4px" }}>{name} さんの結果</h2>
           <p style={{ fontSize: 13, color: "#5B6B6A" }}>
-            {fiscalYear}年度 / {new Date().toLocaleDateString("ja-JP")} 実施 / 合計点数法による判定
+            {profile.companyName} / {fiscalYear}年度 / {new Date().toLocaleDateString("ja-JP")} 実施 / 合計点数法による判定
           </p>
         </div>
         <ScoreBar label="A. 仕事のストレス要因" value={result.A} max={68} />

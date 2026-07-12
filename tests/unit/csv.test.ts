@@ -37,16 +37,13 @@ describe("CSV出力(受け入れテスト6: Excelで文字化けしない)", () 
   });
 });
 
-describe("招待CSVパーサ", () => {
-  it("BOM・CRLF・クォート付きCSVを読める", () => {
-    const text = '\uFEFF氏名,メール,社員番号,部署,企業コード\r\n"山田, 太郎",yamada@example.com,10234,製造部,KYT001\r\n';
+describe("招待CSVパーサ(メール, 企業コード)", () => {
+  it("BOM・CRLF付きCSVを読める", () => {
+    const text = "\uFEFFメール,企業コード\r\nyamada@example.com,KYT001\r\nsato@example.com,KYT001\r\n";
     const rows = parseInviteCsv(text);
-    expect(rows).toHaveLength(1);
+    expect(rows).toHaveLength(2);
     expect(rows[0]).toEqual({
-      name: "山田, 太郎",
       email: "yamada@example.com",
-      emp_id: "10234",
-      dept: "製造部",
       company_code: "KYT001",
     });
   });
@@ -54,7 +51,8 @@ describe("招待CSVパーサ", () => {
   it("ヘッダー行(メール列に@なし)は無視される", () => {
     const rows = parseCsv("a,b\nc,d");
     expect(rows).toHaveLength(2);
-    const invites = parseInviteCsv("氏名,メール,社員番号,部署,企業コード\n太郎,t@example.com,1,製造,X1");
+    const invites = parseInviteCsv("メール,企業コード\nt@example.com,X1");
     expect(invites).toHaveLength(1);
+    expect(invites[0].company_code).toBe("X1");
   });
 });

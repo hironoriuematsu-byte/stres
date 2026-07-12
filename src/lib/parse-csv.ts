@@ -42,23 +42,19 @@ export function parseCsv(text: string): string[][] {
 }
 
 export type InviteRow = {
-  name: string;
   email: string;
-  emp_id: string;
-  dept: string;
   company_code: string;
 };
 
-// ヘッダー行(氏名/メール等の見出し)があれば読み飛ばす
+// 招待CSVは「メール, 企業コード」の2列。
+// ヘッダー行(メール列に@を含まない行)は読み飛ばす。
+// 氏名・社員番号・部署は本人が受検時に入力するため、招待時には扱わない。
 export function parseInviteCsv(text: string): InviteRow[] {
   const rows = parseCsv(text);
   return rows
-    .filter((r) => r.length >= 5 && r[1].includes("@"))
+    .filter((r) => r.length >= 2 && r[0].includes("@"))
     .map((r) => ({
-      name: r[0].trim(),
-      email: r[1].trim(),
-      emp_id: r[2].trim(),
-      dept: r[3].trim(),
-      company_code: r[4].trim(),
+      email: r[0].trim(),
+      company_code: r[1].trim(),
     }));
 }

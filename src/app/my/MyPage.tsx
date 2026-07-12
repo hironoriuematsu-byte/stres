@@ -7,7 +7,15 @@ import { Badge, Btn, Card, ScoreBar } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { InterviewRequest, ResultRow, STATUS_LABEL } from "@/lib/types";
 
-export function MyPage({ name, companyId }: { name: string; companyId: string }) {
+export function MyPage({
+  name,
+  companyId,
+  companyName,
+}: {
+  name: string;
+  companyId: string;
+  companyName: string;
+}) {
   const [results, setResults] = useState<ResultRow[] | null>(null);
   const [requests, setRequests] = useState<InterviewRequest[]>([]);
   const [showForm, setShowForm] = useState<string | null>(null); // result_id
@@ -75,7 +83,10 @@ export function MyPage({ name, companyId }: { name: string; companyId: string })
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div>
             <Badge>従業員マイページ</Badge>
-            <h2 style={{ fontSize: 20, color: brand.ink, margin: "10px 0 2px" }}>{name} さん</h2>
+            <h2 style={{ fontSize: 20, color: brand.ink, margin: "10px 0 2px" }}>
+              {name ? `${name} さん` : "受検者ページ"}
+            </h2>
+            {companyName && <p style={{ fontSize: 13, color: "#5B6B6A", margin: 0 }}>{companyName}</p>}
           </div>
           <Link href="/exam">
             <Btn>ストレスチェックを受検する</Btn>
