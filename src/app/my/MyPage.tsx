@@ -54,19 +54,43 @@ export function MyPage({
 
   const submitRequest = async (r: ResultRow) => {
     setBusy(true);
-    const { error } = await supabase.from("interview_requests").insert({
-      result_id: r.id,
-      user_id: r.user_id,
-      company_id: companyId,
-      message: message || null,
-      preferred: preferred || null,
-    });
-    setBusy(false);
+    const { data: inserted, error } = await supabase
+      .from("interview_requests")
+      .insert({
+        result_id: r.id,
+        user_id: r.user_id,
+        company_id: companyId,
+        message: message || null,
+        preferred: preferred || null,
+      })
+      .select("id")
+      .single();
     if (error) {
+      setBusy(false);
       setNotice("申出の送信に失敗しました: " + error.message);
       return;
     }
-    setNotice("面接指導の申出を送信しました。実施者から連絡があるまでお待ちください。");
+
+    // 実施者・実施事務従事者へのメール通知(失敗しても申出自体は有効)
+    let notified = true;
+    try {
+      const res = await fetch("/api/notify-interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: inserted.id }),
+      });
+      const body = await res.json().catch(() => ({}));
+      notified = res.ok && (body.sent ?? 0) > 0;
+    } catch {
+      notified = false;
+    }
+
+    setBusy(false);
+    setNotice(
+      notified
+        ? "面接指導の申出を送信し、実施者へ通知しました。連絡があるまでお待ちください。"
+        : "面接指導の申出は受け付けられました(通知メールの送信に失敗した可能性があります。実施者は画面上で申出を確認できます)。"
+    );
     setShowForm(null);
     setMessage("");
     setPreferred("");

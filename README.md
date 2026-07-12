@@ -63,7 +63,9 @@ values ('<officeユーザーのUID>', 'office', '植松 太郎');
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | SupabaseプロジェクトURL | クライアント公開(問題なし) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anonキー(RLS前提の操作のみ) | クライアント公開(問題なし) |
-| `SUPABASE_SERVICE_ROLE_KEY` | 招待API(/api/invite)専用 | **サーバーのみ。絶対にNEXT_PUBLIC_を付けない** |
+| `SUPABASE_SERVICE_ROLE_KEY` | 招待API・通知API専用 | **サーバーのみ。絶対にNEXT_PUBLIC_を付けない** |
+| `RESEND_API_KEY` | 面接指導申出の通知メール送信 | サーバーのみ |
+| `SENDER_EMAIL` | 通知メールの送信元(Resend認証済みドメインのアドレス) | サーバーのみ |
 
 GitHubへのpushで自動デプロイされます。
 
@@ -78,20 +80,14 @@ GitHubへのpushで自動デプロイされます。
 - Authentication > Emails > SMTP Settings: カスタムSMTP(Resend)を設定(招待・パスワード再設定メールが従業員に届くために必須)
 - Authentication > Rate Limits: メール送信レートを従業員数に合わせて調整
 
-### 5. 面接指導申出のメール通知(Edge Function + Webhook)
+### 5. 面接指導申出のメール通知
 
-1. Supabase CLIでEdge Functionをデプロイ:
+通知はアプリ本体(`/api/notify-interview`)に組み込まれており、**Edge FunctionやDatabase Webhookの設定は不要**です。Vercelの環境変数に `RESEND_API_KEY` と `SENDER_EMAIL` を設定すれば動作します。
 
-```bash
-supabase functions deploy notify-interview --project-ref <project-ref>
-supabase secrets set RESEND_API_KEY=re_xxx SENDER_EMAIL=noreply@your-domain.jp APP_URL=https://your-app.example --project-ref <project-ref>
-```
-
-2. Dashboard > Database > Webhooks > Create:
-   - Table: `interview_requests` / Events: INSERT
-   - Type: Supabase Edge Function → `notify-interview`
-
-通知先は「office全員 + 該当企業のjimu全員」。本文に個人名・スコアは含まれません。
+- 従業員が申出を送信すると、その直後にoffice全員+該当企業のjimu全員へ1人ずつ個別にメールが送信されます
+- 本文に個人名・スコア等の要配慮情報は含まれません(企業名とログインURLのみ)
+- 通知の成否は申出の成立に影響しません(メール送信に失敗しても申出はダッシュボードに表示されます)
+- ※ 過去にDatabase Webhook + Edge Function構成を設定した場合は、二重送信を防ぐためWebhookを削除してください
 
 ## テスト
 
@@ -126,13 +122,13 @@ src/
     office/      実施者: 企業横断ダッシュボード(結果/申出/集団分析/招待/ログ)
     jimu/        実施事務従事者: 誓約→自社ダッシュボード
     company/     事業者担当者: 集団分析+同意あり結果
-    api/invite/  招待API(service_roleキーはここでのみ使用)
+    api/invite/           招待API(service_roleキーをサーバー内でのみ使用)
+    api/notify-interview/ 面接指導申出の通知メールAPI(Resend)
     login, reset-password, account/update-password, auth/callback
   components/    共有UI(結果一覧・申出一覧・集団分析グラフ・招待・ログ)
   lib/           スコアリング・年度・CSV・アクセスログ・Supabaseクライアント
 supabase/
-  migrations/    0002_production.sql(スキーマ+RLS) / 0003_app_fixes.sql(必須の補正)
-  functions/     notify-interview(申出メール通知 Edge Function)
+  migrations/    0002_production.sql(スキーマ+RLS) / 0003・0004(必須の補正)
 tests/
   unit/          ユニットテスト
   acceptance/    受け入れテスト(実Supabase統合)
