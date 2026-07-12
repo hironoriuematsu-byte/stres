@@ -1,0 +1,78 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>従業員向け(受検のしかた)</title><style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans CJK JP', sans-serif; color: #22333B; font-size: 10.5pt; line-height: 1.75; }
+  .page { padding: 0; }
+  .cover { border-bottom: 4px solid #0F9B8E; padding-bottom: 12px; margin-bottom: 18px; }
+  .cover .brand { font-size: 20pt; font-weight: 900; color: #0B7268; }
+  .cover .brand span { color: #E8792B; }
+  .cover h1 { font-size: 15pt; margin-top: 4px; }
+  .cover .meta { font-size: 9pt; color: #7A8886; margin-top: 4px; }
+  h2 { font-size: 12.5pt; color: #0B7268; border-left: 6px solid #0F9B8E; padding-left: 10px; margin: 20px 0 8px; page-break-after: avoid; }
+  h3 { font-size: 11pt; color: #22333B; margin: 12px 0 4px; page-break-after: avoid; }
+  p { margin: 4px 0; }
+  ul, ol { margin: 4px 0 8px 22px; }
+  li { margin: 2px 0; }
+  .step { border: 1px solid #DCE8E6; border-radius: 8px; padding: 10px 14px; margin: 8px 0; page-break-inside: avoid; }
+  .step .n { display: inline-block; background: #0F9B8E; color: #fff; font-weight: 700; border-radius: 999px; width: 22px; height: 22px; text-align: center; line-height: 22px; margin-right: 8px; font-size: 10pt; }
+  .step .t { font-weight: 700; }
+  .url { font-family: monospace; background: #EDF6F5; padding: 1px 6px; border-radius: 4px; font-size: 9.5pt; }
+  .warn { background: #FBF3E3; border: 1px solid #EFD9A8; border-radius: 8px; padding: 8px 12px; margin: 8px 0; color: #8A6B2E; page-break-inside: avoid; }
+  .info { background: #E2F3F1; border-radius: 8px; padding: 8px 12px; margin: 8px 0; color: #0B7268; page-break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0; page-break-inside: avoid; }
+  th { background: #EDF6F5; color: #0B7268; text-align: left; padding: 5px 8px; border: 1px solid #DCE8E6; }
+  td { padding: 5px 8px; border: 1px solid #DCE8E6; vertical-align: top; }
+  .foot { margin-top: 24px; padding-top: 8px; border-top: 1px solid #DCE8E6; font-size: 8.5pt; color: #8A9694; }
+</style></head>
+<body><div class="page">
+<div class="cover">
+  <div class="brand">ストレスチェック<span>Web</span> 利用マニュアル</div>
+  <h1>従業員向け(受検のしかた)</h1>
+  <div class="meta">対象: 従業員の皆さま / 発行: うえまつ産業医事務所 / アプリURL: https://stres.vercel.app</div>
+</div>
+
+<h2>1. はじめに</h2>
+<p>このシステムは、年1回のストレスチェック(57項目・約10分)をスマートフォンやパソコンから受検できるWebサービスです。</p>
+<div class="info"><b>あなたのプライバシーは守られます。</b>受検結果を見られるのは、あなた本人・実施者(産業医事務所)・実施事務従事者(守秘義務があり人事権を持たない担当者)のみです。<b>あなたが同意しない限り、会社(人事)に個人結果が提供されることはありません。</b>受検の有無や結果を理由とした不利益な取り扱いは法律で禁止されています。</div>
+
+<h2>2. アカウント登録(初回のみ)</h2>
+<p>会社から案内された<b>受検用URL(またはQRコード)</b>から登録します。</p>
+<div class="step"><span class="n">1</span><span class="t">案内メールのURLを開く(またはQRコードを読み取る)</span><br>会社名と実施年度が表示された登録画面が開きます。</div>
+<div class="step"><span class="n">2</span><span class="t">メールアドレスとパスワードを登録</span><br>メールアドレスは<b>会社・個人どちらでも構いません</b>。パスワードは8文字以上で設定します。</div>
+<div class="step"><span class="n">3</span><span class="t">確認メールのリンクをクリック(本人確認)</span><br>登録したアドレスに確認メールが届きます。リンクをクリックすると登録完了です。<b>この確認を済ませるまでログインできません。</b>メールが見当たらないときは迷惑メールフォルダを確認してください。</div>
+<div class="warn">個別の招待メールが届いた場合は、メール内のリンクからパスワードを設定するだけで利用開始できます(上記の登録は不要)。</div>
+
+<h2>3. 受検のしかた</h2>
+<div class="step"><span class="n">1</span><span class="t">ログイン</span><br><span class="url">https://stres.vercel.app/login</span> にメールアドレスとパスワードでログインします。</div>
+<div class="step"><span class="n">2</span><span class="t">「ストレスチェックを受検する」を押す</span><br>マイページのボタンから受検を開始します。</div>
+<div class="step"><span class="n">3</span><span class="t">受検者情報を入力</span><br>氏名・社員番号・部署・性別を入力します(性別は結果の判定基準が男女で異なるため使用します)。</div>
+<div class="step"><span class="n">4</span><span class="t">57問に回答</span><br>A(仕事について17問)→B(最近1か月の状態29問)→C(周囲の方々9問)→D(満足度2問)の順に、最もあてはまるものを選びます。深く考え込まず、直感でお答えください。</div>
+<div class="step"><span class="n">5</span><span class="t">同意の選択と確定</span><br>結果を会社の担当者へ提供することに同意するかを選びます(<b>任意</b>・後からマイページでいつでも変更できます)。「結果を確定する」を押すと完了です。</div>
+<div class="warn">受検は<b>年度に1回</b>です。2回目を開始しようとすると「本年度は受検済みです」と表示されます。</div>
+
+<h2>4. 結果の見方</h2>
+<ul>
+<li><b>総合判定</b>: 「高ストレス」に該当するかどうかが表示されます。</li>
+<li><b>結果票(PDF)</b>: マイページの「結果票を見る(印刷・PDF保存)」から、レーダーチャート・19尺度の評価・アドバイス付きの結果票を表示できます。「印刷 / PDFとして保存」ボタンで保存・印刷が可能です。</li>
+<li>結果は医療上の診断ではありません。体調がすぐれないときは、判定にかかわらず産業医・医療機関にご相談ください。</li>
+</ul>
+
+<h2>5. 高ストレスと判定されたら(面接指導の申出)</h2>
+<p>高ストレスと判定された場合、医師(産業医)による面接指導を申し出ることができます。</p>
+<div class="step"><span class="n">1</span>マイページの結果カードにある「<b>産業医面接指導を申し出る</b>」を押す</div>
+<div class="step"><span class="n">2</span>連絡事項・希望日時(任意)を入力して送信</div>
+<div class="step"><span class="n">3</span>実施者に自動で通知され、日程調整の連絡が届きます。申出の状況(受付/日程調整済/実施済)はマイページで確認できます</div>
+<div class="info">面接指導の申出を理由とする不利益な取り扱いは法律で禁止されています。安心してご利用ください。</div>
+
+<h2>6. 困ったとき</h2>
+<table>
+<tr><th>症状</th><th>対処</th></tr>
+<tr><td>パスワードを忘れた</td><td><span class="url">https://stres.vercel.app/reset-password</span> から再設定メールを受け取り、新しいパスワードを設定します。</td></tr>
+<tr><td>ログインで「メール確認が完了していません」と出る</td><td>登録時の確認メールのリンクをクリックしてください。画面の「確認メールを再送する」ボタンで再送もできます。</td></tr>
+<tr><td>確認メールが届かない</td><td>迷惑メールフォルダを確認。それでも無い場合は会社の担当者(実施事務従事者)へ連絡してください。</td></tr>
+<tr><td>受検用URLが無効と表示される</td><td>配布期間が終了している可能性があります。会社の担当者へ確認してください。</td></tr>
+</table>
+
+<div class="foot">本システムは労働安全衛生法第66条の10に基づくストレスチェック(職業性ストレス簡易調査票57項目)を実施するものです。
+通信はTLSで暗号化され、結果はデータベースの行レベルセキュリティにより閲覧範囲が制御されています。結果データは5年間保存されます。
+お問い合わせ: うえまつ産業医事務所</div>
+</div></body></html>

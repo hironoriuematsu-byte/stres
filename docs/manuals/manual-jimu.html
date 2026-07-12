@@ -1,0 +1,93 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>実施事務従事者向け</title><style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans CJK JP', sans-serif; color: #22333B; font-size: 10.5pt; line-height: 1.75; }
+  .page { padding: 0; }
+  .cover { border-bottom: 4px solid #0F9B8E; padding-bottom: 12px; margin-bottom: 18px; }
+  .cover .brand { font-size: 20pt; font-weight: 900; color: #0B7268; }
+  .cover .brand span { color: #E8792B; }
+  .cover h1 { font-size: 15pt; margin-top: 4px; }
+  .cover .meta { font-size: 9pt; color: #7A8886; margin-top: 4px; }
+  h2 { font-size: 12.5pt; color: #0B7268; border-left: 6px solid #0F9B8E; padding-left: 10px; margin: 20px 0 8px; page-break-after: avoid; }
+  h3 { font-size: 11pt; color: #22333B; margin: 12px 0 4px; page-break-after: avoid; }
+  p { margin: 4px 0; }
+  ul, ol { margin: 4px 0 8px 22px; }
+  li { margin: 2px 0; }
+  .step { border: 1px solid #DCE8E6; border-radius: 8px; padding: 10px 14px; margin: 8px 0; page-break-inside: avoid; }
+  .step .n { display: inline-block; background: #0F9B8E; color: #fff; font-weight: 700; border-radius: 999px; width: 22px; height: 22px; text-align: center; line-height: 22px; margin-right: 8px; font-size: 10pt; }
+  .step .t { font-weight: 700; }
+  .url { font-family: monospace; background: #EDF6F5; padding: 1px 6px; border-radius: 4px; font-size: 9.5pt; }
+  .warn { background: #FBF3E3; border: 1px solid #EFD9A8; border-radius: 8px; padding: 8px 12px; margin: 8px 0; color: #8A6B2E; page-break-inside: avoid; }
+  .info { background: #E2F3F1; border-radius: 8px; padding: 8px 12px; margin: 8px 0; color: #0B7268; page-break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0; page-break-inside: avoid; }
+  th { background: #EDF6F5; color: #0B7268; text-align: left; padding: 5px 8px; border: 1px solid #DCE8E6; }
+  td { padding: 5px 8px; border: 1px solid #DCE8E6; vertical-align: top; }
+  .foot { margin-top: 24px; padding-top: 8px; border-top: 1px solid #DCE8E6; font-size: 8.5pt; color: #8A9694; }
+</style></head>
+<body><div class="page">
+<div class="cover">
+  <div class="brand">ストレスチェック<span>Web</span> 利用マニュアル</div>
+  <h1>実施事務従事者向け</h1>
+  <div class="meta">対象: 各企業の実施事務従事者 / 発行: うえまつ産業医事務所 / アプリURL: https://stres.vercel.app</div>
+</div>
+
+<h2>1. 実施事務従事者の役割と法的位置づけ</h2>
+<p>実施事務従事者は、実施者(産業医事務所)の指示のもとでストレスチェックの実施事務(配布・進捗管理・結果の整理等)を行う担当者です。</p>
+<div class="warn"><b>重要:</b> 労働者の解雇・昇進・異動の決定権(人事権)を持つ方は実施事務従事者にはなれません(労働安全衛生規則第52条の10)。また、業務で知った労働者の秘密には守秘義務があります(労働安全衛生法第105条)。実施事務従事者の選任は衛生委員会の調査審議事項です。</div>
+
+<h2>2. 初回ログインと誓約</h2>
+<div class="step"><span class="n">1</span>実施者からの招待メールのリンクを開き、パスワード(8文字以上)を設定</div>
+<div class="step"><span class="n">2</span><span class="url">https://stres.vercel.app/login</span> からログイン</div>
+<div class="step"><span class="n">3</span>初回は<b>誓約画面</b>が表示されます。「人事権を有しない・守秘義務を守る」ことを確認しチェックを入れて進みます。<b>誓約するまで個人結果は一切表示されません。</b></div>
+
+<h2>3. ダッシュボードの構成</h2>
+<p>ログインすると自社のダッシュボードが開きます。上部の年度セレクタとタブで操作します。</p>
+<table>
+<tr><th>タブ</th><th>できること</th></tr>
+<tr><td>結果一覧</td><td>自社の受検結果の一覧(高ストレスフィルタ・CSV出力・個人結果票の表示)</td></tr>
+<tr><td>面接指導申出</td><td>従業員からの面接指導申出の確認と状況更新</td></tr>
+<tr><td>集団分析</td><td>部署別の集計と集団分析報告書(PDF)</td></tr>
+<tr><td>配布URL・QR</td><td>従業員に配る受検用URL・QRコードの確認・コピー</td></tr>
+<tr><td>従業員招待</td><td>従業員への個別招待メール送信(単発・CSV一括)</td></tr>
+</table>
+
+<h2>4. 従業員への受検案内(実施開始時)</h2>
+<div class="step"><span class="n">1</span>「配布URL・QR」タブを開き、実施者が発行した自社の受検用URLを「URLをコピー」でコピー(QRコードはPNGでダウンロードでき、掲示物に使えます)</div>
+<div class="step"><span class="n">2</span>社内の一斉メールや掲示板で従業員に配布</div>
+<div class="info"><b>案内メールの文例:</b><br>
+「本年度のストレスチェックを実施します。下記URLから登録のうえ、○月○日までに受検してください(所要約10分)。結果はご本人の同意なく会社に提供されることはありません。<br>受検用URL: (コピーしたURL)」</div>
+<p>メールアドレスを指定して個別に招待したい場合は「従業員招待」タブを使います(1件ずつ、またはメールアドレス1列のCSVで一括)。招待できるのは自社の従業員のみです。</p>
+
+<h2>5. 結果の確認</h2>
+<ul>
+<li><b>結果一覧</b>: 受検者数・高ストレス者数が上部に表示されます。「高ストレス者のみ」ボタンで絞り込めます。</li>
+<li>行をクリックすると詳細が開き、「結果票を開く(印刷・PDF)」から厚労省様式に準じた個人結果票をPDF保存できます。</li>
+<li>「CSV出力」でExcelで開ける一覧(BOM付きUTF-8)をダウンロードできます。</li>
+<li>選択中の年度にデータがない場合、データのある年度が画面に案内されます。年度セレクタを切り替えてください。</li>
+</ul>
+<div class="warn">個人結果の閲覧・CSV出力などの操作は<b>すべてアクセスログに記録され、実施者が確認できます</b>。業務上必要な範囲でのみ閲覧してください。結果は5年間保存され、削除・改変はできません。</div>
+
+<h2>6. 面接指導申出への対応</h2>
+<div class="step"><span class="n">1</span>従業員が申出をすると、あなたと実施者に<b>通知メール</b>が届きます(メールに個人名は記載されません)</div>
+<div class="step"><span class="n">2</span>「面接指導申出」タブで内容(氏名・連絡事項・希望日時)を確認</div>
+<div class="step"><span class="n">3</span>実施者と連携して産業医面談の日程を調整し、状況を「日程調整済にする」→実施後に「実施済にする」で更新</div>
+
+<h2>7. 集団分析</h2>
+<ul>
+<li>「集団分析」タブで部署別の受検者数・高ストレス率・平均点を確認できます。</li>
+<li>「集団分析報告書(印刷・PDF)」から、高ストレス率グラフ・仕事のストレス判定図・尺度別平均評価点を含むA4報告書をPDF保存できます。衛生委員会等での職場環境改善の検討にご活用ください。</li>
+</ul>
+<div class="info"><b>10名未満の部署は個人特定防止のため集計に表示されません</b>(法令の取り扱いに基づく仕様です)。</div>
+
+<h2>8. 困ったとき</h2>
+<table>
+<tr><th>症状</th><th>対処</th></tr>
+<tr><td>結果一覧が0件</td><td>年度セレクタを確認(画面に「別の年度にデータがあります」と出る場合はその年度へ切替)</td></tr>
+<tr><td>従業員がログインできない</td><td>確認メール未クリックが最多。ログイン画面の「確認メールを再送する」を案内</td></tr>
+<tr><td>誓約画面から進めない・権限エラー</td><td>実施者(うえまつ産業医事務所)へ連絡</td></tr>
+<tr><td>パスワードを忘れた</td><td><span class="url">https://stres.vercel.app/reset-password</span></td></tr>
+</table>
+
+<div class="foot">本システムは労働安全衛生法第66条の10に基づくストレスチェック(職業性ストレス簡易調査票57項目)を実施するものです。
+通信はTLSで暗号化され、結果はデータベースの行レベルセキュリティにより閲覧範囲が制御されています。結果データは5年間保存されます。
+お問い合わせ: うえまつ産業医事務所</div>
+</div></body></html>
