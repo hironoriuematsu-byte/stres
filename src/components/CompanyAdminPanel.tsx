@@ -66,13 +66,13 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
       <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>企業管理</h3>
       <p style={{ fontSize: 13, color: "#5B6B6A", margin: "0 0 14px", lineHeight: 1.7 }}>
         契約企業の追加と名称変更ができます。企業コードは招待CSVや識別に使う短い英数字です(例:
-        KYT001)。誤削除防止のため、削除はこの画面からはできません。
+        MST001)。誤削除防止のため、削除はこの画面からはできません。
       </p>
 
       <form onSubmit={add} style={{ display: "grid", gap: 10, gridTemplateColumns: "2fr 1fr auto", alignItems: "end" }}>
         <div>
           <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>企業名</label>
-          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="例: マルホ発條工業株式会社" style={input} />
+          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="例: メステート合同会社" style={input} />
         </div>
         <div>
           <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>企業コード</label>
@@ -80,7 +80,7 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
             required
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="例: MRH001"
+            placeholder="例: MST001"
             pattern="[A-Za-z0-9\-_]{2,20}"
             title="英数字・ハイフン・アンダースコア2〜20文字"
             style={input}
