@@ -7,6 +7,15 @@ import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 
+const input = {
+  width: "100%",
+  boxSizing: "border-box" as const,
+  padding: "10px 12px",
+  fontSize: 15,
+  border: `1px solid ${brand.line}`,
+  borderRadius: 10,
+};
+
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -39,20 +48,7 @@ export function LoginForm() {
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             メールアドレス
           </label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 12px",
-              fontSize: 15,
-              border: `1px solid ${brand.line}`,
-              borderRadius: 10,
-            }}
-          />
+          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={input} />
         </div>
         <div style={{ marginBottom: 8 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
@@ -63,23 +59,16 @@ export function LoginForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: "10px 12px",
-              fontSize: 15,
-              border: `1px solid ${brand.line}`,
-              borderRadius: 10,
-            }}
+            style={input}
           />
         </div>
         {err && <div style={{ fontSize: 13, color: "#B02A2A", marginBottom: 8 }}>{err}</div>}
-        <div style={{ display: "flex", gap: 10, marginTop: 16, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 16, alignItems: "center", flexWrap: "wrap" }}>
           <Btn type="submit" disabled={loading}>
             {loading ? "ログイン中…" : "ログイン"}
           </Btn>
-          <Link href="/signup" style={{ fontSize: 13, color: brand.tealDark, fontWeight: 700 }}>
-            アカウントを作成する
+          <Link href="/reset-password" style={{ fontSize: 13, color: brand.tealDark, fontWeight: 700 }}>
+            パスワードを忘れた方
           </Link>
         </div>
       </form>

@@ -2,24 +2,34 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card, QuestionRow, ScoreBar } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { SECTION_A, SECTION_B, SECTION_C, SECTION_D, Answers, Scores, calcScores, emptyAnswers } from "@/lib/questionnaire";
+import { getFiscalYear } from "@/lib/fiscal";
 
-type Profile = { name: string; empId: string; dept: string };
+type ExamProfile = {
+  userId: string;
+  name: string;
+  empId: string;
+  dept: string;
+  companyId: string;
+};
 
 const sections = { 1: SECTION_A, 2: SECTION_B, 4: SECTION_D } as const;
 
-export function ExamForm({ initialProfile }: { initialProfile: Profile }) {
+export function ExamForm({ profile }: { profile: ExamProfile }) {
   const router = useRouter();
-  const [step, setStep] = useState(0); // 0=プロフィール 1=A 2=B 3=C 4=D 5=同意 6=結果
-  const [profile, setProfile] = useState<Profile>(initialProfile);
+  const [step, setStep] = useState(0); // 0=確認 1=A 2=B 3=C 4=D 5=同意 6=結果 7=年度重複
+  const [dept, setDept] = useState(profile.dept);
   const [ans, setAns] = useState<Answers>(emptyAnswers());
   const [consent, setConsent] = useState(false);
   const [result, setResult] = useState<Scores | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const fiscalYear = getFiscalYear();
 
   const setAnswer = (sec: keyof Answers, idx: number, v: number) => {
     setAns((p) => {
@@ -33,77 +43,78 @@ export function ExamForm({ initialProfile }: { initialProfile: Profile }) {
 
   const submit = async () => {
     setSaving(true);
-    setSaveError(false);
+    setSaveError(null);
     const scores = calcScores(ans);
     const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    if (user) {
-      const { error } = await supabase.from("results").insert({
-        user_id: user.id,
-        full_name: profile.name,
-        employee_no: profile.empId,
-        department: profile.dept || "未記入",
-        score_a: scores.A,
-        score_b: scores.B,
-        score_c: scores.C,
-        score_d: scores.D,
-        score_ac: scores.AC,
-        high_stress: scores.highStress,
-        consent_to_company: consent,
-      });
-      if (error) setSaveError(true);
-    } else {
-      setSaveError(true);
+    const { error } = await supabase.from("results").insert({
+      user_id: profile.userId,
+      company_id: profile.companyId,
+      dept: dept || "未記入",
+      fiscal_year: fiscalYear,
+      answers: ans,
+      score_a: scores.A,
+      score_b: scores.B,
+      score_c: scores.C,
+      score_d: scores.D,
+      high_stress: scores.highStress,
+      consent,
+    });
+
+    setSaving(false);
+
+    if (error) {
+      // 同一年度の重複受検(unique制約違反)
+      if (error.code === "23505") {
+        setStep(7);
+        return;
+      }
+      setSaveError(error.message);
+      return;
     }
 
     setResult(scores);
-    setSaving(false);
     setStep(6);
   };
 
-  // プロフィール
+  // 受検者情報確認
   if (step === 0) {
     return (
       <Card style={{ maxWidth: 560, margin: "0 auto" }}>
         <Badge>STEP 1 / 6</Badge>
-        <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 4px" }}>受検者情報</h2>
+        <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 4px" }}>受検者情報の確認</h2>
         <p style={{ fontSize: 13, color: "#5B6B6A", marginBottom: 18 }}>
-          ご本人確認のうえ、正しい情報を入力してください。
+          {fiscalYear}年度のストレスチェックを開始します。所属部署に変更がある場合は修正してください。
         </p>
-        {(
-          [
-            ["氏名", "name", "例: 山田 太郎"],
-            ["社員番号", "empId", "例: 10234"],
-            ["部署", "dept", "例: 製造部"],
-          ] as const
-        ).map(([label, key, ph]) => (
-          <div key={key} style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
-              {label}
-            </label>
-            <input
-              value={profile[key]}
-              onChange={(e) => setProfile({ ...profile, [key]: e.target.value })}
-              placeholder={ph}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: "10px 12px",
-                fontSize: 15,
-                border: `1px solid ${brand.line}`,
-                borderRadius: 10,
-              }}
-            />
+        <div style={{ fontSize: 14, color: brand.ink, lineHeight: 2, marginBottom: 12 }}>
+          <div>
+            <strong>氏名:</strong> {profile.name}
           </div>
-        ))}
+          <div>
+            <strong>社員番号:</strong> {profile.empId || "未登録"}
+          </div>
+        </div>
+        <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
+          部署
+        </label>
+        <input
+          value={dept}
+          onChange={(e) => setDept(e.target.value)}
+          placeholder="例: 製造部"
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            padding: "10px 12px",
+            fontSize: 15,
+            border: `1px solid ${brand.line}`,
+            borderRadius: 10,
+          }}
+        />
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-          <Btn tone="ghost" onClick={() => router.push("/")}>
+          <Btn tone="ghost" onClick={() => router.push("/my")}>
             戻る
           </Btn>
-          <Btn onClick={() => setStep(1)} disabled={!profile.name || !profile.empId}>
+          <Btn onClick={() => setStep(1)} disabled={!dept}>
             回答をはじめる
           </Btn>
         </div>
@@ -200,10 +211,11 @@ export function ExamForm({ initialProfile }: { initialProfile: Profile }) {
         <Badge>STEP 6 / 6</Badge>
         <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 8px" }}>結果の取り扱いについて</h2>
         <ul style={{ fontSize: 14, color: "#44534F", lineHeight: 1.9, paddingLeft: 20, margin: "0 0 16px" }}>
-          <li>あなたの結果は、あなた本人と実施者(産業医事務所)が確認します。</li>
-          <li>会社(人事担当者)には、あなたの同意がない限り個人結果は提供されません(労働安全衛生法第66条の10)。</li>
-          <li>同意の有無にかかわらず、個人が特定されない集団分析には利用されます。</li>
-          <li>高ストレスと判定された場合、産業医面接指導の申出ができます。</li>
+          <li>あなたの結果は、あなた本人・実施者(産業医事務所)・実施事務従事者が確認します。</li>
+          <li>会社(事業者担当者)には、あなたの同意がない限り個人結果は提供されません(労働安全衛生法第66条の10)。</li>
+          <li>同意はあとから結果画面でいつでも追加・撤回できます。</li>
+          <li>同意の有無にかかわらず、個人が特定されない集団分析(10名以上の部署のみ)には利用されます。</li>
+          <li>高ストレスと判定された場合、このシステムから産業医面接指導の申出ができます。</li>
         </ul>
         <label
           style={{
@@ -219,7 +231,7 @@ export function ExamForm({ initialProfile }: { initialProfile: Profile }) {
         >
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 3 }} />
           <span style={{ fontSize: 14, color: brand.ink, lineHeight: 1.7 }}>
-            私のストレスチェック結果(個人結果)を会社の人事担当者へ提供することに<strong>同意します</strong>
+            私のストレスチェック結果(個人結果)を会社の担当者へ提供することに<strong>同意します</strong>
             (任意・チェックなしでも受検結果は有効です)
           </span>
         </label>
@@ -231,6 +243,9 @@ export function ExamForm({ initialProfile }: { initialProfile: Profile }) {
             {saving ? "送信中…" : "結果を確定する"}
           </Btn>
         </div>
+        {saveError && (
+          <div style={{ fontSize: 13, color: "#B02A2A", marginTop: 12 }}>保存に失敗しました: {saveError}</div>
+        )}
       </Card>
     );
   }
@@ -242,7 +257,9 @@ export function ExamForm({ initialProfile }: { initialProfile: Profile }) {
         <div style={{ textAlign: "center", marginBottom: 18 }}>
           {result.highStress ? <Badge tone="red">高ストレス判定</Badge> : <Badge>判定: 高ストレスに該当せず</Badge>}
           <h2 style={{ fontSize: 22, color: brand.ink, margin: "12px 0 4px" }}>{profile.name} さんの結果</h2>
-          <p style={{ fontSize: 13, color: "#5B6B6A" }}>{new Date().toLocaleDateString("ja-JP")} 実施 / 合計点数法による判定</p>
+          <p style={{ fontSize: 13, color: "#5B6B6A" }}>
+            {fiscalYear}年度 / {new Date().toLocaleDateString("ja-JP")} 実施 / 合計点数法による判定
+          </p>
         </div>
         <ScoreBar label="A. 仕事のストレス要因" value={result.A} max={68} />
         <ScoreBar label="B. 心身のストレス反応" value={result.B} max={116} threshold={77} />
@@ -273,17 +290,35 @@ export function ExamForm({ initialProfile }: { initialProfile: Profile }) {
               marginTop: 12,
             }}
           >
-            高ストレス状態にあると判定されました。医師(産業医)による面接指導の対象です。事業者への申出により面接指導を受けることができます。申出を理由とする不利益取り扱いは法律で禁止されています。つらい状態が続く場合は、産業医事務所または医療機関へ早めにご相談ください。
+            高ストレス状態にあると判定されました。医師(産業医)による面接指導の対象です。マイページから面接指導の申出ができます。申出を理由とする不利益取り扱いは法律で禁止されています。
           </div>
         )}
-        {saveError && (
-          <div style={{ fontSize: 13, color: "#B45415", marginTop: 12 }}>
-            ※ 結果の保存に失敗しました。画面のスコアを控えてください。
-          </div>
-        )}
-        <div style={{ marginTop: 20, textAlign: "center" }}>
-          <Btn onClick={() => router.push("/")}>ホームへ戻る</Btn>
+        <div style={{ marginTop: 20, textAlign: "center", display: "flex", gap: 10, justifyContent: "center" }}>
+          {result.highStress && (
+            <Link href="/my">
+              <Btn tone="orange">面接指導を申し出る</Btn>
+            </Link>
+          )}
+          <Link href="/my">
+            <Btn>マイページへ</Btn>
+          </Link>
         </div>
+      </Card>
+    );
+  }
+
+  // 年度重複
+  if (step === 7) {
+    return (
+      <Card style={{ maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
+        <Badge tone="orange">受検済み</Badge>
+        <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 8px" }}>本年度は受検済みです</h2>
+        <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.8, marginBottom: 16 }}>
+          {fiscalYear}年度のストレスチェックはすでに実施済みのため、再受検はできません。結果はマイページから確認できます。
+        </p>
+        <Link href="/my">
+          <Btn>マイページへ</Btn>
+        </Link>
       </Card>
     );
   }

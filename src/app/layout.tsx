@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { getSessionProfile } from "@/lib/auth-server";
 import { Header } from "@/components/Header";
 import { brand } from "@/lib/brand";
 import "./globals.css";
@@ -10,16 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  let role: string | null = null;
-  if (user) {
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-    role = profile?.role ?? null;
-  }
+  const { user, profile } = await getSessionProfile();
 
   return (
     <html lang="ja">
@@ -30,7 +21,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           fontFamily: "'Meiryo','Hiragino Sans','Yu Gothic',sans-serif",
         }}
       >
-        <Header email={user?.email ?? null} role={role} />
+        <div style={{ padding: "0 16px" }}>
+          <Header email={user?.email ?? null} role={profile?.role ?? null} name={profile?.name ?? null} />
+        </div>
         <main style={{ padding: "0 16px 48px" }}>{children}</main>
       </body>
     </html>

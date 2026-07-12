@@ -4,30 +4,32 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { brand } from "@/lib/brand";
+import { ROLE_LABEL, Role } from "@/lib/types";
 
 export function Header({
   email,
   role,
+  name,
 }: {
   email: string | null;
   role: string | null;
+  name: string | null;
 }) {
   const router = useRouter();
-  const supabase = createClient();
 
   const signOut = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/");
+    router.push("/login");
     router.refresh();
   };
 
-  const roleLabel =
-    role === "office" ? "産業医事務所" : role === "company_hr" ? "企業人事担当者" : role === "employee" ? "従業員" : null;
+  const roleLabel = role && role in ROLE_LABEL ? ROLE_LABEL[role as Role] : null;
 
   return (
     <header
       style={{
-        maxWidth: 900,
+        maxWidth: 960,
         margin: "0 auto",
         padding: "26px 0 22px",
         display: "flex",
@@ -51,7 +53,7 @@ export function Header({
         <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#5B6B6A" }}>
           <span>
             {roleLabel ? `${roleLabel} / ` : ""}
-            {email}
+            {name || email}
           </span>
           <button
             onClick={signOut}

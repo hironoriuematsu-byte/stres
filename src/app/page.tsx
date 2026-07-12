@@ -1,112 +1,46 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import { Badge, Card } from "@/components/ui";
+import { redirect } from "next/navigation";
+import { getSessionProfile, roleHome } from "@/lib/auth-server";
+import { Card, Badge } from "@/components/ui";
 import { brand } from "@/lib/brand";
 
 export default async function Home() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile } = await getSessionProfile();
+
+  if (user && profile) {
+    redirect(roleHome(profile.role));
+  }
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto" }}>
-      <Card style={{ marginBottom: 16 }}>
-        <div
-          style={{
-            fontSize: 13,
-            color: "#8A6B2E",
-            background: "#FBF3E3",
-            border: "1px solid #EFD9A8",
-            borderRadius: 10,
-            padding: "10px 14px",
-            lineHeight: 1.7,
-          }}
-        >
-          ⚠️
-          結果はSupabase上のデータベースに保存され、行レベルセキュリティ(RLS)により本人・実施者・(同意時のみ)企業人事担当者のみが閲覧できます。取り扱いには十分ご注意ください。
-        </div>
+    <div style={{ maxWidth: 560, margin: "0 auto" }}>
+      <Card>
+        <Badge>うえまつ産業医事務所</Badge>
+        <h1 style={{ fontSize: 21, color: brand.ink, margin: "12px 0 8px" }}>
+          ストレスチェックWeb
+        </h1>
+        <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 16px" }}>
+          厚生労働省「職業性ストレス簡易調査票(57項目)」に準拠したストレスチェックシステムです。アカウントは実施者(産業医事務所)からの招待により発行されます。招待メールが届いている方は、メール内のリンクからパスワードを設定のうえログインしてください。
+        </p>
+        <Link href="/login">
+          <button
+            style={{
+              background: brand.teal,
+              color: "#fff",
+              border: "none",
+              borderRadius: 10,
+              padding: "11px 22px",
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            ログイン
+          </button>
+        </Link>
       </Card>
-      <div style={{ display: "grid", gap: 14 }}>
-        <Card>
-          <Badge>従業員の方</Badge>
-          <h2 style={{ fontSize: 19, margin: "10px 0 6px", color: brand.ink }}>ストレスチェックを受検する</h2>
-          <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.7, margin: "0 0 14px" }}>
-            厚生労働省「職業性ストレス簡易調査票(57項目)」に回答します。所要時間は約10分。結果はその場で表示され、あなた本人と実施者(産業医事務所)のみが確認できます。会社への結果提供は、あなたが同意した場合に限られます。
-          </p>
-          <Link href={user ? "/exam" : "/login?next=/exam"}>
-            <button
-              style={{
-                background: brand.teal,
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                padding: "11px 22px",
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              受検を開始する
-            </button>
-          </Link>
-          {!user && (
-            <span style={{ marginLeft: 12, fontSize: 13, color: "#5B6B6A" }}>
-              初めての方は
-              <Link href="/signup" style={{ color: brand.tealDark, fontWeight: 700 }}>
-                アカウント作成
-              </Link>
-              が必要です
-            </span>
-          )}
-        </Card>
-        <Card>
-          <Badge tone="orange">産業医事務所(実施者)</Badge>
-          <h2 style={{ fontSize: 19, margin: "10px 0 6px", color: brand.ink }}>実施者ダッシュボード</h2>
-          <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.7, margin: "0 0 14px" }}>
-            全受検者の結果と高ストレス者の一覧を確認できます(事務所アカウントでのログインが必要)。
-          </p>
-          <Link href="/office">
-            <button
-              style={{
-                background: brand.orange,
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                padding: "11px 22px",
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              事務所としてログイン
-            </button>
-          </Link>
-        </Card>
-        <Card>
-          <Badge tone="gray">企業の人事担当者</Badge>
-          <h2 style={{ fontSize: 19, margin: "10px 0 6px", color: brand.ink }}>企業担当者ダッシュボード</h2>
-          <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.7, margin: "0 0 14px" }}>
-            本人が提供に同意した個人結果と、部署別の集団分析を確認できます(企業アカウントでのログインが必要)。同意のない個人結果は労働安全衛生法第66条の10により閲覧できません。
-          </p>
-          <Link href="/company">
-            <button
-              style={{
-                background: "#fff",
-                color: brand.tealDark,
-                border: `1px solid ${brand.teal}`,
-                borderRadius: 10,
-                padding: "11px 22px",
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              企業担当者としてログイン
-            </button>
-          </Link>
-        </Card>
-      </div>
+      <p style={{ fontSize: 12, color: "#8A9694", lineHeight: 1.8, marginTop: 14, padding: "0 4px" }}>
+        通信はTLSで暗号化され、結果データはSupabase(東京リージョン)に保存時暗号化(AES-256)の上で保管されます。個人結果の閲覧範囲は労働安全衛生法第66条の10に基づき、データベースの行レベルセキュリティで制御されています。
+      </p>
     </div>
   );
 }
