@@ -32,6 +32,8 @@ export function ExamForm({
   const [name, setName] = useState(profile.name);
   const [empId, setEmpId] = useState(profile.empId);
   const [dept, setDept] = useState(profile.dept);
+  const [gender, setGender] = useState<"male" | "female" | "">("");
+  const [resultId, setResultId] = useState<string | null>(null);
   const [ans, setAns] = useState<Answers>(emptyAnswers());
   const [consent, setConsent] = useState(false);
   const [result, setResult] = useState<Scores | null>(null);
@@ -63,19 +65,25 @@ export function ExamForm({
       .update({ name, emp_id: empId, dept })
       .eq("user_id", profile.userId);
 
-    const { error } = await supabase.from("results").insert({
-      user_id: profile.userId,
-      company_id: profile.companyId,
-      dept: dept || "未記入",
-      fiscal_year: fiscalYear,
-      answers: ans,
-      score_a: scores.A,
-      score_b: scores.B,
-      score_c: scores.C,
-      score_d: scores.D,
-      high_stress: scores.highStress,
-      consent,
-    });
+    const { data: inserted, error } = await supabase
+      .from("results")
+      .insert({
+        user_id: profile.userId,
+        company_id: profile.companyId,
+        dept: dept || "未記入",
+        fiscal_year: fiscalYear,
+        answers: ans,
+        gender: gender || null,
+        score_a: scores.A,
+        score_b: scores.B,
+        score_c: scores.C,
+        score_d: scores.D,
+        high_stress: scores.highStress,
+        consent,
+      })
+      .select("id")
+      .single();
+    if (inserted) setResultId(inserted.id);
 
     setSaving(false);
 
@@ -134,17 +142,32 @@ export function ExamForm({
           </label>
           <input value={empId} onChange={(e) => setEmpId(e.target.value)} placeholder="例: 10234" style={input} />
         </div>
-        <div>
+        <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             部署
           </label>
           <input value={dept} onChange={(e) => setDept(e.target.value)} placeholder="例: 製造部" style={input} />
         </div>
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
+            性別(結果票の素点換算に使用します)
+          </label>
+          <div style={{ display: "flex", gap: 16, fontSize: 14, color: brand.ink }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+              <input type="radio" name="gender" checked={gender === "male"} onChange={() => setGender("male")} />
+              男性
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+              <input type="radio" name="gender" checked={gender === "female"} onChange={() => setGender("female")} />
+              女性
+            </label>
+          </div>
+        </div>
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
           <Btn tone="ghost" onClick={() => router.push("/my")}>
             戻る
           </Btn>
-          <Btn onClick={() => setStep(1)} disabled={!name || !empId || !dept}>
+          <Btn onClick={() => setStep(1)} disabled={!name || !empId || !dept || !gender}>
             回答をはじめる
           </Btn>
         </div>
@@ -323,7 +346,12 @@ export function ExamForm({
             高ストレス状態にあると判定されました。医師(産業医)による面接指導の対象です。マイページから面接指導の申出ができます。申出を理由とする不利益取り扱いは法律で禁止されています。
           </div>
         )}
-        <div style={{ marginTop: 20, textAlign: "center", display: "flex", gap: 10, justifyContent: "center" }}>
+        <div style={{ marginTop: 20, textAlign: "center", display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+          {resultId && (
+            <Link href={`/report/${resultId}`}>
+              <Btn tone="ghost">結果票を見る(印刷・PDF)</Btn>
+            </Link>
+          )}
           {result.highStress && (
             <Link href="/my">
               <Btn tone="orange">面接指導を申し出る</Btn>

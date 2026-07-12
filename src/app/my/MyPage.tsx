@@ -151,6 +151,11 @@ export function MyPage({
             <p style={{ fontSize: 12, color: "#8A9694", margin: "4px 0 14px" }}>
               {new Date(r.created_at).toLocaleDateString("ja-JP")} 実施 / 部署: {r.dept}
             </p>
+            <div style={{ marginBottom: 10 }}>
+              <Link href={`/report/${r.id}`} style={{ fontSize: 13, color: brand.tealDark, fontWeight: 700 }}>
+                📄 結果票を見る(印刷・PDF保存)
+              </Link>
+            </div>
             <ScoreBar label="A. 仕事のストレス要因" value={r.score_a} max={68} />
             <ScoreBar label="B. 心身のストレス反応" value={r.score_b} max={116} threshold={77} />
             <ScoreBar label="C. 周囲のサポート(点が高いほど乏しい)" value={r.score_c} max={36} />

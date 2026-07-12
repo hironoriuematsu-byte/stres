@@ -151,7 +151,16 @@ export function ResultsPanel({
                     <td colSpan={9} style={{ padding: "10px 14px", background: "#F4FAF9", fontSize: 13, color: brand.ink, lineHeight: 1.9 }}>
                       <strong>詳細</strong> — A(仕事のストレス要因): {r.score_a}/68、B(心身のストレス反応): {r.score_b}
                       /116(基準77)、C(周囲のサポート): {r.score_c}/36、D(満足度): {r.score_d}/8、A+C: {r.score_a + r.score_c}
-                      (基準76・B63以上のとき)。判定: {r.high_stress ? "高ストレス" : "高ストレスに該当せず"}
+                      (基準76・B63以上のとき)。判定: {r.high_stress ? "高ストレス" : "高ストレスに該当せず"}{" "}
+                      <a
+                        href={`/report/${r.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: brand.tealDark, fontWeight: 700 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        📄 結果票を開く(印刷・PDF)
+                      </a>
                     </td>
                   </tr>
                 )}
