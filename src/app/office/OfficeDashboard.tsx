@@ -4,20 +4,21 @@ import { useState } from "react";
 import { Badge, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { Company } from "@/lib/types";
-import { fiscalYearOptions } from "@/lib/fiscal";
+import { fiscalYearOptions, getFiscalYear } from "@/lib/fiscal";
 import { ResultsPanel } from "@/components/ResultsPanel";
 import { InterviewPanel } from "@/components/InterviewPanel";
 import { GroupAnalysis } from "@/components/GroupAnalysis";
 import { UserAdminPanel } from "@/components/UserAdminPanel";
 import { AccessLogsPanel } from "@/components/AccessLogsPanel";
 import { CampaignPanel } from "@/components/CampaignPanel";
+import { CompanyAdminPanel } from "@/components/CompanyAdminPanel";
 
-const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "ユーザー管理", "アクセスログ"] as const;
+const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "ユーザー管理", "企業管理", "アクセスログ"] as const;
 
 export function OfficeDashboard({ companies }: { companies: Company[] }) {
   const years = fiscalYearOptions();
   const [companyId, setCompanyId] = useState(companies[0]?.id ?? "");
-  const [year, setYear] = useState(years[0]);
+  const [year, setYear] = useState(getFiscalYear());
   const [tab, setTab] = useState<(typeof TABS)[number]>("結果一覧");
 
   const company = companies.find((c) => c.id === companyId);
@@ -77,10 +78,10 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
         </div>
       </Card>
 
-      {companies.length === 0 ? (
+      {companies.length === 0 && tab !== "企業管理" ? (
         <Card>
           <p style={{ fontSize: 14, color: "#5B6B6A", margin: 0 }}>
-            契約企業が未登録です。SupabaseのTable Editorで companies に企業(name, code)を登録してください。
+            契約企業が未登録です。「企業管理」タブから企業を追加してください。
           </p>
         </Card>
       ) : (
@@ -96,6 +97,7 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
             <CampaignPanel companyId={company.id} companyName={company.name} fiscalYear={year} manage />
           )}
           {tab === "ユーザー管理" && <UserAdminPanel companies={companies} />}
+          {tab === "企業管理" && <CompanyAdminPanel companies={companies} />}
           {tab === "アクセスログ" && <AccessLogsPanel />}
         </>
       )}

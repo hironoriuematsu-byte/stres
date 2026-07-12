@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Badge, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
-import { fiscalYearOptions } from "@/lib/fiscal";
+import { fiscalYearOptions, getFiscalYear } from "@/lib/fiscal";
 import { ResultsPanel } from "@/components/ResultsPanel";
 import { InterviewPanel } from "@/components/InterviewPanel";
 import { GroupAnalysis } from "@/components/GroupAnalysis";
@@ -22,7 +22,7 @@ export function JimuDashboard({
   companyCode: string;
 }) {
   const years = fiscalYearOptions();
-  const [year, setYear] = useState(years[0]);
+  const [year, setYear] = useState(getFiscalYear());
   const [tab, setTab] = useState<(typeof TABS)[number]>("結果一覧");
 
   return (

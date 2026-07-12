@@ -42,7 +42,7 @@ Supabase SQL Editor で以下を順に実行:
 
 ### 2. 契約企業とofficeアカウントの登録
 
-1. Table Editor で `companies` に企業を登録(name, code。codeは招待時に使う企業コード。例: KYT001)
+1. 企業の登録はofficeダッシュボードの「**企業管理**」タブから行えます(企業名+企業コード。追加・名称変更が可能。初回セットアップ時などTable Editorで直接登録しても構いません)
 2. Authentication > Users で事務所メンバーを「Add user」(Auto Confirm)
 3. SQL Editor で office プロフィールを登録:
 
