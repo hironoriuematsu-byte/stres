@@ -84,10 +84,13 @@ export function ReportView({
   const profile = detailed ? computeProfile(result.answers as never, result.gender as Gender) : null;
   const advice = profile ? buildAdvice(profile, result.high_stress) : null;
 
-  const radarData = profile?.map((s) => ({
-    scale: s.label.length > 9 ? s.label.slice(0, 9) + "…" : s.label,
-    value: s.radar,
-  }));
+  const radarFor = (cat: "stressor" | "reaction" | "support") =>
+    (profile ?? [])
+      .filter((s) => s.category === cat)
+      .map((s) => ({
+        scale: s.label.length > 8 ? s.label.slice(0, 8) + "…" : s.label,
+        評価: s.radar,
+      }));
 
   return (
     <div style={{ maxWidth: 860, margin: "0 auto" }}>
@@ -173,23 +176,40 @@ export function ReportView({
           </p>
         </div>
 
-        {detailed && profile && radarData && advice ? (
+        {detailed && profile && advice ? (
           <>
-            {/* レーダーチャート */}
+            {/* レーダーチャート(3分割) */}
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "0 0 4px" }}>ストレスプロフィール(レーダーチャート)</h2>
             <p style={{ fontSize: 11.5, color: "#8A9694", margin: "0 0 4px" }}>
               素点換算表({result.gender === "male" ? "男性" : "女性"})による評価。チャートが外側に広いほど良好な状態、
               中心に向かって小さいほどストレス状況に注意が必要です。
             </p>
-            <div style={{ width: "100%", height: 340 }}>
-              <ResponsiveContainer>
-                <RadarChart data={radarData} outerRadius="72%">
-                  <PolarGrid stroke={brand.line} />
-                  <PolarAngleAxis dataKey="scale" tick={{ fontSize: 10, fill: "#44534F" }} />
-                  <PolarRadiusAxis domain={[0, 5]} tickCount={6} tick={{ fontSize: 9 }} />
-                  <Radar dataKey="value" stroke={brand.teal} fill={brand.teal} fillOpacity={0.35} />
-                </RadarChart>
-              </ResponsiveContainer>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 4 }}>
+              {(["stressor", "reaction", "support"] as const).map((cat) => (
+                <div key={cat}>
+                  <h3 style={{ fontSize: 12, color: brand.ink, textAlign: "center", margin: "8px 0 0" }}>
+                    {CATEGORY_LABEL[cat]}
+                  </h3>
+                  <div style={{ width: "100%", height: 250 }}>
+                    <ResponsiveContainer>
+                      <RadarChart data={radarFor(cat)} outerRadius="68%">
+                        <PolarGrid stroke={brand.line} />
+                        <PolarAngleAxis dataKey="scale" tick={{ fontSize: 9.5, fill: "#44534F" }} />
+                        <PolarRadiusAxis domain={[0, 5]} tickCount={6} tick={{ fontSize: 8 }} />
+                        <Radar
+                          dataKey="評価"
+                          stroke={brand.teal}
+                          strokeWidth={2}
+                          fill={brand.teal}
+                          fillOpacity={0.3}
+                          dot={{ r: 3, fill: brand.tealDark, strokeWidth: 0 }}
+                          isAnimationActive={false}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* 尺度別評価表 */}
