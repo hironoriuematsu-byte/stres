@@ -17,6 +17,7 @@ type Range = [number, number];
 export type ScaleDef = {
   key: string;
   label: string;
+  short: string; // レーダーチャート用の短縮名(重複しないこと)
   category: "stressor" | "reaction" | "support";
   direction: "negative" | "positive";
   compute: (a: Answers) => number;
@@ -31,6 +32,7 @@ export const SCALES: ScaleDef[] = [
   // ---- ストレスの原因と考えられる因子(A: 9尺度) ----
   {
     key: "quant",
+    short: "負担(量)",
     label: "心理的な仕事の負担(量)",
     category: "stressor",
     direction: "negative",
@@ -40,6 +42,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "qual",
+    short: "負担(質)",
     label: "心理的な仕事の負担(質)",
     category: "stressor",
     direction: "negative",
@@ -49,6 +52,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "physical",
+    short: "身体的負担",
     label: "自覚的な身体的負担度",
     category: "stressor",
     direction: "negative",
@@ -58,6 +62,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "interpersonal",
+    short: "対人関係",
     label: "職場の対人関係でのストレス",
     category: "stressor",
     direction: "negative",
@@ -67,6 +72,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "environment",
+    short: "職場環境",
     label: "職場環境によるストレス",
     category: "stressor",
     direction: "negative",
@@ -76,6 +82,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "control",
+    short: "コントロール",
     label: "仕事のコントロール度",
     category: "stressor",
     direction: "positive",
@@ -85,6 +92,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "skill",
+    short: "技能活用",
     label: "技能の活用度",
     category: "stressor",
     direction: "positive",
@@ -94,6 +102,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "aptitude",
+    short: "適性度",
     label: "仕事の適性度",
     category: "stressor",
     direction: "positive",
@@ -103,6 +112,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "meaning",
+    short: "働きがい",
     label: "働きがい",
     category: "stressor",
     direction: "positive",
@@ -114,6 +124,7 @@ export const SCALES: ScaleDef[] = [
   // ---- ストレスによっておこる心身の反応(B: 6尺度) ----
   {
     key: "vigor",
+    short: "活気",
     label: "活気",
     category: "reaction",
     direction: "positive",
@@ -123,6 +134,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "irritability",
+    short: "イライラ感",
     label: "イライラ感",
     category: "reaction",
     direction: "negative",
@@ -132,6 +144,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "fatigue",
+    short: "疲労感",
     label: "疲労感",
     category: "reaction",
     direction: "negative",
@@ -141,6 +154,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "anxiety",
+    short: "不安感",
     label: "不安感",
     category: "reaction",
     direction: "negative",
@@ -150,6 +164,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "depression",
+    short: "抑うつ感",
     label: "抑うつ感",
     category: "reaction",
     direction: "negative",
@@ -159,6 +174,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "somatic",
+    short: "身体愁訴",
     label: "身体愁訴",
     category: "reaction",
     direction: "negative",
@@ -170,6 +186,7 @@ export const SCALES: ScaleDef[] = [
   // ---- ストレス反応に影響を与える他の因子(C・D: 4尺度) ----
   {
     key: "boss",
+    short: "上司サポート",
     label: "上司からのサポート",
     category: "support",
     direction: "positive",
@@ -179,6 +196,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "coworker",
+    short: "同僚サポート",
     label: "同僚からのサポート",
     category: "support",
     direction: "positive",
@@ -188,6 +206,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "family",
+    short: "家族・友人",
     label: "家族・友人からのサポート",
     category: "support",
     direction: "positive",
@@ -197,6 +216,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "satisfaction",
+    short: "満足度",
     label: "仕事や生活の満足度",
     category: "support",
     direction: "positive",
@@ -209,6 +229,7 @@ export const SCALES: ScaleDef[] = [
 export type ScaleResult = {
   key: string;
   label: string;
+  short: string;
   category: ScaleDef["category"];
   direction: ScaleDef["direction"];
   raw: number; // 換算後の素点
@@ -240,6 +261,7 @@ export function computeProfile(answers: Answers, gender: Gender): ScaleResult[] 
     return {
       key: s.key,
       label: s.label,
+      short: s.short,
       category: s.category,
       direction: s.direction,
       raw,

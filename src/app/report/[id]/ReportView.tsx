@@ -88,7 +88,7 @@ export function ReportView({
     (profile ?? [])
       .filter((s) => s.category === cat)
       .map((s) => ({
-        scale: s.label.length > 8 ? s.label.slice(0, 8) + "…" : s.label,
+        scale: s.short,
         評価: s.radar,
       }));
 
