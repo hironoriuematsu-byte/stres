@@ -61,6 +61,21 @@ export function Header({
             {roleLabel ? `${roleLabel} / ` : ""}
             {name || email}
           </span>
+          <Link
+            href="/account"
+            style={{
+              background: "#fff",
+              border: `1px solid ${brand.line}`,
+              borderRadius: 8,
+              padding: "6px 12px",
+              fontSize: 12,
+              fontWeight: 700,
+              color: brand.tealDark,
+              textDecoration: "none",
+            }}
+          >
+            アカウント設定
+          </Link>
           <button
             onClick={signOut}
             style={{

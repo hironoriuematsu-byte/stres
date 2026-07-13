@@ -20,6 +20,7 @@ export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/";
+  const timedOut = params.get("reason") === "timeout";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -94,6 +95,22 @@ export function LoginForm() {
   return (
     <Card style={{ maxWidth: 440, margin: "0 auto" }}>
       <h2 style={{ fontSize: 20, color: brand.ink, margin: "0 0 14px" }}>ログイン</h2>
+      {timedOut && (
+        <div
+          style={{
+            fontSize: 13,
+            color: "#8A6B2E",
+            background: "#FBF3E3",
+            border: "1px solid #EFD9A8",
+            borderRadius: 10,
+            padding: "10px 12px",
+            marginBottom: 12,
+            lineHeight: 1.7,
+          }}
+        >
+          一定時間操作がなかったため、安全のため自動的にログアウトしました。再度ログインしてください。
+        </div>
+      )}
       <form onSubmit={submit}>
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>

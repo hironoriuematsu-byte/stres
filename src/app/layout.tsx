@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getSessionProfile } from "@/lib/auth-server";
 import { Header } from "@/components/Header";
+import { AutoLogout } from "@/components/AutoLogout";
 import { brand } from "@/lib/brand";
 import "./globals.css";
 
@@ -21,6 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           fontFamily: "'Meiryo','Hiragino Sans','Yu Gothic',sans-serif",
         }}
       >
+        {user && <AutoLogout />}
         <div style={{ padding: "0 16px" }}>
           <Header email={user?.email ?? null} role={profile?.role ?? null} name={profile?.name ?? null} />
         </div>

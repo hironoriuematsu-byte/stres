@@ -36,6 +36,13 @@ export function ExamForm({ profile }: { profile: ExamProfile }) {
 
   const fiscalYear = getFiscalYear(); // 受検は常に現在の年度で記録する
 
+  // 共有PC対策: 受検終了後にその場でログアウトできるようにする
+  const signOutAndExit = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.replace("/login");
+  };
+
   const setAnswer = (sec: keyof Answers, idx: number, v: number) => {
     setAns((p) => {
       const n = { ...p, [sec]: [...p[sec]] };
@@ -354,7 +361,13 @@ export function ExamForm({ profile }: { profile: ExamProfile }) {
           <Link href="/my">
             <Btn>マイページへ</Btn>
           </Link>
+          <Btn tone="ghost" onClick={signOutAndExit}>
+            ログアウトして終了
+          </Btn>
         </div>
+        <p style={{ fontSize: 12, color: "#8A9694", marginTop: 14, textAlign: "center", lineHeight: 1.7 }}>
+          共用のパソコンをお使いの場合は、終了時に必ず「ログアウトして終了」を押してください。
+        </p>
       </Card>
     );
   }

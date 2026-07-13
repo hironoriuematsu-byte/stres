@@ -20,7 +20,12 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
+            // 共有PC対策: 有効期限を外しセッションCookie化(削除時のみ期限を残す)
+            response.cookies.set(
+              name,
+              value,
+              value ? { ...options, maxAge: undefined, expires: undefined } : options
+            )
           );
         },
       },

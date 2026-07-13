@@ -17,7 +17,12 @@ export function createClient() {
         setAll(cookiesToSet: CookieToSet[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              // 共有PC対策: 有効期限を外しセッションCookie化(削除時のみ期限を残す)
+              cookieStore.set(
+                name,
+                value,
+                value ? { ...options, maxAge: undefined, expires: undefined } : options
+              )
             );
           } catch {
             // Server Component から呼ばれた場合は無視(middleware がセッションを更新する)
