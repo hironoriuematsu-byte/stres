@@ -130,11 +130,25 @@ export function ReportView({
         }}
       >
         {/* ヘッダ */}
-        <div style={{ borderBottom: `3px solid ${brand.teal}`, paddingBottom: 10, marginBottom: 14 }}>
-          <h1 style={{ fontSize: 20, color: brand.ink, margin: "0 0 4px" }}>ストレスチェック個人結果票</h1>
-          <p style={{ fontSize: 11, color: "#7A8886", margin: 0 }}>
-            職業性ストレス簡易調査票(57項目)/ 実施者: うえまつ産業医事務所
-          </p>
+        <div
+          style={{
+            borderBottom: `3px solid ${brand.teal}`,
+            paddingBottom: 10,
+            marginBottom: 14,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <div>
+            <h1 style={{ fontSize: 20, color: brand.ink, margin: "0 0 4px" }}>ストレスチェック個人結果票</h1>
+            <p style={{ fontSize: 11, color: "#7A8886", margin: 0 }}>
+              職業性ストレス簡易調査票(57項目)/ 実施者: うえまつ産業医事務所
+            </p>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="mestate うえまつ産業医事務所" style={{ height: 52, width: "auto" }} />
         </div>
 
         <table style={{ width: "100%", fontSize: 13, marginBottom: 16, borderCollapse: "collapse" }}>
