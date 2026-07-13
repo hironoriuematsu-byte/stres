@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card, ScoreBar } from "@/components/ui";
 import { brand } from "@/lib/brand";
@@ -26,6 +27,10 @@ export function MyPage({
   const [notice, setNotice] = useState<string | null>(null);
 
   const supabase = createClient();
+  const params = useSearchParams();
+  // 結果票・受検結果画面の「面接指導を申し出る」から遷移した場合は、申出フォームを自動で開く
+  const wantInterview = params.get("interview") === "1";
+  const autoOpened = useRef(false);
 
   const reload = useCallback(async () => {
     const [{ data: rs }, { data: irs }] = await Promise.all([
@@ -40,6 +45,18 @@ export function MyPage({
   useEffect(() => {
     reload();
   }, [reload]);
+
+  // ?interview=1 で遷移してきたら、申出可能な高ストレス結果のフォームを自動で開く
+  useEffect(() => {
+    if (!wantInterview || autoOpened.current || results === null) return;
+    const target = results.find(
+      (r) => r.high_stress && !requests.some((q) => q.result_id === r.id)
+    );
+    if (target) {
+      setShowForm(target.id);
+      autoOpened.current = true;
+    }
+  }, [wantInterview, results, requests]);
 
   const toggleConsent = async (r: ResultRow) => {
     setBusy(true);

@@ -354,7 +354,7 @@ export function ExamForm({ profile }: { profile: ExamProfile }) {
             </Link>
           )}
           {result.highStress && (
-            <Link href="/my">
+            <Link href="/my?interview=1">
               <Btn tone="orange">面接指導を申し出る</Btn>
             </Link>
           )}
