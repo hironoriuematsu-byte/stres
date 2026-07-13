@@ -3,6 +3,39 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
+export const maxDuration = 60; // 宛先数分の送信間隔・再試行に耐えられるようにする
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Resend APIは1秒あたり2リクエストまでのため、1通ずつ間隔を空けて送信し、
+// 429(レート制限)の場合は待って再試行する
+async function sendViaResend(
+  resendKey: string,
+  payload: { from: string; to: string[]; subject: string; text: string }
+): Promise<{ ok: boolean; detail?: string }> {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return { ok: true };
+      const detail = `${res.status} ${await res.text()}`;
+      if (res.status === 429) {
+        await sleep(1200 * (attempt + 1));
+        continue;
+      }
+      return { ok: false, detail };
+    } catch (e) {
+      return { ok: false, detail: String(e) };
+    }
+  }
+  return { ok: false, detail: "429 rate limited(再試行上限に達しました)" };
+}
 
 // 面接指導申出の通知メール(仕様4.1)。
 // 申出INSERT直後にフロントから呼ばれ、office全員+該当企業のjimu全員へ
@@ -88,31 +121,25 @@ export async function POST(req: Request) {
     `ログイン: ${origin}`,
   ].join("\n");
 
+  console.log(
+    `notify-interview recipients: office=${officesRes.data?.length ?? 0}, jimu=${jimusRes.data?.length ?? 0}, emails=${emails.length}`
+  );
+
   // 1人ずつ個別送信(宛先の相互開示を防ぎ、1件の失敗で全体を止めない)
   let sent = 0;
   const failures: string[] = [];
-  for (const to of emails) {
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: sender,
-          to: [to],
-          subject: "【ストレスチェックWeb】面接指導の申出があります",
-          text,
-        }),
-      });
-      if (res.ok) {
-        sent++;
-      } else {
-        failures.push(`${to}: ${res.status} ${await res.text()}`);
-      }
-    } catch (e) {
-      failures.push(`${to}: ${String(e)}`);
+  for (let i = 0; i < emails.length; i++) {
+    if (i > 0) await sleep(600); // レート制限(2通/秒)を超えないよう間隔を空ける
+    const result = await sendViaResend(resendKey, {
+      from: sender,
+      to: [emails[i]],
+      subject: "【ストレスチェックWeb】面接指導の申出があります",
+      text,
+    });
+    if (result.ok) {
+      sent++;
+    } else {
+      failures.push(`${emails[i]}: ${result.detail}`);
     }
   }
 
@@ -138,26 +165,16 @@ export async function POST(req: Request) {
       `ストレスチェックWeb: ${origin}`,
       "うえまつ産業医事務所(Mestate LLC)",
     ].join("\n");
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: sender,
-          to: [user.email],
-          subject: "【ストレスチェックWeb】面接指導の申出を受け付けました",
-          text: selfText,
-        }),
-      });
-      sentRequester = res.ok;
-      if (!res.ok) {
-        console.error("notify-interview self-send failure:", res.status, await res.text());
-      }
-    } catch (e) {
-      console.error("notify-interview self-send failure:", String(e));
+    if (emails.length > 0) await sleep(600); // レート制限対策の送信間隔
+    const result = await sendViaResend(resendKey, {
+      from: sender,
+      to: [user.email],
+      subject: "【ストレスチェックWeb】面接指導の申出を受け付けました",
+      text: selfText,
+    });
+    sentRequester = result.ok;
+    if (!result.ok) {
+      console.error("notify-interview self-send failure:", result.detail);
     }
   }
 
