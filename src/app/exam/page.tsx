@@ -22,22 +22,14 @@ export default async function ExamPage() {
   if (profile.role !== "employee") redirect(roleHome(profile.role));
 
   const supabase = createClient();
-  const [{ data: company }, { data: campaign }] = await Promise.all([
-    supabase.from("companies").select("name").eq("id", profile.company_id!).single(),
-    // 有効な配布キャンペーンがあれば、その実施年度で受検する
-    supabase
-      .from("campaigns")
-      .select("fiscal_year")
-      .eq("company_id", profile.company_id!)
-      .eq("active", true)
-      .order("fiscal_year", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  const { data: company } = await supabase
+    .from("companies")
+    .select("name")
+    .eq("id", profile.company_id!)
+    .single();
 
   return (
     <ExamForm
-      fiscalYearOverride={campaign?.fiscal_year ?? null}
       profile={{
         userId: profile.user_id,
         name: profile.name === "未設定" ? "" : profile.name,

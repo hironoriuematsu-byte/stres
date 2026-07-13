@@ -20,13 +20,7 @@ type ExamProfile = {
 
 const sections = { 1: SECTION_A, 2: SECTION_B, 4: SECTION_D } as const;
 
-export function ExamForm({
-  profile,
-  fiscalYearOverride,
-}: {
-  profile: ExamProfile;
-  fiscalYearOverride?: number | null;
-}) {
+export function ExamForm({ profile }: { profile: ExamProfile }) {
   const router = useRouter();
   const [step, setStep] = useState(0); // 0=受検者情報 1=A 2=B 3=C 4=D 5=同意 6=結果 7=年度重複
   const [name, setName] = useState(profile.name);
@@ -40,7 +34,7 @@ export function ExamForm({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const fiscalYear = fiscalYearOverride ?? getFiscalYear();
+  const fiscalYear = getFiscalYear(); // 受検は常に現在の年度で記録する
 
   const setAnswer = (sec: keyof Answers, idx: number, v: number) => {
     setAns((p) => {

@@ -129,7 +129,7 @@ export function ResultsPanel({
             .sort((a, b) => Number(b[0]) - Number(a[0]))
             .map(([y, n]) => `${y}年度(${n}件)`)
             .join("、")}
-          。右上の年度セレクタを切り替えてください(受検は配布URLに設定された実施年度で記録されます)。
+          。右上の年度セレクタを切り替えてください。
         </div>
       )}
       <div style={{ overflowX: "auto", marginTop: 14 }}>

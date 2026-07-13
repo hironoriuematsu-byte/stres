@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getSessionProfile } from "@/lib/auth-server";
+import { getSessionProfile, roleHome } from "@/lib/auth-server";
 import { Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { ReportView } from "./ReportView";
@@ -8,8 +8,13 @@ import { ReportView } from "./ReportView";
 // 個人結果票。閲覧可否はRLSに委ねる:
 //   本人=自分の結果のみ / office=全件 / jimu=自社(誓約済)のみ
 export default async function ReportPage({ params }: { params: { id: string } }) {
-  const { user } = await getSessionProfile();
+  const { user, profile } = await getSessionProfile();
   if (!user) redirect(`/login?next=/report/${params.id}`);
+
+  // 「戻る」の代わりに、閲覧者のロールに応じた固定の行き先を用意する
+  // (ブラウザ履歴で戻ると受検フローの途中に戻ってしまうため)
+  const backHref = roleHome(profile?.role);
+  const backLabel = profile?.role === "employee" ? "マイページへ" : "ダッシュボードへ";
 
   const supabase = createClient();
   const { data: result } = await supabase
@@ -44,6 +49,8 @@ export default async function ReportPage({ params }: { params: { id: string } })
       subjectName={subject?.name ?? "(不明)"}
       subjectEmpId={subject?.emp_id ?? ""}
       companyName={company?.name ?? ""}
+      backHref={backHref}
+      backLabel={backLabel}
     />
   );
 }

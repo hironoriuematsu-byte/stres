@@ -3,8 +3,8 @@ export function getFiscalYear(d: Date = new Date()): number {
   return d.getMonth() + 1 >= 4 ? d.getFullYear() : d.getFullYear() - 1;
 }
 
-// 来年度(準備・先行配布用)+ 当年度以前
-export function fiscalYearOptions(pastCount = 4): number[] {
+// 当年度〜過去4年度(誤発行防止のため来年度は含めない)
+export function fiscalYearOptions(count = 5): number[] {
   const cur = getFiscalYear();
-  return [cur + 1, ...Array.from({ length: pastCount + 1 }, (_, i) => cur - i)];
+  return Array.from({ length: count }, (_, i) => cur - i);
 }

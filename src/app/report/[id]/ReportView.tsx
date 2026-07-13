@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -68,11 +69,15 @@ export function ReportView({
   subjectName,
   subjectEmpId,
   companyName,
+  backHref,
+  backLabel,
 }: {
   result: ResultRow & { answers: unknown; gender: Gender | null };
   subjectName: string;
   subjectEmpId: string;
   companyName: string;
+  backHref: string;
+  backLabel: string;
 }) {
   useEffect(() => {
     const supabase = createClient();
@@ -105,9 +110,11 @@ export function ReportView({
       `}</style>
 
       <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
-        <Btn tone="ghost" onClick={() => history.back()} style={{ padding: "8px 14px", fontSize: 13 }}>
-          戻る
-        </Btn>
+        <Link href={backHref}>
+          <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
+            {backLabel}
+          </Btn>
+        </Link>
         <Btn onClick={() => window.print()} style={{ padding: "8px 16px", fontSize: 13 }}>
           印刷 / PDFとして保存
         </Btn>
