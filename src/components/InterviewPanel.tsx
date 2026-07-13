@@ -75,7 +75,7 @@ export function InterviewPanel({
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-              {["申出日", "氏名", "部署", "連絡事項", "希望日時", "状況", "操作"].map((h) => (
+              {["申出日", "氏名", "部署", "相談したいこと・連絡事項", "状況", "操作"].map((h) => (
                 <th key={h} style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>
                   {h}
                 </th>
@@ -92,10 +92,9 @@ export function InterviewPanel({
                   {people[r.user_id]?.name ?? "(不明)"}
                 </td>
                 <td style={{ padding: "9px 10px" }}>{people[r.user_id]?.dept ?? ""}</td>
-                <td style={{ padding: "9px 10px", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {r.message ?? "—"}
+                <td style={{ padding: "9px 10px", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {[r.message, r.preferred].filter(Boolean).join(" / ") || "—"}
                 </td>
-                <td style={{ padding: "9px 10px" }}>{r.preferred ?? "—"}</td>
                 <td style={{ padding: "9px 10px" }}>
                   <Badge tone={r.status === "pending" ? "orange" : r.status === "done" ? "teal" : "gray"}>
                     {STATUS_LABEL[r.status]}
@@ -126,7 +125,7 @@ export function InterviewPanel({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ padding: 24, textAlign: "center", color: "#8A9694" }}>
+                <td colSpan={6} style={{ padding: 24, textAlign: "center", color: "#8A9694" }}>
                   申出はまだありません。
                 </td>
               </tr>

@@ -156,8 +156,7 @@ export async function POST(req: Request) {
       "日程等について連絡がありますので、しばらくお待ちください。",
       "",
       `申出日時: ${new Date(request.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`,
-      `連絡事項: ${request.message || "(記載なし)"}`,
-      `面談の希望日時: ${request.preferred || "(記載なし)"}`,
+      `相談したいこと・連絡事項: ${request.message || "(記載なし)"}`,
       "",
       "※面接指導の申出を理由とする不利益な取り扱いは、法律で禁止されています。",
       "※このメールに心当たりがない場合は、会社の実施事務従事者までお知らせください。",
@@ -169,7 +168,7 @@ export async function POST(req: Request) {
     const result = await sendViaResend(resendKey, {
       from: sender,
       to: [user.email],
-      subject: "【ストレスチェックWeb】面接指導の申出を受け付けました",
+      subject: "【ストレスチェックWeb】産業医面接指導の申出を受け付けました",
       text: selfText,
     });
     sentRequester = result.ok;

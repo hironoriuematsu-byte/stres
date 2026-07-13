@@ -22,7 +22,6 @@ export function MyPage({
   const [requests, setRequests] = useState<InterviewRequest[]>([]);
   const [showForm, setShowForm] = useState<string | null>(null); // result_id
   const [message, setMessage] = useState("");
-  const [preferred, setPreferred] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -79,7 +78,7 @@ export function MyPage({
         user_id: r.user_id,
         company_id: companyId,
         message: message || null,
-        preferred: preferred || null,
+        preferred: null,
       })
       .select("id")
       .single();
@@ -115,7 +114,6 @@ export function MyPage({
     );
     setShowForm(null);
     setMessage("");
-    setPreferred("");
     reload();
   };
 
@@ -237,9 +235,9 @@ export function MyPage({
                   </div>
                 ) : showForm === r.id ? (
                   <div style={{ border: `1px solid ${brand.line}`, borderRadius: 10, padding: 14 }}>
-                    <h4 style={{ fontSize: 14, color: brand.ink, margin: "0 0 10px" }}>面接指導の申出</h4>
+                    <h4 style={{ fontSize: 14, color: brand.ink, margin: "0 0 10px" }}>産業医面接指導の申出</h4>
                     <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 4 }}>
-                      連絡事項(任意)
+                      相談したいこと・連絡事項(任意)
                     </label>
                     <textarea
                       value={message}
@@ -252,25 +250,8 @@ export function MyPage({
                         fontSize: 14,
                         border: `1px solid ${brand.line}`,
                         borderRadius: 8,
-                        marginBottom: 10,
-                        fontFamily: "inherit",
-                      }}
-                    />
-                    <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 4 }}>
-                      面談の希望日時(任意)
-                    </label>
-                    <input
-                      value={preferred}
-                      onChange={(e) => setPreferred(e.target.value)}
-                      placeholder="例: 平日の午後、7月中 など"
-                      style={{
-                        width: "100%",
-                        boxSizing: "border-box",
-                        padding: "8px 10px",
-                        fontSize: 14,
-                        border: `1px solid ${brand.line}`,
-                        borderRadius: 8,
                         marginBottom: 12,
+                        fontFamily: "inherit",
                       }}
                     />
                     <div style={{ display: "flex", gap: 8 }}>
