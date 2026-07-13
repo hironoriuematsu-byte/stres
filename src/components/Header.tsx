@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { brand } from "@/lib/brand";
 import { ROLE_LABEL, Role } from "@/lib/types";
@@ -16,6 +16,12 @@ export function Header({
   name: string | null;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+
+  // アカウント設定ページでは「アカウント設定」タブの代わりに戻り先を表示する
+  const onAccountPage = pathname.startsWith("/account");
+  const homeHref = role === "employee" ? "/my" : role === "jimu" ? "/jimu" : role === "office" ? "/office" : "/";
+  const homeLabel = role === "employee" ? "マイページ" : "ダッシュボード";
 
   const signOut = async () => {
     const supabase = createClient();
@@ -62,7 +68,7 @@ export function Header({
             {name || email}
           </span>
           <Link
-            href="/account"
+            href={onAccountPage ? homeHref : "/account"}
             style={{
               background: "#fff",
               border: `1px solid ${brand.line}`,
@@ -74,7 +80,7 @@ export function Header({
               textDecoration: "none",
             }}
           >
-            アカウント設定
+            {onAccountPage ? homeLabel : "アカウント設定"}
           </Link>
           <button
             onClick={signOut}

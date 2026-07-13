@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   // 申出が実在し、呼び出し元本人のものであることを確認(なりすまし・スパム送信防止)
   const { data: request } = await admin
     .from("interview_requests")
-    .select("id, user_id, company_id, created_at")
+    .select("id, user_id, company_id, created_at, message, preferred")
     .eq("id", requestId)
     .single();
   if (!request || request.user_id !== user.id) {
@@ -120,5 +120,46 @@ export async function POST(req: Request) {
     console.error("notify-interview send failures:", failures);
   }
 
-  return NextResponse.json({ sent, failed: failures.length });
+  // 申出した本人への受付確認メール(本人宛のため申出内容を含めてよい)
+  let sentRequester = false;
+  if (user.email) {
+    const selfText = [
+      "産業医面接指導の申出を受け付けました。",
+      "実施者(うえまつ産業医事務所)および会社の実施事務従事者へ通知済みです。",
+      "日程等について連絡がありますので、しばらくお待ちください。",
+      "",
+      `申出日時: ${new Date(request.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`,
+      `連絡事項: ${request.message || "(記載なし)"}`,
+      `面談の希望日時: ${request.preferred || "(記載なし)"}`,
+      "",
+      "※面接指導の申出を理由とする不利益な取り扱いは、法律で禁止されています。",
+      "※このメールに心当たりがない場合は、会社の実施事務従事者までお知らせください。",
+      "",
+      `ストレスチェックWeb: ${origin}`,
+      "うえまつ産業医事務所(Mestate LLC)",
+    ].join("\n");
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: sender,
+          to: [user.email],
+          subject: "【ストレスチェックWeb】面接指導の申出を受け付けました",
+          text: selfText,
+        }),
+      });
+      sentRequester = res.ok;
+      if (!res.ok) {
+        console.error("notify-interview self-send failure:", res.status, await res.text());
+      }
+    } catch (e) {
+      console.error("notify-interview self-send failure:", String(e));
+    }
+  }
+
+  return NextResponse.json({ sent, failed: failures.length, sentRequester });
 }

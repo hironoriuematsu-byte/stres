@@ -72,8 +72,9 @@ export function MyPage({
       return;
     }
 
-    // 実施者・実施事務従事者へのメール通知(失敗しても申出自体は有効)
+    // 実施者・実施事務従事者へのメール通知 + 本人への受付確認メール(失敗しても申出自体は有効)
     let notified = true;
+    let selfMailed = false;
     try {
       const res = await fetch("/api/notify-interview", {
         method: "POST",
@@ -82,6 +83,7 @@ export function MyPage({
       });
       const body = await res.json().catch(() => ({}));
       notified = res.ok && (body.sent ?? 0) > 0;
+      selfMailed = body.sentRequester === true;
     } catch {
       notified = false;
     }
@@ -89,7 +91,9 @@ export function MyPage({
     setBusy(false);
     setNotice(
       notified
-        ? "面接指導の申出を送信し、実施者へ通知しました。連絡があるまでお待ちください。"
+        ? selfMailed
+          ? "面接指導の申出を送信し、実施者へ通知しました。受付確認メールをあなた宛にもお送りしましたのでご確認ください。"
+          : "面接指導の申出を送信し、実施者へ通知しました。連絡があるまでお待ちください。"
         : "面接指導の申出は受け付けられました(通知メールの送信に失敗した可能性があります。実施者は画面上で申出を確認できます)。"
     );
     setShowForm(null);

@@ -286,6 +286,17 @@ export function ReportView({
           発行: うえまつ産業医事務所 / ストレスチェックWeb
         </p>
       </div>
+
+      <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+        <Link href={backHref}>
+          <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
+            {backLabel}
+          </Btn>
+        </Link>
+        <Btn onClick={() => window.print()} style={{ padding: "8px 16px", fontSize: 13 }}>
+          印刷 / PDFとして保存
+        </Btn>
+      </div>
     </div>
   );
 }
