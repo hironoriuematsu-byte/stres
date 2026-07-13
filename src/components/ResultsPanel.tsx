@@ -7,6 +7,7 @@ import { brand } from "@/lib/brand";
 import { Profile, ResultRow } from "@/lib/types";
 import { downloadCsv, resultsCsv } from "@/lib/csv";
 import { logAccess } from "@/lib/log";
+import { getFiscalYear } from "@/lib/fiscal";
 
 // office / jimu 共通: 結果一覧(高ストレスフィルタ・CSV出力・詳細閲覧ログ)
 export function ResultsPanel({
@@ -90,6 +91,29 @@ export function ResultsPanel({
     const next = openDetail === r.id ? null : r.id;
     setOpenDetail(next);
     if (next) logAccess(supabase, "view_result_detail", r.id, companyId);
+  };
+
+  // 再受験対応: 当年度かつ本人の直近の結果のみ削除可(制約はDB関数側で強制)
+  const deleteForRetake = async (r: ResultRow) => {
+    const name = people[r.user_id]?.name ?? "(不明)";
+    if (
+      !confirm(
+        `${name} さんの ${r.fiscal_year}年度の結果を削除します。\n\n` +
+          "・この操作は元に戻せません(紐づく面接指導の申出も削除されます)\n" +
+          "・削除後、本人は同年度内に再受検できます\n" +
+          "・削除の操作はアクセスログに記録されます\n\n" +
+          "本人からの再受験の申出に基づく削除ですか?"
+      )
+    ) {
+      return;
+    }
+    const { error } = await supabase.rpc("delete_result_for_retake", { p_result: r.id });
+    if (error) {
+      alert("削除できませんでした: " + error.message);
+      return;
+    }
+    setOpenDetail(null);
+    setRows((prev) => (prev ?? []).filter((x) => x.id !== r.id));
   };
 
   return (
@@ -190,6 +214,27 @@ export function ResultsPanel({
                       >
                         📄 結果票を開く(印刷・PDF)
                       </a>
+                      {r.fiscal_year === getFiscalYear() && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteForRetake(r);
+                          }}
+                          style={{
+                            marginLeft: 12,
+                            background: "#fff",
+                            border: "1px solid #D64545",
+                            color: "#B02A2A",
+                            borderRadius: 8,
+                            padding: "4px 10px",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          再受験のため削除
+                        </button>
+                      )}
                     </td>
                   </tr>
                 )}
@@ -206,7 +251,7 @@ export function ResultsPanel({
         </table>
       </div>
       <p style={{ fontSize: 12, color: "#8A9694", marginTop: 12, lineHeight: 1.7 }}>
-        行をクリックすると詳細を表示します(詳細の閲覧はアクセスログに記録されます)。結果は5年間保存され、削除・改変はできません。
+        行をクリックすると詳細を表示します(詳細の閲覧はアクセスログに記録されます)。結果は5年間保存され、原則削除・改変はできません。例外として、本人から誤回答による再受験の申出があった場合のみ、当年度かつ直近の結果を「再受験のため削除」できます(操作はログに記録されます)。
       </p>
     </Card>
   );

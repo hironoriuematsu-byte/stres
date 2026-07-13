@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card, ScoreBar } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { InterviewRequest, ResultRow, STATUS_LABEL } from "@/lib/types";
+import { getFiscalYear } from "@/lib/fiscal";
 
 export function MyPage({
   name,
@@ -101,6 +102,9 @@ export function MyPage({
     return <Card style={{ maxWidth: 720, margin: "0 auto" }}>読み込み中…</Card>;
   }
 
+  const currentFy = getFiscalYear();
+  const takenThisYear = results.some((r) => r.fiscal_year === currentFy);
+
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", display: "grid", gap: 16 }}>
       <Card>
@@ -112,9 +116,24 @@ export function MyPage({
             </h2>
             {companyName && <p style={{ fontSize: 13, color: "#5B6B6A", margin: 0 }}>{companyName}</p>}
           </div>
-          <Link href="/exam">
-            <Btn>ストレスチェックを受検する</Btn>
-          </Link>
+          {takenThisYear ? (
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: brand.tealDark,
+                background: "#E2F3F1",
+                borderRadius: 10,
+                padding: "10px 16px",
+              }}
+            >
+              ✓ {currentFy}年度は受検済みです
+            </div>
+          ) : (
+            <Link href="/exam">
+              <Btn>ストレスチェックを受検する</Btn>
+            </Link>
+          )}
         </div>
         {notice && (
           <div
