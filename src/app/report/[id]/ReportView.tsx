@@ -101,7 +101,7 @@ export function ReportView({
     <div style={{ maxWidth: 860, margin: "0 auto" }}>
       <style>{`
         @media print {
-          header, .no-print { display: none !important; }
+          header, footer, .no-print { display: none !important; }
           main { padding: 0 !important; }
           body { background: #fff !important; }
           .report-sheet { border: none !important; box-shadow: none !important; padding: 0 !important; }

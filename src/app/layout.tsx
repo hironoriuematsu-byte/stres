@@ -25,6 +25,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Header email={user?.email ?? null} role={profile?.role ?? null} name={profile?.name ?? null} />
         </div>
         <main style={{ padding: "0 16px 48px" }}>{children}</main>
+        <footer
+          style={{
+            textAlign: "center",
+            padding: "20px 16px 28px",
+            fontSize: 12,
+            color: "#8A9694",
+          }}
+        >
+          Copyright © Mestate LLC All Rights Reserved.
+        </footer>
       </body>
     </html>
   );

@@ -31,16 +31,22 @@ export function Header({
       style={{
         maxWidth: 960,
         margin: "0 auto",
-        padding: "26px 0 22px",
+        padding: "20px 0 16px",
         display: "flex",
-        alignItems: "baseline",
+        alignItems: "center",
         gap: 12,
         flexWrap: "wrap",
         justifyContent: "space-between",
       }}
     >
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-        <Link href="/" style={{ textDecoration: "none" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 12 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="mestate うえまつ産業医事務所"
+            style={{ height: 54, width: "auto", display: "block" }}
+          />
           <div style={{ fontSize: 22, fontWeight: 800, color: brand.tealDark, cursor: "pointer" }}>
             ストレスチェック<span style={{ color: brand.orange }}>Web</span>
           </div>
