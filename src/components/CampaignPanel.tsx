@@ -117,7 +117,7 @@ export function CampaignPanel({
         {campaign && (campaign.active ? <Badge>配布中</Badge> : <Badge tone="gray">停止中</Badge>)}
       </div>
       <p style={{ fontSize: 13, color: "#5B6B6A", margin: "6px 0 14px", lineHeight: 1.8 }}>
-        このURLを社内の一斉メールや掲示で従業員に配布してください。従業員はURLから自分のメールアドレス(会社・個人どちらでも可)でアカウント登録し、メール認証(本人確認)を済ませてから受検します。
+        このURLを社内の一斉メールや掲示で従業員に配布してください。従業員はURLから自分のメールアドレスでアカウント登録し、メール認証(本人確認)を済ませてから受検します。
       </p>
 
       {err && <div style={{ fontSize: 13, color: "#B02A2A", marginBottom: 10 }}>{err}</div>}

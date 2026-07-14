@@ -86,9 +86,12 @@ export function JoinForm({ token }: { token: string }) {
       <form onSubmit={submit}>
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
-            メールアドレス(会社・個人どちらでも可)
+            メールアドレス
           </label>
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={input} />
+          <p style={{ fontSize: 12, color: "#8A6B2E", background: "#FBF3E3", border: "1px solid #EFD9A8", borderRadius: 8, padding: "8px 10px", margin: "6px 0 0", lineHeight: 1.7 }}>
+            登録したメールアドレスはログインに必要です。忘れないようにメモ等に残してください。
+          </p>
         </div>
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
