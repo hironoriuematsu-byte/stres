@@ -19,7 +19,20 @@ import { Btn } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { SCALES } from "@/lib/profile-report";
 import { aggregateByDept, DeptAggregate, GroupResultInput, MIN_GROUP } from "@/lib/group-report";
+import { riskTone } from "@/lib/health-risk";
 import { logAccess } from "@/lib/log";
+
+// 健康リスク値の表示色(全国平均=100 / 120以上要注意 / 150以上要対応)
+const RISK_COLOR = {
+  teal: "#0F9B8E",
+  yellow: "#C9A227",
+  orange: "#E8792B",
+  red: "#D64545",
+  gray: "#8A9694",
+} as const;
+const RISK_BG = { teal: "#fff", yellow: "#FBF7E8", orange: "#FCEADC", red: "#FDE3E3", gray: "#fff" } as const;
+
+const rRisk = (v: number | null) => (v == null ? null : Math.round(v));
 
 const CATEGORY_LABEL = {
   stressor: "A. ストレスの原因と考えられる因子",
@@ -41,12 +54,14 @@ function JudgeScatter({
   title,
   xLabel,
   yLabel,
+  riskLabel,
   data,
 }: {
   title: string;
   xLabel: string;
   yLabel: string;
-  data: { dept: string; x: number; y: number }[];
+  riskLabel: string;
+  data: { dept: string; x: number; y: number; risk: number | null }[];
 }) {
   return (
     <div>
@@ -81,19 +96,35 @@ function JudgeScatter({
                     <div>
                       {xLabel}: {(payload[0].payload as { x: number }).x} / {yLabel}: {(payload[0].payload as { y: number }).y}
                     </div>
+                    <div>
+                      {riskLabel}: {(payload[0].payload as { risk: number | null }).risk ?? "—"}
+                    </div>
                   </div>
                 ) : null
               }
             />
             <Scatter data={data} fill={brand.teal} isAnimationActive={false}>
               <LabelList dataKey="dept" position="top" style={{ fontSize: 10, fill: "#44534F" }} />
+              <LabelList
+                dataKey="risk"
+                position="bottom"
+                formatter={(v: number | null) => (v == null ? "" : `リスク ${v}`)}
+                style={{ fontSize: 10, fontWeight: 700 }}
+              />
               {data.map((d, i) => (
-                <Cell key={i} fill={d.dept === "全体" ? brand.orange : brand.teal} />
+                <Cell key={i} fill={RISK_COLOR[riskTone(d.risk)]} />
               ))}
             </Scatter>
           </ScatterChart>
         </ResponsiveContainer>
       </div>
+      <p style={{ fontSize: 10, color: "#8A9694", textAlign: "center", margin: "0 0 4px" }}>
+        点の色と数値は{riskLabel}(全国平均=100):
+        <span style={{ color: RISK_COLOR.teal, fontWeight: 700 }}> ●100未満 </span>/
+        <span style={{ color: RISK_COLOR.yellow, fontWeight: 700 }}> ●100以上 </span>/
+        <span style={{ color: RISK_COLOR.orange, fontWeight: 700 }}> ●120以上 </span>/
+        <span style={{ color: RISK_COLOR.red, fontWeight: 700 }}> ●150以上 </span>
+      </p>
     </div>
   );
 }
@@ -135,10 +166,10 @@ export function GroupReportView({
 
   const scatter1 = groups
     .filter((g) => g.quant != null && g.control != null)
-    .map((g) => ({ dept: g.dept, x: g.control!, y: g.quant! }));
+    .map((g) => ({ dept: g.dept, x: g.control!, y: g.quant!, risk: rRisk(g.healthRisk.a) }));
   const scatter2 = groups
     .filter((g) => g.boss != null && g.coworker != null)
-    .map((g) => ({ dept: g.dept, x: g.boss!, y: g.coworker! }));
+    .map((g) => ({ dept: g.dept, x: g.boss!, y: g.coworker!, risk: rRisk(g.healthRisk.b) }));
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto" }}>
@@ -183,6 +214,22 @@ export function GroupReportView({
               <div style={{ fontSize: 18, fontWeight: 800, color: brand.tealDark }}>{v}</div>
             </div>
           ))}
+          {total && total.healthRisk.total != null && (
+            <div
+              style={{
+                border: `2px solid ${RISK_COLOR[riskTone(total.healthRisk.total)]}`,
+                background: RISK_BG[riskTone(total.healthRisk.total)],
+                borderRadius: 10,
+                padding: "10px 18px",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: 11, color: "#5B6B6A" }}>総合健康リスク(全体・全国平均=100)</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: RISK_COLOR[riskTone(total.healthRisk.total)] }}>
+                {rRisk(total.healthRisk.total)}
+              </div>
+            </div>
+          )}
         </div>
         <p style={{ fontSize: 11.5, color: brand.orange, fontWeight: 700, margin: "0 0 14px" }}>
           ※ 受検者{MIN_GROUP}名未満の部署({excludedDepts}部署)は個人特定防止のため集計から除外しています。
@@ -216,7 +263,7 @@ export function GroupReportView({
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-                    {["部署", "受検者数", "高ストレス者数", "高ストレス率", "A平均", "B平均", "C平均", "量的負担", "コントロール", "上司支援", "同僚支援"].map((h) => (
+                    {["部署", "受検者数", "高ストレス者数", "高ストレス率", "A平均", "B平均", "C平均", "量的負担", "コントロール", "上司支援", "同僚支援", "リスクA", "リスクB", "総合健康リスク"].map((h) => (
                       <th key={h} style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>
                         {h}
                       </th>
@@ -237,6 +284,22 @@ export function GroupReportView({
                       <td style={{ padding: "6px 8px" }}>{g.control ?? "—"}</td>
                       <td style={{ padding: "6px 8px" }}>{g.boss ?? "—"}</td>
                       <td style={{ padding: "6px 8px" }}>{g.coworker ?? "—"}</td>
+                      <td style={{ padding: "6px 8px", background: RISK_BG[riskTone(g.healthRisk.a)] }}>
+                        {rRisk(g.healthRisk.a) ?? "—"}
+                      </td>
+                      <td style={{ padding: "6px 8px", background: RISK_BG[riskTone(g.healthRisk.b)] }}>
+                        {rRisk(g.healthRisk.b) ?? "—"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "6px 8px",
+                          fontWeight: 800,
+                          color: RISK_COLOR[riskTone(g.healthRisk.total)],
+                          background: RISK_BG[riskTone(g.healthRisk.total)],
+                        }}
+                      >
+                        {rRisk(g.healthRisk.total) ?? "—"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -244,14 +307,33 @@ export function GroupReportView({
             </div>
 
             {/* 判定図プロット */}
-            <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 0" }}>仕事のストレス判定図(部署プロット)</h2>
+            <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 0" }}>仕事のストレス判定図(部署プロット・健康リスク)</h2>
             <p style={{ fontSize: 11, color: "#8A9694", margin: "2px 0 0" }}>
               左図は左上(負担が多くコントロールが低い)ほど、右図は左下(上司・同僚の支援がともに少ない)ほど健康リスクが高い領域です。
+              各点の下の数値がその集団の健康リスク(全国平均=100)で、健康問題の起きやすさが全国平均の何倍かを表します(例: 120なら1.2倍)。
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 8 }}>
-              <JudgeScatter title="量的負担 × コントロール判定図" xLabel="仕事のコントロール" yLabel="量的負担" data={scatter1} />
-              <JudgeScatter title="職場の支援判定図" xLabel="上司の支援" yLabel="同僚の支援" data={scatter2} />
+              <JudgeScatter
+                title="量的負担 × コントロール判定図"
+                xLabel="仕事のコントロール"
+                yLabel="量的負担"
+                riskLabel="健康リスクA"
+                data={scatter1}
+              />
+              <JudgeScatter
+                title="職場の支援判定図"
+                xLabel="上司の支援"
+                yLabel="同僚の支援"
+                riskLabel="健康リスクB"
+                data={scatter2}
+              />
             </div>
+            <p style={{ fontSize: 10.5, color: "#8A9694", margin: "4px 0 0", lineHeight: 1.7 }}>
+              ※ 健康リスクは「仕事のストレス判定図」(東京大学・職業性ストレス簡易調査票用係数、全国平均値は東京医科大学プログラムの訂正値)に基づき、
+              リスクA = 100×exp{"{"}(量的負担−全国平均)×α+(コントロール−全国平均)×β{"}"}、リスクB = 100×exp{"{"}(上司支援−全国平均)×γ+(同僚支援−全国平均)×δ{"}"}、
+              総合健康リスク = A×B÷100 で算出しています。判定図は男女別のため、男女それぞれの平均点で算出し受検者数で加重平均した値(男女計)を表示しています。
+              総合健康リスクが120以上の集団は仕事のストレスに関する問題がある可能性があり、職場環境改善の優先的な検討をおすすめします。
+            </p>
 
             {/* 尺度別平均評価点 */}
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 6px" }}>尺度別 平均評価点(素点換算・5段階)</h2>

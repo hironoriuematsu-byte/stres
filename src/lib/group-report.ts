@@ -9,6 +9,7 @@
 
 import { computeProfile, hasCompleteAnswers, Gender, SCALES } from "@/lib/profile-report";
 import { Answers } from "@/lib/questionnaire";
+import { groupHealthRisk, GroupHealthRisk } from "@/lib/health-risk";
 
 export const MIN_GROUP = 10;
 
@@ -36,6 +37,7 @@ export type DeptAggregate = {
   boss: number | null; // 上司支援 平均(3-12)
   coworker: number | null; // 同僚支援 平均(3-12)
   meanGrades: Record<string, number | null>; // 尺度key → 平均評価点
+  healthRisk: GroupHealthRisk; // 仕事のストレス判定図の健康リスク(男女計・全国平均=100)
 };
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
@@ -60,6 +62,23 @@ function aggregate(dept: string, rows: GroupResultInput[]): DeptAggregate {
 
   const js = detailed.map((r) => judgeScales(r.answers as Answers));
   const mean = (vals: number[]) => (vals.length ? r1(vals.reduce((a, b) => a + b, 0) / vals.length) : null);
+
+  // 判定図・係数は男女別のため、健康リスク算出用に男女それぞれの平均を求める
+  const genderJudgeMeans = (g: "male" | "female") => {
+    const rows2 = detailed.filter((r) => r.gender === g);
+    if (rows2.length === 0) return null;
+    const js2 = rows2.map((r) => judgeScales(r.answers as Answers));
+    const m = (f: (j: ReturnType<typeof judgeScales>) => number) =>
+      js2.reduce((t, j) => t + f(j), 0) / js2.length;
+    return {
+      quant: m((j) => j.quant),
+      control: m((j) => j.control),
+      boss: m((j) => j.boss),
+      coworker: m((j) => j.coworker),
+      n: rows2.length,
+    };
+  };
+  const healthRisk = groupHealthRisk({ male: genderJudgeMeans("male"), female: genderJudgeMeans("female") });
 
   const meanGrades: Record<string, number | null> = {};
   if (detailed.length > 0) {
@@ -86,6 +105,7 @@ function aggregate(dept: string, rows: GroupResultInput[]): DeptAggregate {
     boss: mean(js.map((j) => j.boss)),
     coworker: mean(js.map((j) => j.coworker)),
     meanGrades,
+    healthRisk,
   };
 }
 
