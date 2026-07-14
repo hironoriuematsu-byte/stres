@@ -63,7 +63,7 @@ export function ExamForm({ profile }: { profile: ExamProfile }) {
     // (失敗しても受検自体は続行する)
     await supabase
       .from("profiles")
-      .update({ name, emp_id: empId, dept })
+      .update({ name, emp_id: empId || null, dept })
       .eq("user_id", profile.userId);
 
     const { data: inserted, error } = await supabase
@@ -117,7 +117,7 @@ export function ExamForm({ profile }: { profile: ExamProfile }) {
         <Badge>STEP 1 / 6</Badge>
         <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 4px" }}>受検者情報</h2>
         <p style={{ fontSize: 13, color: "#5B6B6A", marginBottom: 14 }}>
-          ストレスチェックを開始します。氏名・社員番号・部署を入力してください。
+          ストレスチェックを開始します。氏名・部署・性別を入力してください(社員番号は任意です)。
         </p>
         <div
           style={{
@@ -139,7 +139,7 @@ export function ExamForm({ profile }: { profile: ExamProfile }) {
         </div>
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
-            社員番号
+            社員番号(任意)
           </label>
           <input value={empId} onChange={(e) => setEmpId(e.target.value)} placeholder="例: 10234" style={input} />
         </div>
@@ -168,7 +168,7 @@ export function ExamForm({ profile }: { profile: ExamProfile }) {
           <Btn tone="ghost" onClick={() => router.push("/my")}>
             戻る
           </Btn>
-          <Btn onClick={() => setStep(1)} disabled={!name || !empId || !dept || !gender}>
+          <Btn onClick={() => setStep(1)} disabled={!name || !dept || !gender}>
             回答をはじめる
           </Btn>
         </div>
