@@ -12,7 +12,7 @@ export default async function JimuPage() {
 
   // 未誓約の実施事務従事者はRLSにより結果が0件になるため、先に誓約画面へ誘導(仕様1)
   if (!profile.no_personnel_authority) {
-    return <Attestation />;
+    return <Attestation initialName={profile.name === "未設定" ? "" : profile.name} />;
   }
 
   const supabase = createClient();
