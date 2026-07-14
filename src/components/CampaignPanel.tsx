@@ -15,12 +15,9 @@ type Campaign = {
   created_at: string;
 };
 
-function newToken() {
-  return (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "");
-}
-
 // 受検用配布URL・QRコードの発行/表示
 // office: 発行・再発行・停止が可能 / jimu: 自社分の閲覧・コピーのみ
+// 操作はすべてSECURITY DEFINERのRPC経由(0009)。テーブルRLSの状態に依存しない
 export function CampaignPanel({
   companyId,
   companyName,
@@ -42,10 +39,7 @@ export function CampaignPanel({
 
   const reload = useCallback(async () => {
     const { data, error } = await supabase
-      .from("campaigns")
-      .select("*")
-      .eq("company_id", companyId)
-      .eq("fiscal_year", fiscalYear)
+      .rpc("get_campaign", { p_company: companyId, p_year: fiscalYear })
       .maybeSingle();
     if (error) setErr(error.message);
     setCampaign((data as Campaign) ?? null);
@@ -74,9 +68,9 @@ export function CampaignPanel({
   const issue = async () => {
     setBusy(true);
     setErr(null);
-    const { error } = await supabase.from("campaigns").insert({
-      company_id: companyId,
-      fiscal_year: fiscalYear,
+    const { error } = await supabase.rpc("issue_campaign", {
+      p_company: companyId,
+      p_year: fiscalYear,
     });
     if (error) setErr(error.message);
     setBusy(false);
@@ -87,10 +81,7 @@ export function CampaignPanel({
     if (campaign === "loading" || !campaign) return;
     if (!confirm("URLを再発行すると、配布済みの旧URLは使えなくなります。よろしいですか?")) return;
     setBusy(true);
-    const { error } = await supabase
-      .from("campaigns")
-      .update({ token: newToken(), active: true })
-      .eq("id", campaign.id);
+    const { error } = await supabase.rpc("rotate_campaign", { p_campaign: campaign.id });
     if (error) setErr(error.message);
     setBusy(false);
     reload();
@@ -99,10 +90,10 @@ export function CampaignPanel({
   const toggleActive = async () => {
     if (campaign === "loading" || !campaign) return;
     setBusy(true);
-    const { error } = await supabase
-      .from("campaigns")
-      .update({ active: !campaign.active })
-      .eq("id", campaign.id);
+    const { error } = await supabase.rpc("set_campaign_active", {
+      p_campaign: campaign.id,
+      p_active: !campaign.active,
+    });
     if (error) setErr(error.message);
     setBusy(false);
     reload();
