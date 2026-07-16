@@ -72,9 +72,10 @@ export function resultsCsv(rows: ResultCsvRow[], meta?: ResultCsvMeta): string {
   const highRate = rows.length ? Math.round((highN / rows.length) * 1000) / 10 : 0;
   const headerLines = [
     ["ストレスチェック結果一覧"],
-    ["システム", "ストレスチェックWeb 職業性ストレス簡易調査票(57項目)準拠"],
-    ["実施者名・所在地", "上松弘典 うえまつ産業医事務所 京都府京都市中京区錦小路通室町西入天神山町280 4階"],
-    ["企業名", meta.companyName],
+    ["システム", "ストレスチェックWeb 職業性ストレス簡易調査票(57項目)準拠/うえまつ産業医事務所"],
+    ["実施者名", "産業医 上松 弘典"],
+    ["産業医所属機関名・所在地", "うえまつ産業医事務所 京都府京都市中京区錦小路通室町西入天神山町280 4階"],
+    ["事業場名", meta.companyName],
     ["実施年度", `${meta.fiscalYear}年度`],
     ["受検者数", `${rows.length}名`],
     ["高ストレス者数", `${highN}名`],
