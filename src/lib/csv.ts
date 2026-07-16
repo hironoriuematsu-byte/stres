@@ -41,8 +41,14 @@ export const RESULT_CSV_HEADERS = [
   "同意有無",
 ];
 
-export function resultsCsv(rows: ResultCsvRow[]): string {
-  return buildCsv(
+export type ResultCsvMeta = {
+  companyName: string;
+  fiscalYear: number;
+  interviewCount: number; // 面接指導を希望(申出)した人数
+};
+
+export function resultsCsv(rows: ResultCsvRow[], meta?: ResultCsvMeta): string {
+  const body = buildCsv(
     RESULT_CSV_HEADERS,
     rows.map((r) => [
       new Date(r.created_at).toLocaleDateString("ja-JP"),
@@ -58,6 +64,27 @@ export function resultsCsv(rows: ResultCsvRow[]): string {
       r.consent ? "同意あり" : "同意なし",
     ])
   );
+
+  if (!meta) return body;
+
+  // 冒頭に実施情報とサマリーを付ける(BOMは先頭に1つだけ)
+  const highN = rows.filter((r) => r.high_stress).length;
+  const highRate = rows.length ? Math.round((highN / rows.length) * 1000) / 10 : 0;
+  const headerLines = [
+    ["ストレスチェック結果一覧"],
+    ["システム", "ストレスチェックWeb 職業性ストレス簡易調査票(57項目)準拠"],
+    ["企業名", meta.companyName],
+    ["実施年度", `${meta.fiscalYear}年度`],
+    ["受検者数", `${rows.length}名`],
+    ["高ストレス者数", `${highN}名`],
+    ["高ストレス者割合", `${highRate}%`],
+    ["面接指導希望者数", `${meta.interviewCount}名`],
+    [],
+  ]
+    .map((line) => line.map(escapeField).join(","))
+    .join("\r\n");
+
+  return "\uFEFF" + headerLines + "\r\n" + body.replace(/^\uFEFF/, "");
 }
 
 export function downloadCsv(filename: string, content: string) {

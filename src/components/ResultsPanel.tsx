@@ -22,6 +22,7 @@ export function ResultsPanel({
   const [rows, setRows] = useState<ResultRow[] | null>(null);
   const [people, setPeople] = useState<Record<string, Profile>>({});
   const [otherYears, setOtherYears] = useState<Record<number, number>>({});
+  const [interviewResultIds, setInterviewResultIds] = useState<Set<string>>(new Set());
   const [onlyHigh, setOnlyHigh] = useState(false);
   const [openDetail, setOpenDetail] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export function ResultsPanel({
     setRows(null);
     setErr(null);
     (async () => {
-      const [{ data: rs, error: e1 }, { data: ps }, { data: allYears }] = await Promise.all([
+      const [{ data: rs, error: e1 }, { data: ps }, { data: allYears }, { data: irs }] = await Promise.all([
         supabase
           .from("results")
           .select("*")
@@ -42,6 +43,8 @@ export function ResultsPanel({
         supabase.from("profiles").select("*").eq("company_id", companyId),
         // 年度の取り違えに気づけるよう、この企業のデータがある年度を集計する
         supabase.from("results").select("fiscal_year").eq("company_id", companyId),
+        // CSVサマリー用: 面接指導の申出(結果IDで年度を突き合わせる)
+        supabase.from("interview_requests").select("result_id").eq("company_id", companyId),
       ]);
       if (e1) {
         setErr(e1.message);
@@ -56,6 +59,7 @@ export function ResultsPanel({
         yearCounts[r.fiscal_year] = (yearCounts[r.fiscal_year] ?? 0) + 1;
       });
       setOtherYears(yearCounts);
+      setInterviewResultIds(new Set(((irs as { result_id: string }[]) ?? []).map((x) => x.result_id)));
       setRows((rs as ResultRow[]) ?? []);
       logAccess(supabase, "view_results", `${companyName}/${fiscalYear}`, companyId);
     })();
@@ -81,7 +85,13 @@ export function ResultsPanel({
         score_d: r.score_d,
         high_stress: r.high_stress,
         consent: r.consent,
-      }))
+      })),
+      {
+        companyName,
+        fiscalYear,
+        // 表示中の年度の結果に紐づく申出のみを数える
+        interviewCount: rows.filter((r) => interviewResultIds.has(r.id)).length,
+      }
     );
     downloadCsv(`stresscheck_${companyName}_${fiscalYear}.csv`, content);
     logAccess(supabase, "export_csv", `${companyName}/${fiscalYear}`, companyId);

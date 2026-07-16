@@ -35,6 +35,37 @@ describe("CSV出力(受け入れテスト6: Excelで文字化けしない)", () 
     const csv = buildCsv(["v"], [['a,"b"\nc']]);
     expect(csv).toContain('"a,""b""\nc"');
   });
+
+  it("メタ情報付き: 実施年度・準拠調査票・サマリーが冒頭に入る", () => {
+    const row = {
+      created_at: "2026-07-01T00:00:00Z",
+      fiscal_year: 2026,
+      name: "山田 太郎",
+      emp_id: "10234",
+      dept: "製造部",
+      score_a: 40,
+      score_b: 80,
+      score_c: 20,
+      score_d: 5,
+      high_stress: true,
+      consent: false,
+    };
+    const csv = resultsCsv([row, { ...row, name: "佐藤 花子", high_stress: false }], {
+      companyName: "メステート合同会社",
+      fiscalYear: 2026,
+      interviewCount: 1,
+    });
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    expect(csv.slice(1).includes("﻿")).toBe(false); // BOMは先頭に1つだけ
+    expect(csv).toContain("ストレスチェックWeb 職業性ストレス簡易調査票(57項目)準拠");
+    expect(csv).toContain("企業名,メステート合同会社");
+    expect(csv).toContain("実施年度,2026年度");
+    expect(csv).toContain("受検者数,2名");
+    expect(csv).toContain("高ストレス者数,1名");
+    expect(csv).toContain("高ストレス者割合,50%");
+    expect(csv).toContain("面接指導希望者数,1名");
+    expect(csv).toContain(RESULT_CSV_HEADERS.join(","));
+  });
 });
 
 describe("招待CSVパーサ(メール, 企業コード)", () => {
