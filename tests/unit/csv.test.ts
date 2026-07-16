@@ -59,14 +59,16 @@ describe("CSV出力(受け入れテスト6: Excelで文字化けしない)", () 
     expect(csv.slice(1).includes("﻿")).toBe(false); // BOMは先頭に1つだけ
     expect(csv).toContain("システム,ストレスチェックWeb 職業性ストレス簡易調査票(57項目)準拠/うえまつ産業医事務所");
     expect(csv).toContain("実施者名,産業医 上松 弘典");
-    expect(csv).toContain("産業医所属機関名・所在地,うえまつ産業医事務所 京都府京都市中京区錦小路通室町西入天神山町280 4階");
+    expect(csv).toContain("産業医所在地,うえまつ産業医事務所 京都府京都市中京区錦小路通室町西入天神山町280 4階");
+    expect(csv).not.toContain("産業医所属機関名");
     expect(csv).toContain("事業場名,メステート合同会社");
     expect(csv).not.toContain("企業名,");
     expect(csv).toContain("実施年度,2026年度");
-    expect(csv).toContain("受検者数,2名");
-    expect(csv).toContain("高ストレス者数,1名");
+    // 人数はExcelで右揃えになるよう数値のまま(「名」を付けない)
+    expect(csv).toContain("受検者数,2\r\n");
+    expect(csv).toContain("高ストレス者数,1\r\n");
     expect(csv).toContain("高ストレス者割合,50%");
-    expect(csv).toContain("面接指導希望者数,1名");
+    expect(csv).toContain("面接指導希望者数,1\r\n");
     expect(csv).toContain(RESULT_CSV_HEADERS.join(","));
   });
 });
