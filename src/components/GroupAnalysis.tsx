@@ -74,11 +74,13 @@ export function GroupAnalysis({
         )}
       </div>
       <p style={{ fontSize: 12, color: brand.orange, fontWeight: 700, margin: "0 0 12px" }}>
-        ※ 10名未満の部署は個人特定防止のため表示されません
+        ※ 10名未満の部署は個人特定防止のため表示されません(全体は受検者の合計が10名以上であれば表示されます)
       </p>
 
       {rows.length === 0 ? (
-        <p style={{ fontSize: 13, color: "#8A9694" }}>表示できる部署がありません(受検者10名以上の部署がまだない年度です)。</p>
+        <p style={{ fontSize: 13, color: "#8A9694" }}>
+          まだ表示できる集計がありません(受検者の合計が10名以上になると「全体」の集計が表示されます)。
+        </p>
       ) : (
         <>
           <div style={{ width: "100%", height: Math.max(120, rows.length * 48) }}>
@@ -106,7 +108,10 @@ export function GroupAnalysis({
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.dept} style={{ borderBottom: `1px solid ${brand.line}` }}>
+                  <tr
+                    key={r.dept}
+                    style={{ borderBottom: `1px solid ${brand.line}`, background: r.dept === "全体" ? "#F4FAF9" : "#fff" }}
+                  >
                     <td style={{ padding: "9px 10px", fontWeight: 700, color: brand.ink }}>{r.dept}</td>
                     <td style={{ padding: "9px 10px" }}>{r.n}</td>
                     <td style={{ padding: "9px 10px" }}>{r.high_n}</td>
