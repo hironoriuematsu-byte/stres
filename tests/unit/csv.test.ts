@@ -58,6 +58,9 @@ describe("CSV出力(受け入れテスト6: Excelで文字化けしない)", () 
     expect(csv.charCodeAt(0)).toBe(0xfeff);
     expect(csv.slice(1).includes("﻿")).toBe(false); // BOMは先頭に1つだけ
     expect(csv).toContain("ストレスチェックWeb 職業性ストレス簡易調査票(57項目)準拠");
+    expect(csv).toContain("実施者名,産業医 上松弘典");
+    expect(csv).toContain("所属機関名称,うえまつ産業医事務所");
+    expect(csv).toContain("所属機関住所,京都府京都市中京区錦小路通室町西入天神山町280 4階");
     expect(csv).toContain("企業名,メステート合同会社");
     expect(csv).toContain("実施年度,2026年度");
     expect(csv).toContain("受検者数,2名");

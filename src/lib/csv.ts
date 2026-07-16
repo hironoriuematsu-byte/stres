@@ -73,6 +73,9 @@ export function resultsCsv(rows: ResultCsvRow[], meta?: ResultCsvMeta): string {
   const headerLines = [
     ["ストレスチェック結果一覧"],
     ["システム", "ストレスチェックWeb 職業性ストレス簡易調査票(57項目)準拠"],
+    ["実施者名", "産業医 上松弘典"],
+    ["所属機関名称", "うえまつ産業医事務所"],
+    ["所属機関住所", "京都府京都市中京区錦小路通室町西入天神山町280 4階"],
     ["企業名", meta.companyName],
     ["実施年度", `${meta.fiscalYear}年度`],
     ["受検者数", `${rows.length}名`],
