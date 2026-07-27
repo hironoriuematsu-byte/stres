@@ -26,6 +26,8 @@ export function ResultsPanel({
   const [onlyHigh, setOnlyHigh] = useState(false);
   const [openDetail, setOpenDetail] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [deptEdit, setDeptEdit] = useState("");
+  const [deptBusy, setDeptBusy] = useState(false);
 
   const supabase = createClient();
 
@@ -100,7 +102,31 @@ export function ResultsPanel({
   const showDetail = (r: ResultRow) => {
     const next = openDetail === r.id ? null : r.id;
     setOpenDetail(next);
+    setDeptEdit(r.dept);
     if (next) logAccess(supabase, "view_result_detail", r.id, companyId);
+  };
+
+  // 部署名の表記ゆれ修正(集団分析で同一部署として集計できるようにする)
+  const saveDept = async (r: ResultRow) => {
+    const next = deptEdit.trim();
+    if (!next || next === r.dept) return;
+    setDeptBusy(true);
+    const { error } = await supabase.rpc("update_employee_dept", {
+      p_user: r.user_id,
+      p_year: r.fiscal_year,
+      p_dept: next,
+    });
+    setDeptBusy(false);
+    if (error) {
+      alert("部署名を変更できませんでした: " + error.message);
+      return;
+    }
+    setRows((prev) =>
+      (prev ?? []).map((x) => (x.user_id === r.user_id && x.fiscal_year === r.fiscal_year ? { ...x, dept: next } : x))
+    );
+    setPeople((prev) =>
+      prev[r.user_id] ? { ...prev, [r.user_id]: { ...prev[r.user_id], dept: next } } : prev
+    );
   };
 
   // 再受験対応: 当年度かつ本人の直近の結果のみ削除可(制約はDB関数側で強制)
@@ -224,6 +250,43 @@ export function ResultsPanel({
                       >
                         📄 結果票を開く(印刷・PDF)
                       </a>
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}
+                      >
+                        <span style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>部署名の修正:</span>
+                        <input
+                          value={deptEdit}
+                          onChange={(e) => setDeptEdit(e.target.value)}
+                          placeholder="例: 営業部"
+                          style={{
+                            padding: "5px 10px",
+                            fontSize: 13,
+                            border: `1px solid ${brand.line}`,
+                            borderRadius: 8,
+                            width: 180,
+                          }}
+                        />
+                        <button
+                          onClick={() => saveDept(r)}
+                          disabled={deptBusy || !deptEdit.trim() || deptEdit.trim() === r.dept}
+                          style={{
+                            background: "#fff",
+                            border: `1px solid ${brand.teal}`,
+                            color: brand.tealDark,
+                            borderRadius: 8,
+                            padding: "5px 12px",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {deptBusy ? "変更中…" : "変更を保存"}
+                        </button>
+                        <span style={{ fontSize: 11, color: "#8A9694" }}>
+                          表記ゆれ(例: 営業/営業部)を統一すると集団分析で同じ部署として集計されます(操作はログに記録されます)
+                        </span>
+                      </div>
                       {r.fiscal_year === getFiscalYear() && (
                         <button
                           onClick={(e) => {

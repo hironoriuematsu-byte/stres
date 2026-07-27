@@ -25,6 +25,7 @@ const ACTION_LABEL: Record<string, string> = {
   interview_request_created: "面接指導の申出",
   delete_result_for_retake: "結果削除(再受験対応)",
   view_group_report: "集団分析報告書の表示",
+  update_dept: "部署名の修正",
 };
 
 export function AccessLogsPanel() {
