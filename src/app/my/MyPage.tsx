@@ -22,6 +22,8 @@ export function MyPage({
   const [requests, setRequests] = useState<InterviewRequest[]>([]);
   const [showForm, setShowForm] = useState<string | null>(null); // result_id
   const [message, setMessage] = useState("");
+  // 申出に伴う事業者への結果提供同意(告示によるみなし同意)の確認チェック
+  const [consentAgree, setConsentAgree] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -70,7 +72,21 @@ export function MyPage({
   };
 
   const submitRequest = async (r: ResultRow) => {
+    // 告示(平成30年厚労省告示第322号ほか)により、面接指導の申出をもって
+    // 結果の事業者への提供に同意したものとみなされるため、同意確認を必須とし、
+    // 申出と同時に同意を記録する
+    if (!r.consent && !consentAgree) return;
     setBusy(true);
+
+    if (!r.consent) {
+      const { error: cErr } = await supabase.from("results").update({ consent: true }).eq("id", r.id);
+      if (cErr) {
+        setBusy(false);
+        setNotice("同意の記録に失敗したため、申出を中断しました: " + cErr.message);
+        return;
+      }
+    }
+
     const { data: inserted, error } = await supabase
       .from("interview_requests")
       .insert({
@@ -114,6 +130,7 @@ export function MyPage({
     );
     setShowForm(null);
     setMessage("");
+    setConsentAgree(false);
     reload();
   };
 
@@ -254,17 +271,66 @@ export function MyPage({
                         fontFamily: "inherit",
                       }}
                     />
+                    <div
+                      style={{
+                        fontSize: 12.5,
+                        color: "#8A6B2E",
+                        background: "#FBF3E3",
+                        border: "1px solid #EFD9A8",
+                        borderRadius: 10,
+                        padding: "10px 12px",
+                        marginBottom: 12,
+                        lineHeight: 1.8,
+                      }}
+                    >
+                      <strong>申出の前にご確認ください:</strong>{" "}
+                      面接指導の申出を行うと、厚生労働省の指針により、あなたのストレスチェック結果を事業者(会社)へ提供することに同意したものとみなされます。
+                      {!r.consent && (
+                        <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 8, cursor: "pointer", color: brand.ink }}>
+                          <input
+                            type="checkbox"
+                            checked={consentAgree}
+                            onChange={(e) => setConsentAgree(e.target.checked)}
+                            style={{ marginTop: 3 }}
+                          />
+                          <span style={{ fontWeight: 700 }}>
+                            ストレスチェック結果を事業者(会社)へ提供することに同意して、面接指導を申し出ます
+                          </span>
+                        </label>
+                      )}
+                      {r.consent && (
+                        <span>(あなたはすでに結果の提供に同意済みです)</span>
+                      )}
+                    </div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <Btn tone="ghost" onClick={() => setShowForm(null)} style={{ padding: "8px 14px", fontSize: 13 }}>
+                      <Btn
+                        tone="ghost"
+                        onClick={() => {
+                          setShowForm(null);
+                          setConsentAgree(false);
+                        }}
+                        style={{ padding: "8px 14px", fontSize: 13 }}
+                      >
                         キャンセル
                       </Btn>
-                      <Btn tone="orange" onClick={() => submitRequest(r)} disabled={busy} style={{ padding: "8px 14px", fontSize: 13 }}>
+                      <Btn
+                        tone="orange"
+                        onClick={() => submitRequest(r)}
+                        disabled={busy || (!r.consent && !consentAgree)}
+                        style={{ padding: "8px 14px", fontSize: 13 }}
+                      >
                         {busy ? "送信中…" : "申出を送信する"}
                       </Btn>
                     </div>
                   </div>
                 ) : (
-                  <Btn tone="orange" onClick={() => setShowForm(r.id)}>
+                  <Btn
+                    tone="orange"
+                    onClick={() => {
+                      setShowForm(r.id);
+                      setConsentAgree(false);
+                    }}
+                  >
                     産業医面接指導を申し出る
                   </Btn>
                 )}

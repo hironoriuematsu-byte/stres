@@ -158,6 +158,7 @@ export async function POST(req: Request) {
       `申出日時: ${new Date(request.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`,
       `相談したいこと・連絡事項: ${request.message || "(記載なし)"}`,
       "",
+      "※本申出により、厚生労働省の指針に基づき、ストレスチェック結果を事業者へ提供することに同意したものとして取り扱われます。",
       "※面接指導の申出を理由とする不利益な取り扱いは、法律で禁止されています。",
       "※このメールに心当たりがない場合は、会社の実施事務従事者までお知らせください。",
       "",
