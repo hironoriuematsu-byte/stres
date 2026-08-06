@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
+import { logAccess } from "@/lib/log";
 import { Company } from "@/lib/types";
 
 const input = {
@@ -25,14 +26,34 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [sortKey, setSortKey] = useState<"name" | "code">("name");
+  const [sortAsc, setSortAsc] = useState(true);
 
   const supabase = createClient();
+
+  const sorted = useMemo(() => {
+    const list = [...companies].sort((a, b) => a[sortKey].localeCompare(b[sortKey], "ja"));
+    return sortAsc ? list : list.reverse();
+  }, [companies, sortKey, sortAsc]);
+
+  const toggleSort = (key: "name" | "code") => {
+    if (sortKey === key) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortKey(key);
+      setSortAsc(true);
+    }
+  };
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setNotice(null);
-    const { error } = await supabase.from("companies").insert({ name: name.trim(), code: code.trim() });
+    const { data: created, error } = await supabase
+      .from("companies")
+      .insert({ name: name.trim(), code: code.trim() })
+      .select("id")
+      .single();
     setBusy(false);
     if (error) {
       setNotice(
@@ -42,6 +63,7 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
       );
       return;
     }
+    logAccess(supabase, "company_created", `${name.trim()} (${code.trim()})`, created?.id ?? null);
     setNotice(`「${name}」を追加しました。`);
     setName("");
     setCode("");
@@ -56,6 +78,7 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
       setNotice("名称変更に失敗しました: " + error.message);
       return;
     }
+    logAccess(supabase, "company_renamed", `${c.name}→${editName.trim()}`, c.id);
     setEditing(null);
     setNotice("名称を変更しました。");
     router.refresh();
@@ -110,15 +133,26 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-              {["企業名", "企業コード", "操作"].map((h) => (
-                <th key={h} style={{ textAlign: "left", padding: "9px 10px" }}>
-                  {h}
+              {(
+                [
+                  ["企業名", "name"],
+                  ["企業コード", "code"],
+                ] as const
+              ).map(([label, key]) => (
+                <th
+                  key={key}
+                  onClick={() => toggleSort(key)}
+                  title="クリックで並べ替え"
+                  style={{ textAlign: "left", padding: "9px 10px", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+                >
+                  {label} {sortKey === key ? (sortAsc ? "▲" : "▼") : "△"}
                 </th>
               ))}
+              <th style={{ textAlign: "left", padding: "9px 10px" }}>操作</th>
             </tr>
           </thead>
           <tbody>
-            {companies.map((c) => (
+            {sorted.map((c) => (
               <tr key={c.id} style={{ borderBottom: `1px solid ${brand.line}` }}>
                 <td style={{ padding: "9px 10px", fontWeight: 700, color: brand.ink }}>
                   {editing === c.id ? (

@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
+import { logAccess } from "@/lib/log";
 
 type Campaign = {
   id: string;
@@ -50,6 +51,8 @@ export function CampaignPanel({
     setCampaign("loading");
     setErr(null);
     reload();
+    logAccess(supabase, "view_campaign", `${companyName}/${fiscalYear}`, companyId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reload]);
 
   const url =
@@ -73,6 +76,7 @@ export function CampaignPanel({
       p_year: fiscalYear,
     });
     if (error) setErr(error.message);
+    else logAccess(supabase, "issue_campaign", `${companyName}/${fiscalYear}`, companyId);
     setBusy(false);
     reload();
   };
@@ -83,6 +87,7 @@ export function CampaignPanel({
     setBusy(true);
     const { error } = await supabase.rpc("rotate_campaign", { p_campaign: campaign.id });
     if (error) setErr(error.message);
+    else logAccess(supabase, "rotate_campaign", `${companyName}/${fiscalYear}`, companyId);
     setBusy(false);
     reload();
   };
@@ -95,6 +100,13 @@ export function CampaignPanel({
       p_active: !campaign.active,
     });
     if (error) setErr(error.message);
+    else
+      logAccess(
+        supabase,
+        campaign.active ? "campaign_deactivated" : "campaign_activated",
+        `${companyName}/${fiscalYear}`,
+        companyId
+      );
     setBusy(false);
     reload();
   };

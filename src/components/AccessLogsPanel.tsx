@@ -26,6 +26,13 @@ const ACTION_LABEL: Record<string, string> = {
   delete_result_for_retake: "結果削除(再受験対応)",
   view_group_report: "集団分析報告書の表示",
   update_dept: "部署名の修正",
+  company_created: "企業の追加",
+  company_renamed: "企業名の変更",
+  view_campaign: "配布URL・QRの表示",
+  issue_campaign: "配布URLの発行",
+  rotate_campaign: "配布URLの再発行",
+  campaign_activated: "配布の再開",
+  campaign_deactivated: "配布の停止",
 };
 
 export function AccessLogsPanel() {
