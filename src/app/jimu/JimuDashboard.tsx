@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Card } from "@/components/ui";
+import Link from "next/link";
+import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { fiscalYearOptions, getFiscalYear } from "@/lib/fiscal";
 import { ResultsPanel } from "@/components/ResultsPanel";
@@ -33,17 +34,24 @@ export function JimuDashboard({
             <Badge tone="orange">実施事務従事者ダッシュボード</Badge>
             <h2 style={{ fontSize: 20, color: brand.ink, margin: "10px 0 0" }}>{companyName}</h2>
           </div>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            style={{ padding: "8px 10px", fontSize: 14, border: `1px solid ${brand.line}`, borderRadius: 9 }}
-          >
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}年度
-              </option>
-            ))}
-          </select>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <Link href="/my">
+              <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
+                自分の受検(マイページ)
+              </Btn>
+            </Link>
+            <select
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              style={{ padding: "8px 10px", fontSize: 14, border: `1px solid ${brand.line}`, borderRadius: 9 }}
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}年度
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <div style={{ display: "flex", gap: 6, marginTop: 16, flexWrap: "wrap" }}>
           {TABS.map((t) => (

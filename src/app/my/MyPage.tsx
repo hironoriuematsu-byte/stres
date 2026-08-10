@@ -146,7 +146,7 @@ export function MyPage({
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div>
-            <Badge>従業員マイページ</Badge>
+            <Badge>マイページ(受検者)</Badge>
             <h2 style={{ fontSize: 20, color: brand.ink, margin: "10px 0 2px" }}>
               {name ? `${name} さん` : "受検者ページ"}
             </h2>

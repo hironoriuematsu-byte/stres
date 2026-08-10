@@ -7,7 +7,8 @@ export default async function My() {
   const { user, profile } = await getSessionProfile();
 
   if (!user) redirect("/login?next=/my");
-  if (!profile || profile.role !== "employee") redirect(roleHome(profile?.role));
+  // 従業員に加えて実施事務従事者も自分の受検・結果の確認ができる
+  if (!profile || (profile.role !== "employee" && profile.role !== "jimu")) redirect(roleHome(profile?.role));
 
   const supabase = createClient();
   const { data: company } = await supabase

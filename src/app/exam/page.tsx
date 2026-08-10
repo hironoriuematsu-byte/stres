@@ -21,7 +21,8 @@ export default async function ExamPage() {
       </Card>
     );
   }
-  if (profile.role !== "employee") redirect(roleHome(profile.role));
+  // 従業員に加えて実施事務従事者も自分のアカウントで受検できる
+  if (profile.role !== "employee" && profile.role !== "jimu") redirect(roleHome(profile.role));
 
   const supabase = createClient();
   const fiscalYear = getFiscalYear();
