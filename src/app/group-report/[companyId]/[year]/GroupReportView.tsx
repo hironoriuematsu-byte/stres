@@ -7,6 +7,12 @@ import {
   CartesianGrid,
   Cell,
   LabelList,
+  Legend,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -39,6 +45,101 @@ const CATEGORY_LABEL = {
   reaction: "B. ストレスによっておこる心身の反応",
   support: "C. サポート・満足度",
 } as const;
+
+// 職場のストレスプロフィール(レーダーチャート)。個人結果票と同じく
+// 「外側ほど良好」に統一するため、悪い方向が高得点の尺度は反転して描画する。
+// 全国平均は評価点の中央値(5段階=3、単一項目の4段階=2.5)を基準線とする。
+function radarDataFor(
+  cat: "stressor" | "reaction" | "support",
+  group: DeptAggregate,
+  total: DeptAggregate | null
+) {
+  return SCALES.filter((s) => s.category === cat).map((s) => {
+    const max = s.male.length;
+    const inv = (v: number | null) =>
+      v == null ? null : s.direction === "negative" ? max + 1 - v : v;
+    const row: Record<string, string | number | null> = {
+      scale: s.short,
+      全国平均: (1 + max) / 2,
+      部署: group.detailCount > 0 ? inv(group.meanGrades[s.key]) : null,
+    };
+    if (total && total.dept !== group.dept && total.detailCount > 0) {
+      row["全体"] = inv(total.meanGrades[s.key]);
+    }
+    return row;
+  });
+}
+
+function GroupRadarBlock({ group, total }: { group: DeptAggregate; total: DeptAggregate | null }) {
+  const showTotal = total && total.dept !== group.dept && total.detailCount > 0;
+  return (
+    <div style={{ pageBreakInside: "avoid", marginTop: 10 }}>
+      <h3 style={{ fontSize: 13.5, color: brand.ink, margin: "0 0 2px" }}>
+        {group.dept}
+        <span style={{ fontSize: 11, color: "#8A9694", fontWeight: 400 }}>
+          (集計対象 {group.detailCount} 名)
+        </span>
+      </h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 4 }}>
+        {(
+          [
+            ["stressor", CATEGORY_LABEL.stressor],
+            ["reaction", CATEGORY_LABEL.reaction],
+            ["support", CATEGORY_LABEL.support],
+          ] as const
+        ).map(([cat, label]) => (
+          <div key={cat}>
+            <p style={{ fontSize: 11, color: brand.tealDark, textAlign: "center", margin: "4px 0 0", fontWeight: 700 }}>
+              {label}
+            </p>
+            <div style={{ width: "100%", height: 230 }}>
+              <ResponsiveContainer>
+                <RadarChart data={radarDataFor(cat, group, total)} outerRadius="68%">
+                  <PolarGrid stroke={brand.line} />
+                  <PolarAngleAxis dataKey="scale" tick={{ fontSize: 9.5 }} />
+                  <PolarRadiusAxis domain={[1, 5]} tickCount={5} tick={{ fontSize: 8.5 }} angle={90} />
+                  <Radar
+                    name="全国平均"
+                    dataKey="全国平均"
+                    stroke="#8A9694"
+                    strokeDasharray="4 3"
+                    strokeWidth={1.5}
+                    fill="#8A9694"
+                    fillOpacity={0}
+                    isAnimationActive={false}
+                  />
+                  {showTotal && (
+                    <Radar
+                      name="全体平均"
+                      dataKey="全体"
+                      stroke={brand.orange}
+                      strokeWidth={2}
+                      fill={brand.orange}
+                      fillOpacity={0.06}
+                      dot={{ r: 2 }}
+                      isAnimationActive={false}
+                    />
+                  )}
+                  <Radar
+                    name={group.dept === "全体" ? "全体平均" : `${group.dept}平均`}
+                    dataKey="部署"
+                    stroke={brand.teal}
+                    strokeWidth={2}
+                    fill={brand.teal}
+                    fillOpacity={0.12}
+                    dot={{ r: 2.5 }}
+                    isAnimationActive={false}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 10.5 }} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // 平均評価点のセル色(悪い方向を赤系で強調)
 function gradeCellColor(key: string, v: number | null): string {
@@ -334,6 +435,26 @@ export function GroupReportView({
               総合健康リスク = A×B÷100 で算出しています。判定図は男女別のため、男女それぞれの平均点で算出し受検者数で加重平均した値(男女計)を表示しています。
               総合健康リスクが120以上の集団は仕事のストレスに関する問題がある可能性があり、職場環境改善の優先的な検討をおすすめします。
             </p>
+
+            {/* 職場のストレスプロフィール(レーダーチャート) */}
+            <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 0" }}>
+              職場のストレスプロフィール(部署別レーダーチャート)
+            </h2>
+            <p style={{ fontSize: 11, color: "#8A9694", margin: "2px 0 0", lineHeight: 1.7 }}>
+              各部署の平均評価点を、全体平均(オレンジ)・全国平均(灰色の点線)と重ねて表示します。
+              個人結果票と同じく<strong>外側ほど良好</strong>になるよう統一しています(負担・反応系の尺度は反転して描画)。
+              灰色の点線(全国平均 = 評価点3、単一項目尺度は2.5)より内側にへこんでいる項目が、全国平均より悪い方向の項目です。
+            </p>
+            {groups
+              .filter((g) => g.detailCount > 0)
+              .map((g) => (
+                <GroupRadarBlock key={g.dept} group={g} total={total} />
+              ))}
+            {groups.every((g) => g.detailCount === 0) && (
+              <p style={{ fontSize: 12, color: "#8A9694", margin: "8px 0 0" }}>
+                回答詳細と性別が記録されたデータがないため、レーダーチャートは表示できません。
+              </p>
+            )}
 
             {/* 尺度別平均評価点 */}
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 6px" }}>尺度別 平均評価点(素点換算・5段階)</h2>
