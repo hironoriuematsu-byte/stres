@@ -1,15 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Btn, Card } from "@/components/ui";
+import { createClient } from "@/lib/supabase/client";
+import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
-import { Company } from "@/lib/types";
+import { Company, ROLE_LABEL, Role } from "@/lib/types";
 import { parseCsv, parseInviteCsv } from "@/lib/parse-csv";
 
 type InvitePayload = {
   email: string;
   company_code: string;
   role: "employee" | "jimu";
+};
+
+type Member = {
+  user_id: string;
+  name: string;
+  emp_id: string | null;
+  dept: string | null;
+  role: string;
+  email: string;
 };
 
 const input = {
@@ -38,6 +48,56 @@ export function UserAdminPanel({
   });
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState<string[]>([]);
+  // メンバー一覧・ロール変更(officeのみ)
+  const [memberCompanyId, setMemberCompanyId] = useState(companies?.[0]?.id ?? "");
+  const [members, setMembers] = useState<Member[] | null>(null);
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [memberErr, setMemberErr] = useState<string | null>(null);
+
+  const loadMembers = async (companyId: string) => {
+    if (!companyId) return;
+    setMemberBusy(true);
+    setMemberErr(null);
+    try {
+      const res = await fetch("/api/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyId }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setMemberErr(body.error ?? res.statusText);
+        setMembers([]);
+      } else {
+        setMembers(body.members as Member[]);
+      }
+    } catch (e) {
+      setMemberErr(String(e));
+      setMembers([]);
+    }
+    setMemberBusy(false);
+  };
+
+  const changeRole = async (m: Member, nextRole: "employee" | "jimu") => {
+    const label = nextRole === "jimu" ? "実施事務従事者" : "従業員";
+    const extra =
+      nextRole === "jimu"
+        ? "変更後、本人は初回アクセス時に誓約(氏名確認・人事権なしの確認)を行うと結果閲覧などが可能になります。"
+        : "変更後、本人は自分のマイページ(受検・自分の結果)のみ利用できます。";
+    if (!confirm(`${m.name || m.email} さんのロールを「${label}」に変更します。\n\n${extra}\n・操作はアクセスログに記録されます\n\nよろしいですか?`)) {
+      return;
+    }
+    setMemberBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("change_user_role", { p_user: m.user_id, p_role: nextRole });
+    if (error) {
+      alert("ロールを変更できませんでした: " + error.message);
+      setMemberBusy(false);
+      return;
+    }
+    await loadMembers(memberCompanyId);
+    setMemberBusy(false);
+  };
 
   const send = async (invites: InvitePayload[]) => {
     setBusy(true);
@@ -154,6 +214,81 @@ export function UserAdminPanel({
           style={{ fontSize: 13 }}
         />
       </div>
+
+      {!jimuMode && (
+        <div style={{ marginTop: 20, borderTop: `1px solid ${brand.line}`, paddingTop: 16 }}>
+          <h4 style={{ fontSize: 15, color: brand.ink, margin: "0 0 6px" }}>メンバー一覧・ロール変更</h4>
+          <p style={{ fontSize: 12.5, color: "#5B6B6A", margin: "0 0 10px", lineHeight: 1.7 }}>
+            実施事務従事者の交代時などに、従業員⇔実施事務従事者のロールを変更できます(実施者アカウントは対象外・操作はログに記録)。
+          </p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+            <select
+              value={memberCompanyId}
+              onChange={(e) => setMemberCompanyId(e.target.value)}
+              style={{ ...input, width: "auto", minWidth: 220 }}
+            >
+              {(companies ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}({c.code})
+                </option>
+              ))}
+            </select>
+            <Btn tone="ghost" onClick={() => loadMembers(memberCompanyId)} disabled={memberBusy} style={{ padding: "8px 14px", fontSize: 13 }}>
+              {memberBusy ? "読み込み中…" : "メンバーを表示"}
+            </Btn>
+          </div>
+          {memberErr && <div style={{ fontSize: 13, color: "#B02A2A", marginBottom: 8 }}>{memberErr}</div>}
+          {members !== null && (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
+                    {["氏名", "メールアドレス", "社員番号", "部署", "ロール", "操作"].map((h) => (
+                      <th key={h} style={{ textAlign: "left", padding: "8px 10px", whiteSpace: "nowrap" }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((m) => (
+                    <tr key={m.user_id} style={{ borderBottom: `1px solid ${brand.line}` }}>
+                      <td style={{ padding: "8px 10px", fontWeight: 700, color: brand.ink }}>{m.name}</td>
+                      <td style={{ padding: "8px 10px" }}>{m.email}</td>
+                      <td style={{ padding: "8px 10px" }}>{m.emp_id ?? ""}</td>
+                      <td style={{ padding: "8px 10px" }}>{m.dept ?? ""}</td>
+                      <td style={{ padding: "8px 10px" }}>
+                        <Badge tone={m.role === "jimu" ? "orange" : "gray"}>
+                          {m.role in ROLE_LABEL ? ROLE_LABEL[m.role as Role] : m.role}
+                        </Badge>
+                      </td>
+                      <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                        {m.role === "employee" && (
+                          <Btn tone="ghost" onClick={() => changeRole(m, "jimu")} disabled={memberBusy} style={{ padding: "5px 12px", fontSize: 12 }}>
+                            実施事務従事者にする
+                          </Btn>
+                        )}
+                        {m.role === "jimu" && (
+                          <Btn tone="ghost" onClick={() => changeRole(m, "employee")} disabled={memberBusy} style={{ padding: "5px 12px", fontSize: 12 }}>
+                            従業員に戻す
+                          </Btn>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {members.length === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 20, textAlign: "center", color: "#8A9694" }}>
+                        メンバーがいません。
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {log.length > 0 && (
         <div

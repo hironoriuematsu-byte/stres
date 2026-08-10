@@ -33,6 +33,7 @@ const ACTION_LABEL: Record<string, string> = {
   rotate_campaign: "配布URLの再発行",
   campaign_activated: "配布の再開",
   campaign_deactivated: "配布の停止",
+  change_role: "ロール変更",
 };
 
 export function AccessLogsPanel() {
