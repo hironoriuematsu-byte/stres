@@ -155,13 +155,18 @@ function GroupRadarBlock({ group, total }: { group: DeptAggregate; total: DeptAg
   );
 }
 
-// 平均評価点のセル色(悪い方向を赤系で強調)
+// 平均評価点のセル色(悪い方向を赤系で強調)。
+// 基準(3.4/4.0)は5段階尺度の目盛りに基づくため、単一項目の4段階尺度は
+// 1〜5の目盛りに線形換算してから判定する(4段階の目盛りでは
+// 概ね2.8以上=注意、3.25以上=要注意に相当。レーダーチャートの換算と同一)
 function gradeCellColor(key: string, v: number | null): string {
   if (v == null) return "#fff";
   const def = SCALES.find((s) => s.key === key)!;
-  const bad = def.direction === "negative" ? v : (def.male.length + 1) - v;
-  if (bad >= 4) return "#FDE3E3";
-  if (bad >= 3.4) return "#FCEADC";
+  const max = def.male.length;
+  const bad = def.direction === "negative" ? v : max + 1 - v;
+  const scaled = max === 4 ? 1 + ((bad - 1) * 4) / 3 : bad;
+  if (scaled >= 4) return "#FDE3E3";
+  if (scaled >= 3.4) return "#FCEADC";
   return "#fff";
 }
 
@@ -520,10 +525,12 @@ export function GroupReportView({
                 負担・反応系の尺度は点が高いほど悪い方向、コントロール・サポート系の尺度は点が低いほど悪い方向を意味します。
               </p>
               <p style={{ margin: "4px 0 0" }}>
-                ※ 網掛けの基準(悪い方向に換算した平均評価点):{" "}
+                ※ 網掛けの基準(悪い方向に換算した平均評価点、5段階の目盛り):{" "}
                 <span style={{ background: "#FCEADC", padding: "1px 8px", borderRadius: 4 }}>3.4以上 = 注意</span>{" "}
                 <span style={{ background: "#FDE3E3", padding: "1px 8px", borderRadius: 4 }}>4.0以上 = 要注意</span>{" "}
-                (全国平均3を基準に、それぞれ「やや悪い」「明らかに悪い」水準の目安)。網掛けのない欄は概ね全国平均並みか良好です。
+                (全国平均3を基準に、それぞれ「やや悪い」「明らかに悪い」水準の目安)。
+                単一項目の4段階尺度は1〜5の目盛りに換算してから同じ基準で判定します(4段階の目盛りでは概ね2.8以上=注意、3.25以上=要注意に相当)。
+                網掛けのない欄は概ね基準並みか良好です。
               </p>
               <p style={{ margin: "4px 0 0" }}>
                 ※ 回答詳細のない旧データは尺度別集計から除外されています。
