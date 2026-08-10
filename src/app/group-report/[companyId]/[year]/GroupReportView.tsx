@@ -170,6 +170,45 @@ function gradeCellColor(key: string, v: number | null): string {
   return "#fff";
 }
 
+// 判定図プロット用の番号表記(①〜⑳、それ以降は (21) 形式)
+export function plotNum(i: number): string {
+  const circled = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳";
+  return i < 20 ? circled[i] : `(${i + 1})`;
+}
+
+type PlotPoint = {
+  x: number;
+  y: number;
+  label: string; // 番号(座標が一致する部署はまとめて表示: 例「①③」)
+  worstRisk: number | null; // 点の色分け用(重なった場合は最も高いリスク)
+  items: { num: string; dept: string; risk: number | null }[];
+};
+
+// 座標が完全に一致する部署を1つの点にまとめる(ラベルの完全な重なりを防ぐ)
+function mergePoints(
+  entries: { num: string; dept: string; x: number; y: number; risk: number | null }[]
+): PlotPoint[] {
+  const byCoord = new Map<string, PlotPoint>();
+  for (const e of entries) {
+    const key = `${e.x}/${e.y}`;
+    const p = byCoord.get(key);
+    if (p) {
+      p.items.push({ num: e.num, dept: e.dept, risk: e.risk });
+      p.label += e.num;
+      if (e.risk != null && (p.worstRisk == null || e.risk > p.worstRisk)) p.worstRisk = e.risk;
+    } else {
+      byCoord.set(key, {
+        x: e.x,
+        y: e.y,
+        label: e.num,
+        worstRisk: e.risk,
+        items: [{ num: e.num, dept: e.dept, risk: e.risk }],
+      });
+    }
+  }
+  return [...byCoord.values()];
+}
+
 function JudgeScatter({
   title,
   xLabel,
@@ -181,7 +220,7 @@ function JudgeScatter({
   xLabel: string;
   yLabel: string;
   riskLabel: string;
-  data: { dept: string; x: number; y: number; risk: number | null }[];
+  data: PlotPoint[];
 }) {
   return (
     <div>
@@ -211,35 +250,37 @@ function JudgeScatter({
               labelFormatter={() => ""}
               content={({ payload }) =>
                 payload && payload.length > 0 ? (
-                  <div style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 8, padding: "6px 10px", fontSize: 12 }}>
-                    <strong>{(payload[0].payload as { dept: string }).dept}</strong>
-                    <div>
-                      {xLabel}: {(payload[0].payload as { x: number }).x} / {yLabel}: {(payload[0].payload as { y: number }).y}
-                    </div>
-                    <div>
-                      {riskLabel}: {(payload[0].payload as { risk: number | null }).risk ?? "—"}
+                  <div style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 8, padding: "6px 10px", fontSize: 12, lineHeight: 1.7 }}>
+                    {(payload[0].payload as PlotPoint).items.map((it) => (
+                      <div key={it.num}>
+                        <strong>
+                          {it.num} {it.dept}
+                        </strong>{" "}
+                        {riskLabel}: {it.risk ?? "—"}
+                      </div>
+                    ))}
+                    <div style={{ color: "#8A9694" }}>
+                      {xLabel}: {(payload[0].payload as PlotPoint).x} / {yLabel}: {(payload[0].payload as PlotPoint).y}
                     </div>
                   </div>
                 ) : null
               }
             />
             <Scatter data={data} fill={brand.teal} isAnimationActive={false}>
-              <LabelList dataKey="dept" position="top" style={{ fontSize: 10, fill: "#44534F" }} />
               <LabelList
-                dataKey="risk"
-                position="bottom"
-                formatter={(v: number | null) => (v == null ? "" : `リスク ${v}`)}
-                style={{ fontSize: 10, fontWeight: 700 }}
+                dataKey="label"
+                position="top"
+                style={{ fontSize: 12, fontWeight: 700, fill: "#22333B" }}
               />
               {data.map((d, i) => (
-                <Cell key={i} fill={RISK_COLOR[riskTone(d.risk)]} />
+                <Cell key={i} fill={RISK_COLOR[riskTone(d.worstRisk)]} />
               ))}
             </Scatter>
           </ScatterChart>
         </ResponsiveContainer>
       </div>
       <p style={{ fontSize: 10, color: "#8A9694", textAlign: "center", margin: "0 0 4px" }}>
-        点の色と数値は{riskLabel}(全国平均=100):
+        点の色は{riskLabel}(全国平均=100):
         <span style={{ color: RISK_COLOR.teal, fontWeight: 700 }}> ●100未満 </span>/
         <span style={{ color: RISK_COLOR.yellow, fontWeight: 700 }}> ●100以上 </span>/
         <span style={{ color: RISK_COLOR.orange, fontWeight: 700 }}> ●120以上 </span>/
@@ -284,12 +325,17 @@ export function GroupReportView({
   const { total, depts, excludedDepts } = aggregateByDept(rows);
   const groups: DeptAggregate[] = [...depts, ...(total ? [total] : [])];
 
-  const scatter1 = groups
-    .filter((g) => g.quant != null && g.control != null)
-    .map((g) => ({ dept: g.dept, x: g.control!, y: g.quant!, risk: rRisk(g.healthRisk.a) }));
-  const scatter2 = groups
-    .filter((g) => g.boss != null && g.coworker != null)
-    .map((g) => ({ dept: g.dept, x: g.boss!, y: g.coworker!, risk: rRisk(g.healthRisk.b) }));
+  // 判定図: 部署名の代わりに番号で点を打ち、対応表を図の下に示す(ラベルの重なり対策)
+  const plotted = groups.filter(
+    (g) => g.quant != null && g.control != null && g.boss != null && g.coworker != null
+  );
+  const numbered = plotted.map((g, i) => ({ g, num: plotNum(i) }));
+  const scatter1 = mergePoints(
+    numbered.map(({ g, num }) => ({ num, dept: g.dept, x: g.control!, y: g.quant!, risk: rRisk(g.healthRisk.a) }))
+  );
+  const scatter2 = mergePoints(
+    numbered.map(({ g, num }) => ({ num, dept: g.dept, x: g.boss!, y: g.coworker!, risk: rRisk(g.healthRisk.b) }))
+  );
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto" }}>
@@ -430,7 +476,8 @@ export function GroupReportView({
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 0" }}>仕事のストレス判定図(部署プロット・健康リスク)</h2>
             <p style={{ fontSize: 11, color: "#8A9694", margin: "2px 0 0" }}>
               左図は左上(負担が多くコントロールが低い)ほど、右図は左下(上司・同僚の支援がともに少ない)ほど健康リスクが高い領域です。
-              各点の下の数値がその集団の健康リスク(全国平均=100)で、健康問題の起きやすさが全国平均の何倍かを表します(例: 120なら1.2倍)。
+              図中の番号は下の対応表の部署を表します(座標が同じ部署は番号をまとめて表示)。健康リスクは全国平均=100で、
+              健康問題の起きやすさが全国平均の何倍かを表します(例: 120なら1.2倍)。
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 8 }}>
               <JudgeScatter
@@ -447,6 +494,45 @@ export function GroupReportView({
                 riskLabel="健康リスクB"
                 data={scatter2}
               />
+            </div>
+            {/* 番号と部署の対応表 */}
+            <div style={{ overflowX: "auto", marginTop: 6 }}>
+              <table style={{ borderCollapse: "collapse", fontSize: 11.5 }}>
+                <thead>
+                  <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
+                    {["番号", "部署", "リスクA(量-コントロール)", "リスクB(職場の支援)", "総合健康リスク"].map((h) => (
+                      <th key={h} style={{ textAlign: "left", padding: "5px 10px", whiteSpace: "nowrap", border: `1px solid ${brand.line}` }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {numbered.map(({ g, num }) => (
+                    <tr key={g.dept} style={{ background: g.dept === "全体" ? "#F4FAF9" : "#fff" }}>
+                      <td style={{ padding: "4px 10px", fontWeight: 700, border: `1px solid ${brand.line}` }}>{num}</td>
+                      <td style={{ padding: "4px 10px", fontWeight: 700, color: brand.ink, border: `1px solid ${brand.line}` }}>{g.dept}</td>
+                      <td style={{ padding: "4px 10px", border: `1px solid ${brand.line}`, background: RISK_BG[riskTone(g.healthRisk.a)] }}>
+                        {rRisk(g.healthRisk.a) ?? "—"}
+                      </td>
+                      <td style={{ padding: "4px 10px", border: `1px solid ${brand.line}`, background: RISK_BG[riskTone(g.healthRisk.b)] }}>
+                        {rRisk(g.healthRisk.b) ?? "—"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "4px 10px",
+                          fontWeight: 800,
+                          border: `1px solid ${brand.line}`,
+                          color: RISK_COLOR[riskTone(g.healthRisk.total)],
+                          background: RISK_BG[riskTone(g.healthRisk.total)],
+                        }}
+                      >
+                        {rRisk(g.healthRisk.total) ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
             <p style={{ fontSize: 10.5, color: "#8A9694", margin: "4px 0 0", lineHeight: 1.7 }}>
               ※ 健康リスクは「仕事のストレス判定図」(東京大学・職業性ストレス簡易調査票用係数、全国平均値は東京医科大学プログラムの訂正値)に基づき、
