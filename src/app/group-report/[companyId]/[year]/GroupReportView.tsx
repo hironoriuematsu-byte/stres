@@ -48,7 +48,13 @@ const CATEGORY_LABEL = {
 
 // 職場のストレスプロフィール(レーダーチャート)。個人結果票と同じく
 // 「外側ほど良好」に統一するため、悪い方向が高得点の尺度は反転して描画する。
-// 全国平均は評価点の中央値(5段階=3、単一項目の4段階=2.5)を基準線とする。
+//
+// 基準点(全国平均水準)は全尺度で3に統一する:
+// - 5段階尺度: 素点換算表は全国分布で10%/23.3%/33.3%/23.3%/10%と
+//   なるよう設計されており、評価点の期待値は3
+// - 単一項目の4段階尺度: 期待値2.5を3に揃えるため1〜5の目盛りへ線形換算
+// 評価点は男女別換算表で個人ごとに算出後に平均するため、
+// 集団平均は実際の男女構成で加重された値になる。
 function radarDataFor(
   cat: "stressor" | "reaction" | "support",
   group: DeptAggregate,
@@ -56,15 +62,20 @@ function radarDataFor(
 ) {
   return SCALES.filter((s) => s.category === cat).map((s) => {
     const max = s.male.length;
-    const inv = (v: number | null) =>
-      v == null ? null : s.direction === "negative" ? max + 1 - v : v;
+    const disp = (v: number | null) => {
+      if (v == null) return null;
+      const outer = s.direction === "negative" ? max + 1 - v : v; // 外側ほど良好に反転
+      // 4段階(1〜4)は1〜5に線形換算して基準点を3に統一(5段階はそのまま)
+      const scaled = max === 4 ? 1 + ((outer - 1) * 4) / 3 : outer;
+      return Math.round(scaled * 100) / 100;
+    };
     const row: Record<string, string | number | null> = {
       scale: s.short,
-      全国平均: (1 + max) / 2,
-      部署: group.detailCount > 0 ? inv(group.meanGrades[s.key]) : null,
+      全国平均: 3,
+      部署: group.detailCount > 0 ? disp(group.meanGrades[s.key]) : null,
     };
     if (total && total.dept !== group.dept && total.detailCount > 0) {
-      row["全体"] = inv(total.meanGrades[s.key]);
+      row["全体"] = disp(total.meanGrades[s.key]);
     }
     return row;
   });
@@ -443,7 +454,11 @@ export function GroupReportView({
             <p style={{ fontSize: 11, color: "#8A9694", margin: "2px 0 0", lineHeight: 1.7 }}>
               各部署の平均評価点を、全体平均(オレンジ)・全国平均(灰色の点線)と重ねて表示します。
               個人結果票と同じく<strong>外側ほど良好</strong>になるよう統一しています(負担・反応系の尺度は反転して描画)。
-              灰色の点線(全国平均 = 評価点3、単一項目尺度は2.5)より内側にへこんでいる項目が、全国平均より悪い方向の項目です。
+              基準点は<strong>全尺度で「3 = 全国平均水準」に統一</strong>しています:
+              5段階の尺度は素点換算表の設計(全国分布の10%/23.3%/33.3%/23.3%/10%区分)上、評価点の期待値が3となり、
+              単一項目の4段階尺度は期待値(2.5)が3に一致するよう1〜5の目盛りへ換算して描画しています。
+              評価点は男女別の換算表で個人ごとに算出してから平均するため、集団の値は実際の男女構成で加重されています。
+              灰色の点線(3)より内側にへこんでいる項目が、全国平均より悪い方向の項目です。
             </p>
             {groups
               .filter((g) => g.detailCount > 0)
