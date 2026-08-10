@@ -35,7 +35,7 @@ export function MyPage({
 
   const reload = useCallback(async () => {
     const [{ data: rs }, { data: irs }] = await Promise.all([
-      supabase.from("results").select("*").order("fiscal_year", { ascending: false }),
+      supabase.from("results").select("id, user_id, company_id, dept, fiscal_year, score_a, score_b, score_c, score_d, high_stress, consent, created_at").order("fiscal_year", { ascending: false }),
       supabase.from("interview_requests").select("*").order("created_at", { ascending: false }),
     ]);
     setResults((rs as ResultRow[]) ?? []);

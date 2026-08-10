@@ -38,11 +38,12 @@ export function ResultsPanel({
       const [{ data: rs, error: e1 }, { data: ps }, { data: allYears }, { data: irs }] = await Promise.all([
         supabase
           .from("results")
-          .select("*")
+          // 一覧に必要な列のみ取得(57問分の回答データを転送しない)
+          .select("id, user_id, company_id, dept, fiscal_year, score_a, score_b, score_c, score_d, high_stress, consent, created_at")
           .eq("company_id", companyId)
           .eq("fiscal_year", fiscalYear)
           .order("created_at", { ascending: false }),
-        supabase.from("profiles").select("*").eq("company_id", companyId),
+        supabase.from("profiles").select("user_id, name, emp_id, dept").eq("company_id", companyId),
         // 年度の取り違えに気づけるよう、この企業のデータがある年度を集計する
         supabase.from("results").select("fiscal_year").eq("company_id", companyId),
         // CSVサマリー用: 面接指導の申出(結果IDで年度を突き合わせる)

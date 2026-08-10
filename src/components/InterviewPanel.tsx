@@ -35,7 +35,7 @@ export function InterviewPanel({
         .select("*")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
-      supabase.from("profiles").select("*").eq("company_id", companyId),
+      supabase.from("profiles").select("user_id, name, emp_id, dept").eq("company_id", companyId),
     ]);
     if (e1) {
       setErr(e1.message);

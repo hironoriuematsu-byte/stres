@@ -54,7 +54,7 @@ export function AccessLogsPanel() {
     let q = supabase.from("access_logs").select("*").order("created_at", { ascending: false }).limit(300);
     if (from) q = q.gte("created_at", `${from}T00:00:00+09:00`);
     if (to) q = q.lte("created_at", `${to}T23:59:59+09:00`);
-    const [{ data: logs }, { data: ps }] = await Promise.all([q, supabase.from("profiles").select("*")]);
+    const [{ data: logs }, { data: ps }] = await Promise.all([q, supabase.from("profiles").select("user_id, name")]);
     const map: Record<string, Profile> = {};
     ((ps as Profile[]) ?? []).forEach((p) => (map[p.user_id] = p));
     setPeople(map);

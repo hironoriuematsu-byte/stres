@@ -1,18 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Badge, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { Company } from "@/lib/types";
 import { fiscalYearOptions, getFiscalYear } from "@/lib/fiscal";
-import { ResultsPanel } from "@/components/ResultsPanel";
-import { InterviewPanel } from "@/components/InterviewPanel";
-import { GroupAnalysis } from "@/components/GroupAnalysis";
-import { UserAdminPanel } from "@/components/UserAdminPanel";
-import { AccessLogsPanel } from "@/components/AccessLogsPanel";
-import { CampaignPanel } from "@/components/CampaignPanel";
-import { CompanyAdminPanel } from "@/components/CompanyAdminPanel";
 import { DashboardMenu, MenuItem } from "@/components/DashboardMenu";
+
+// 各パネルはタブを開いたときに初めて読み込む(初期表示の高速化。
+// グラフ描画・QRコード生成などの大きなライブラリを先読みしない)
+const panelLoading = () => <Card>読み込み中…</Card>;
+const ResultsPanel = dynamic(() => import("@/components/ResultsPanel").then((m) => m.ResultsPanel), { loading: panelLoading, ssr: false });
+const InterviewPanel = dynamic(() => import("@/components/InterviewPanel").then((m) => m.InterviewPanel), { loading: panelLoading, ssr: false });
+const GroupAnalysis = dynamic(() => import("@/components/GroupAnalysis").then((m) => m.GroupAnalysis), { loading: panelLoading, ssr: false });
+const UserAdminPanel = dynamic(() => import("@/components/UserAdminPanel").then((m) => m.UserAdminPanel), { loading: panelLoading, ssr: false });
+const AccessLogsPanel = dynamic(() => import("@/components/AccessLogsPanel").then((m) => m.AccessLogsPanel), { loading: panelLoading, ssr: false });
+const CampaignPanel = dynamic(() => import("@/components/CampaignPanel").then((m) => m.CampaignPanel), { loading: panelLoading, ssr: false });
+const CompanyAdminPanel = dynamic(() => import("@/components/CompanyAdminPanel").then((m) => m.CompanyAdminPanel), { loading: panelLoading, ssr: false });
 
 const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "ユーザー管理", "企業管理", "アクセスログ"] as const;
 type Tab = (typeof TABS)[number];
