@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Btn, Card } from "@/components/ui";
+import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { Profile, ROLE_LABEL, Role } from "@/lib/types";
 
@@ -36,11 +36,17 @@ const ACTION_LABEL: Record<string, string> = {
   change_role: "ロール変更",
 };
 
+// 閲覧(view_*)か操作(データの作成・変更・出力)かの分類
+type LogKind = "all" | "view" | "operation";
+const kindOf = (action: string): Exclude<LogKind, "all"> =>
+  action.startsWith("view_") ? "view" : "operation";
+
 export function AccessLogsPanel() {
   const [rows, setRows] = useState<LogRow[] | null>(null);
   const [people, setPeople] = useState<Record<string, Profile>>({});
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [kind, setKind] = useState<LogKind>("all");
 
   const supabase = createClient();
 
@@ -62,11 +68,13 @@ export function AccessLogsPanel() {
 
   if (rows === null) return <Card>読み込み中…</Card>;
 
+  const shown = kind === "all" ? rows : rows.filter((r) => kindOf(r.action) === kind);
+
   return (
     <Card>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <h3 style={{ fontSize: 17, color: brand.ink, margin: 0 }}>アクセスログ(最新300件)</h3>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, flexWrap: "wrap" }}>
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ padding: "6px 8px", border: `1px solid ${brand.line}`, borderRadius: 8 }} />
           〜
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ padding: "6px 8px", border: `1px solid ${brand.line}`, borderRadius: 8 }} />
@@ -75,11 +83,37 @@ export function AccessLogsPanel() {
           </Btn>
         </div>
       </div>
-      <div style={{ overflowX: "auto", marginTop: 14 }}>
+      <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+        {(
+          [
+            ["all", "すべて"],
+            ["view", "閲覧ログ"],
+            ["operation", "操作ログ"],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setKind(k)}
+            style={{
+              background: kind === k ? brand.teal : "#fff",
+              color: kind === k ? "#fff" : brand.tealDark,
+              border: `1px solid ${brand.teal}`,
+              borderRadius: 999,
+              padding: "6px 14px",
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div style={{ overflowX: "auto", marginTop: 12 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-              {["日時", "ユーザー", "ロール", "操作", "対象"].map((h) => (
+              {["日時", "ユーザー", "ロール", "種別", "内容", "対象"].map((h) => (
                 <th key={h} style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>
                   {h}
                 </th>
@@ -87,7 +121,7 @@ export function AccessLogsPanel() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {shown.map((r) => (
               <tr key={r.id} style={{ borderBottom: `1px solid ${brand.line}` }}>
                 <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                   {new Date(r.created_at).toLocaleString("ja-JP")}
@@ -98,15 +132,22 @@ export function AccessLogsPanel() {
                 <td style={{ padding: "8px 10px" }}>
                   {r.role && r.role in ROLE_LABEL ? ROLE_LABEL[r.role as Role] : r.role ?? ""}
                 </td>
+                <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                  {kindOf(r.action) === "view" ? (
+                    <Badge tone="gray">閲覧</Badge>
+                  ) : (
+                    <Badge tone="orange">操作</Badge>
+                  )}
+                </td>
                 <td style={{ padding: "8px 10px" }}>{ACTION_LABEL[r.action] ?? r.action}</td>
                 <td style={{ padding: "8px 10px", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis" }}>
                   {r.target ?? ""}
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {shown.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ padding: 24, textAlign: "center", color: "#8A9694" }}>
+                <td colSpan={6} style={{ padding: 24, textAlign: "center", color: "#8A9694" }}>
                   ログはありません。
                 </td>
               </tr>
@@ -114,7 +155,9 @@ export function AccessLogsPanel() {
           </tbody>
         </table>
       </div>
-      <p style={{ fontSize: 12, color: "#8A9694", marginTop: 10 }}>ログは削除できません(監査証跡として保全されます)。</p>
+      <p style={{ fontSize: 12, color: "#8A9694", marginTop: 10, lineHeight: 1.7 }}>
+        「閲覧」は結果一覧・詳細・報告書などの表示、「操作」はCSV出力・招待・配布URL発行・企業追加・部署名修正・結果削除・ロール変更などのデータに影響する行為です。ログは削除できません(監査証跡として保全されます)。
+      </p>
     </Card>
   );
 }
