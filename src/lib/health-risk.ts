@@ -17,7 +17,8 @@
 export type RiskGender = "male" | "female";
 
 // 全国平均(mean)と回帰係数(coef): 職業性ストレス簡易調査票(3項目合計 3〜12点)
-const NORMS: Record<
+// (判定図への全国平均プロット表示にも使用するため公開する)
+export const NORMS: Record<
   RiskGender,
   {
     quant: { mean: number; coef: number };

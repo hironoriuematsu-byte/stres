@@ -25,7 +25,7 @@ import { Btn } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { SCALES } from "@/lib/profile-report";
 import { aggregateByDept, DeptAggregate, GroupResultInput, MIN_GROUP } from "@/lib/group-report";
-import { riskTone } from "@/lib/health-risk";
+import { NORMS, riskTone } from "@/lib/health-risk";
 import { logAccess } from "@/lib/log";
 
 // 健康リスク値の表示色(全国平均=100 / 120以上要注意 / 150以上要対応)
@@ -215,12 +215,14 @@ function JudgeScatter({
   yLabel,
   riskLabel,
   data,
+  refPoints,
 }: {
   title: string;
   xLabel: string;
   yLabel: string;
   riskLabel: string;
   data: PlotPoint[];
+  refPoints: { x: number; y: number; label: string }[]; // 全国平均の位置(男女別)
 }) {
   return (
     <div>
@@ -248,24 +250,44 @@ function JudgeScatter({
             <Tooltip
               formatter={(v: number) => v}
               labelFormatter={() => ""}
-              content={({ payload }) =>
-                payload && payload.length > 0 ? (
+              content={({ payload }) => {
+                if (!payload || payload.length === 0) return null;
+                const p = payload[0].payload as Partial<PlotPoint> & { x: number; y: number; label?: string };
+                return (
                   <div style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 8, padding: "6px 10px", fontSize: 12, lineHeight: 1.7 }}>
-                    {(payload[0].payload as PlotPoint).items.map((it) => (
-                      <div key={it.num}>
-                        <strong>
-                          {it.num} {it.dept}
-                        </strong>{" "}
-                        {riskLabel}: {it.risk ?? "—"}
-                      </div>
-                    ))}
+                    {p.items ? (
+                      p.items.map((it) => (
+                        <div key={it.num}>
+                          <strong>
+                            {it.num} {it.dept}
+                          </strong>{" "}
+                          {riskLabel}: {it.risk ?? "—"}
+                        </div>
+                      ))
+                    ) : (
+                      <strong>{p.label}</strong>
+                    )}
                     <div style={{ color: "#8A9694" }}>
-                      {xLabel}: {(payload[0].payload as PlotPoint).x} / {yLabel}: {(payload[0].payload as PlotPoint).y}
+                      {xLabel}: {p.x} / {yLabel}: {p.y}
                     </div>
                   </div>
-                ) : null
-              }
+                );
+              }}
             />
+            {/* 全国平均の位置(男女別・◆マーク) */}
+            <Scatter
+              data={refPoints}
+              fill="#5B6B6A"
+              shape="diamond"
+              isAnimationActive={false}
+              legendType="none"
+            >
+              <LabelList
+                dataKey="label"
+                position="bottom"
+                style={{ fontSize: 9, fill: "#5B6B6A", fontWeight: 700 }}
+              />
+            </Scatter>
             <Scatter data={data} fill={brand.teal} isAnimationActive={false}>
               <LabelList
                 dataKey="label"
@@ -280,7 +302,7 @@ function JudgeScatter({
         </ResponsiveContainer>
       </div>
       <p style={{ fontSize: 10, color: "#8A9694", textAlign: "center", margin: "0 0 4px" }}>
-        点の色は{riskLabel}(全国平均=100):
+        <span style={{ color: "#5B6B6A", fontWeight: 700 }}>◆ = 全国平均の位置(男女別)</span> / 点の色は{riskLabel}(全国平均=100):
         <span style={{ color: RISK_COLOR.teal, fontWeight: 700 }}> ●100未満 </span>/
         <span style={{ color: RISK_COLOR.yellow, fontWeight: 700 }}> ●100以上 </span>/
         <span style={{ color: RISK_COLOR.orange, fontWeight: 700 }}> ●120以上 </span>/
@@ -476,8 +498,9 @@ export function GroupReportView({
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 0" }}>仕事のストレス判定図(部署プロット・健康リスク)</h2>
             <p style={{ fontSize: 11, color: "#8A9694", margin: "2px 0 0" }}>
               左図は左上(負担が多くコントロールが低い)ほど、右図は左下(上司・同僚の支援がともに少ない)ほど健康リスクが高い領域です。
-              図中の番号は下の対応表の部署を表します(座標が同じ部署は番号をまとめて表示)。健康リスクは全国平均=100で、
-              健康問題の起きやすさが全国平均の何倍かを表します(例: 120なら1.2倍)。
+              図中の番号は下の対応表の部署を表し(座標が同じ部署は番号をまとめて表示)、◆は全国平均の位置(男女別)です。
+              全体・各部署の点が◆よりリスクの高い側にあるかどうかで、全国平均との比較ができます。
+              健康リスクは全国平均=100で、健康問題の起きやすさが全国平均の何倍かを表します(例: 120なら1.2倍)。
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 8 }}>
               <JudgeScatter
@@ -486,6 +509,10 @@ export function GroupReportView({
                 yLabel="量的負担"
                 riskLabel="健康リスクA"
                 data={scatter1}
+                refPoints={[
+                  { x: NORMS.male.control.mean, y: NORMS.male.quant.mean, label: "全国平均(男)" },
+                  { x: NORMS.female.control.mean, y: NORMS.female.quant.mean, label: "全国平均(女)" },
+                ]}
               />
               <JudgeScatter
                 title="職場の支援判定図"
@@ -493,6 +520,10 @@ export function GroupReportView({
                 yLabel="同僚の支援"
                 riskLabel="健康リスクB"
                 data={scatter2}
+                refPoints={[
+                  { x: NORMS.male.boss.mean, y: NORMS.male.coworker.mean, label: "全国平均(男)" },
+                  { x: NORMS.female.boss.mean, y: NORMS.female.coworker.mean, label: "全国平均(女)" },
+                ]}
               />
             </div>
             {/* 番号と部署の対応表 */}
