@@ -660,10 +660,25 @@ export function GroupReportView({
                         <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
                           <td style={{ padding: "5px 8px", color: brand.ink, whiteSpace: "nowrap" }}>
                             {s.label}
+                            <span
+                              style={{
+                                marginLeft: 6,
+                                fontSize: 9.5,
+                                fontWeight: 700,
+                                color: s.direction === "negative" ? "#B02A2A" : "#0B7268",
+                                background: s.direction === "negative" ? "#FDF0F0" : "#E2F3F1",
+                                border: `1px solid ${s.direction === "negative" ? "#F3CBCB" : "#BFE3DE"}`,
+                                borderRadius: 6,
+                                padding: "0px 6px",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {s.direction === "negative" ? "▲高いと注意" : "▼低いと注意"}
+                            </span>
                             {s.male.length === 4 && (
                               <span
                                 style={{
-                                  marginLeft: 6,
+                                  marginLeft: 4,
                                   fontSize: 9.5,
                                   color: "#8A6B2E",
                                   background: "#FBF3E3",
@@ -697,7 +712,9 @@ export function GroupReportView({
                 ※ 平均評価点は、厚生労働省の素点換算表(男女別)による各人の評価点(1〜5の5段階。「単一項目・4段階」の表示がある尺度は1〜4)の集団平均です。
                 「全国平均」列は比較の基準で、5段階尺度は評価点の期待値<strong>3.0(全国平均水準)</strong>、
                 単一項目・4段階の尺度は目盛り中央の<strong>2.5(参考基準。全国調査に基づく平均値ではありません)</strong>を示しています。
-                負担・反応系の尺度は点が高いほど悪い方向、コントロール・サポート系の尺度は点が低いほど悪い方向を意味します。
+                尺度名の横のタグは点数の読み方を表します:
+                <span style={{ color: "#B02A2A", fontWeight: 700 }}>「▲高いと注意」</span>は点が高いほど悪い方向(負担・反応系)、
+                <span style={{ color: "#0B7268", fontWeight: 700 }}>「▼低いと注意」</span>は点が低いほど悪い方向(コントロール・サポート系)です。
               </p>
               <p style={{ margin: "4px 0 0" }}>
                 ※ 網掛けの基準(悪い方向に換算した平均評価点、5段階の目盛り):{" "}
