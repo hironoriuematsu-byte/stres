@@ -13,6 +13,8 @@ import {
   PolarRadiusAxis,
   Radar,
   RadarChart,
+  ReferenceArea,
+  ReferenceDot,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -216,6 +218,7 @@ function JudgeScatter({
   riskLabel,
   data,
   refPoints,
+  riskCorner,
 }: {
   title: string;
   xLabel: string;
@@ -223,14 +226,40 @@ function JudgeScatter({
   riskLabel: string;
   data: PlotPoint[];
   refPoints: { x: number; y: number; label: string; name?: string }[]; // 全国平均の位置(⓪)
+  riskCorner: "top-left" | "bottom-left"; // 健康リスクが高くなる方向の隅
 }) {
+  // 高リスク側ほど濃い赤系になる背景グラデーション(判定図の危険領域表示)
+  const gid = `riskGrad-${riskCorner}-${riskLabel}`;
+  const topLeft = riskCorner === "top-left";
+  const highPos = topLeft ? { x: 4.6, y: 11.3 } : { x: 4.6, y: 3.7 };
+  const lowPos = topLeft ? { x: 10.6, y: 3.7 } : { x: 10.6, y: 11.3 };
   return (
     <div>
       <h3 style={{ fontSize: 12.5, color: brand.ink, textAlign: "center", margin: "8px 0 0" }}>{title}</h3>
       <div style={{ width: "100%", height: 260 }}>
         <ResponsiveContainer>
           <ScatterChart margin={{ top: 16, right: 24, bottom: 14, left: 0 }}>
+            <defs>
+              <linearGradient id={gid} x1="0" y1={topLeft ? "0" : "1"} x2="1" y2={topLeft ? "1" : "0"}>
+                <stop offset="0%" stopColor="#D64545" stopOpacity={0.22} />
+                <stop offset="45%" stopColor="#E8792B" stopOpacity={0.1} />
+                <stop offset="100%" stopColor="#0F9B8E" stopOpacity={0.05} />
+              </linearGradient>
+            </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={brand.line} />
+            <ReferenceArea x1={3} x2={12} y1={3} y2={12} fill={`url(#${gid})`} strokeOpacity={0} />
+            <ReferenceDot
+              x={highPos.x}
+              y={highPos.y}
+              r={0}
+              label={{ value: "高リスク領域", fill: "#B02A2A", fontSize: 10.5, fontWeight: 700 }}
+            />
+            <ReferenceDot
+              x={lowPos.x}
+              y={lowPos.y}
+              r={0}
+              label={{ value: "低リスク領域", fill: brand.tealDark, fontSize: 10.5, fontWeight: 700 }}
+            />
             <XAxis
               type="number"
               dataKey="x"
@@ -491,7 +520,8 @@ export function GroupReportView({
             {/* 判定図プロット */}
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 0" }}>仕事のストレス判定図(部署プロット・健康リスク)</h2>
             <p style={{ fontSize: 11, color: "#8A9694", margin: "2px 0 0" }}>
-              左図は左上(負担が多くコントロールが低い)ほど、右図は左下(上司・同僚の支援がともに少ない)ほど健康リスクが高い領域です。
+              背景の色が濃い(赤系の)側ほど健康リスクが高い領域です:
+              左図は左上(負担が多くコントロールが低い)ほど、右図は左下(上司・同僚の支援がともに少ない)ほどリスクが高くなります。
               図中の番号は下の対応表の部署を表し(座標が同じ部署は番号をまとめて表示)、⓪は全国平均(男女計)の位置です。
               全体・各部署の点が⓪よりリスクの高い側にあるかどうかで、全国平均との比較ができます。
               健康リスクは全国平均=100で、健康問題の起きやすさが全国平均の何倍かを表します(例: 120なら1.2倍)。
@@ -506,6 +536,7 @@ export function GroupReportView({
                 refPoints={[
                   { x: NORMS_COMBINED.control, y: NORMS_COMBINED.quant, label: "⓪", name: "全国平均(男女計)" },
                 ]}
+                riskCorner="top-left"
               />
               <JudgeScatter
                 title="職場の支援判定図"
@@ -516,6 +547,7 @@ export function GroupReportView({
                 refPoints={[
                   { x: NORMS_COMBINED.boss, y: NORMS_COMBINED.coworker, label: "⓪", name: "全国平均(男女計)" },
                 ]}
+                riskCorner="bottom-left"
               />
             </div>
             {/* 番号と部署の対応表 */}
