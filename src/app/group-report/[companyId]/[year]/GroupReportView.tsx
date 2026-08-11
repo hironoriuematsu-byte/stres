@@ -606,6 +606,9 @@ export function GroupReportView({
                 <thead>
                   <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
                     <th style={{ textAlign: "left", padding: "5px 8px" }}>尺度</th>
+                    <th style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap", color: "#5B6B6A" }}>
+                      全国平均
+                    </th>
                     {groups.map((g) => (
                       <th key={g.dept} style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap" }}>
                         {g.dept}
@@ -617,7 +620,7 @@ export function GroupReportView({
                   {(["stressor", "reaction", "support"] as const).map((cat) => (
                     <>
                       <tr key={cat}>
-                        <td colSpan={groups.length + 1} style={{ padding: "5px 8px", background: "#F4FAF9", fontWeight: 700, color: brand.tealDark }}>
+                        <td colSpan={groups.length + 2} style={{ padding: "5px 8px", background: "#F4FAF9", fontWeight: 700, color: brand.tealDark }}>
                           {CATEGORY_LABEL[cat]}
                         </td>
                       </tr>
@@ -642,6 +645,9 @@ export function GroupReportView({
                               </span>
                             )}
                           </td>
+                          <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
+                            {s.male.length === 4 ? "2.5(参考)" : "3.0"}
+                          </td>
                           {groups.map((g) => (
                             <td key={g.dept} style={{ padding: "5px 8px", background: gradeCellColor(s.key, g.meanGrades[s.key]) }}>
                               {g.meanGrades[s.key] ?? "—"}
@@ -657,7 +663,8 @@ export function GroupReportView({
             <div style={{ fontSize: 10.5, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.8 }}>
               <p style={{ margin: 0 }}>
                 ※ 平均評価点は、厚生労働省の素点換算表(男女別)による各人の評価点(1〜5の5段階。「単一項目・4段階」の表示がある尺度は1〜4)の集団平均です。
-                評価点は全国データに基づいて区分されており、<strong>3が全国平均的な水準</strong>です(3より悪い方向に離れるほど注意が必要)。
+                「全国平均」列は比較の基準で、5段階尺度は評価点の期待値<strong>3.0(全国平均水準)</strong>、
+                単一項目・4段階の尺度は目盛り中央の<strong>2.5(参考基準。全国調査に基づく平均値ではありません)</strong>を示しています。
                 負担・反応系の尺度は点が高いほど悪い方向、コントロール・サポート系の尺度は点が低いほど悪い方向を意味します。
               </p>
               <p style={{ margin: "4px 0 0" }}>
