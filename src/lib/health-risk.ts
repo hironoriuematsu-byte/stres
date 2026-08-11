@@ -41,6 +41,17 @@ export const NORMS: Record<
   },
 };
 
+// 男女計の全国平均(仕事のストレス判定図・男女用)。
+// 厚労省「職業性ストレス簡易調査票を用いたストレスの現状把握のための
+// マニュアル」の男女用判定図に示された全国平均値。
+// 判定図への全国平均プロット(⓪)の座標に使用する。
+export const NORMS_COMBINED = {
+  quant: 8.7,
+  control: 7.9,
+  boss: 7.5,
+  coworker: 8.1,
+} as const;
+
 // 量-コントロール判定図の健康リスク(A)
 export function riskQuantControl(quant: number, control: number, gender: RiskGender): number {
   const n = NORMS[gender];
