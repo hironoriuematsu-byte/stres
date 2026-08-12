@@ -10,10 +10,12 @@ import { InterviewRequest, ResultRow, STATUS_LABEL } from "@/lib/types";
 import { getFiscalYear } from "@/lib/fiscal";
 
 export function MyPage({
+  userId,
   name,
   companyId,
   companyName,
 }: {
+  userId: string;
   name: string;
   companyId: string;
   companyName: string;
@@ -34,14 +36,21 @@ export function MyPage({
   const autoOpened = useRef(false);
 
   const reload = useCallback(async () => {
+    // 必ず本人の行だけに絞る。実施事務従事者は職務上RLSで自社全員の結果を
+    // 閲覧できるため、絞り込みがないと他人の結果がマイページに混ざり
+    // 「受検済み」の誤判定になる
     const [{ data: rs }, { data: irs }] = await Promise.all([
-      supabase.from("results").select("id, user_id, company_id, dept, fiscal_year, score_a, score_b, score_c, score_d, high_stress, consent, created_at").order("fiscal_year", { ascending: false }),
-      supabase.from("interview_requests").select("*").order("created_at", { ascending: false }),
+      supabase
+        .from("results")
+        .select("id, user_id, company_id, dept, fiscal_year, score_a, score_b, score_c, score_d, high_stress, consent, created_at")
+        .eq("user_id", userId)
+        .order("fiscal_year", { ascending: false }),
+      supabase.from("interview_requests").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     ]);
     setResults((rs as ResultRow[]) ?? []);
     setRequests((irs as InterviewRequest[]) ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     reload();

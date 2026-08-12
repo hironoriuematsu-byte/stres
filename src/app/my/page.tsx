@@ -19,6 +19,7 @@ export default async function My() {
 
   return (
     <MyPage
+      userId={user.id}
       name={profile.name === "未設定" ? "" : profile.name}
       companyId={profile.company_id!}
       companyName={company?.name ?? ""}
