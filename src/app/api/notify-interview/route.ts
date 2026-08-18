@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { IMPLEMENTER } from "@/lib/org";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 宛先数分の送信間隔・再試行に耐えられるようにする
@@ -152,7 +153,7 @@ export async function POST(req: Request) {
   if (user.email) {
     const selfText = [
       "産業医面接指導の申出を受け付けました。",
-      "実施者(うえまつ産業医事務所)および会社の実施事務従事者へ通知済みです。",
+      `実施者(${IMPLEMENTER.full})および会社の実施事務従事者へ通知済みです。`,
       "日程等について連絡がありますので、しばらくお待ちください。",
       "",
       `申出日時: ${new Date(request.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`,
@@ -163,7 +164,7 @@ export async function POST(req: Request) {
       "※このメールに心当たりがない場合は、会社の実施事務従事者までお知らせください。",
       "",
       `ストレスチェックWeb: ${origin}`,
-      "うえまつ産業医事務所(Mestate LLC)",
+      `${IMPLEMENTER.officeName}(${IMPLEMENTER.corporateName})`,
     ].join("\n");
     if (emails.length > 0) await sleep(600); // レート制限対策の送信間隔
     const result = await sendViaResend(resendKey, {

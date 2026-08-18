@@ -141,7 +141,7 @@ export function CampaignPanel({
           </Btn>
         ) : (
           <p style={{ fontSize: 13, color: "#8A9694", margin: 0 }}>
-            {fiscalYear}年度の配布URLはまだ発行されていません。実施者(産業医事務所)にご依頼ください。
+            {fiscalYear}年度の配布URLはまだ発行されていません。実施者(産業医)にご依頼ください。
           </p>
         )
       ) : (

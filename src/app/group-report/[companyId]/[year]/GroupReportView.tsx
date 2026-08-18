@@ -28,6 +28,7 @@ import { brand } from "@/lib/brand";
 import { SCALES } from "@/lib/profile-report";
 import { aggregateByDept, DeptAggregate, GroupResultInput, MIN_GROUP } from "@/lib/group-report";
 import { NORMS_COMBINED, riskTone } from "@/lib/health-risk";
+import { IMPLEMENTER } from "@/lib/org";
 import { logAccess } from "@/lib/log";
 
 // 健康リスク値の表示色(全国平均=100 / 120以上要注意 / 150以上要対応)
@@ -407,8 +408,8 @@ export function GroupReportView({
         <div style={{ borderBottom: `3px solid ${brand.teal}`, paddingBottom: 10, marginBottom: 14 }}>
           <h1 style={{ fontSize: 20, color: brand.ink, margin: "0 0 4px" }}>ストレスチェック集団分析報告書</h1>
           <p style={{ fontSize: 11, color: "#7A8886", margin: 0 }}>
-            {companyName} / {fiscalYear}年度 / 職業性ストレス簡易調査票(57項目)/ 実施者: うえまつ産業医事務所 /
-            作成日: {new Date().toLocaleDateString("ja-JP")}
+            {companyName} / {fiscalYear}年度 / 職業性ストレス簡易調査票(57項目)/ 実施者: {IMPLEMENTER.full} /
+            実施事務局: {IMPLEMENTER.officeName} / 作成日: {new Date().toLocaleDateString("ja-JP")}
           </p>
         </div>
 
@@ -733,7 +734,8 @@ export function GroupReportView({
 
         <p style={{ fontSize: 10.5, color: "#8A9694", marginTop: 18, lineHeight: 1.7 }}>
           本報告書は職場環境改善の検討資料であり、個人を特定できる情報は含まれていません。
-          衛生委員会等での審議にご活用ください。発行: うえまつ産業医事務所 / ストレスチェックWeb
+          衛生委員会等での審議にご活用ください。
+          実施者: {IMPLEMENTER.full}(所属: {IMPLEMENTER.officeName} {IMPLEMENTER.officeAddress})/ ストレスチェックWeb
         </p>
       </div>
     </div>

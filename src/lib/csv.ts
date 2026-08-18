@@ -1,5 +1,7 @@
 // CSV生成: BOM付きUTF-8(Excelで文字化けしないこと — 仕様4.3)
 
+import { IMPLEMENTER } from "@/lib/org";
+
 function escapeField(v: string | number | boolean | null | undefined): string {
   const s = v == null ? "" : String(v);
   if (/[",\r\n]/.test(s)) {
@@ -72,9 +74,9 @@ export function resultsCsv(rows: ResultCsvRow[], meta?: ResultCsvMeta): string {
   const highRate = rows.length ? Math.round((highN / rows.length) * 1000) / 10 : 0;
   const headerLines = [
     ["ストレスチェック結果一覧"],
-    ["システム", "ストレスチェックWeb 職業性ストレス簡易調査票(57項目)準拠/うえまつ産業医事務所"],
-    ["実施者名", "産業医 上松 弘典"],
-    ["産業医所在地", "うえまつ産業医事務所 京都府京都市中京区錦小路通室町西入天神山町280 4階"],
+    ["システム", `ストレスチェックWeb 職業性ストレス簡易調査票(57項目)準拠/${IMPLEMENTER.officeName}`],
+    ["実施者名", IMPLEMENTER.full],
+    ["産業医所在地", `${IMPLEMENTER.officeName} ${IMPLEMENTER.officeAddress}`],
     ["事業場名", meta.companyName],
     ["実施年度", `${meta.fiscalYear}年度`],
     // 人数は数値のまま出力する(Excelで数値として右揃えになる)

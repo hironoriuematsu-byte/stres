@@ -16,6 +16,7 @@ import { brand } from "@/lib/brand";
 import { ResultRow } from "@/lib/types";
 import { buildAdvice, computeProfile, hasCompleteAnswers, Gender, ScaleResult } from "@/lib/profile-report";
 import { logAccess } from "@/lib/log";
+import { IMPLEMENTER } from "@/lib/org";
 
 const CATEGORY_LABEL = {
   stressor: "A. ストレスの原因と考えられる因子",
@@ -144,7 +145,7 @@ export function ReportView({
           <div>
             <h1 style={{ fontSize: 20, color: brand.ink, margin: "0 0 4px" }}>ストレスチェック個人結果票</h1>
             <p style={{ fontSize: 11, color: "#7A8886", margin: 0 }}>
-              職業性ストレス簡易調査票(57項目)/ 実施者: うえまつ産業医事務所
+              職業性ストレス簡易調査票(57項目)/ 実施者: {IMPLEMENTER.full} / 実施事務局: {IMPLEMENTER.officeName}
             </p>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -283,7 +284,7 @@ export function ReportView({
         <p style={{ fontSize: 10.5, color: "#8A9694", marginTop: 18, lineHeight: 1.7 }}>
           本結果票は労働安全衛生法第66条の10に基づくストレスチェックの個人結果であり、医療上の診断ではありません。
           本人の同意なく事業者へ提供されることはありません。結果は5年間保存されます。
-          発行: うえまつ産業医事務所 / ストレスチェックWeb
+          実施者: {IMPLEMENTER.full}(所属: {IMPLEMENTER.officeName} {IMPLEMENTER.officeAddress})/ ストレスチェックWeb
         </p>
       </div>
 

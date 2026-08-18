@@ -46,7 +46,7 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div>
-            <Badge tone="orange">実施者(産業医事務所)ダッシュボード</Badge>
+            <Badge tone="orange">実施者(産業医)ダッシュボード</Badge>
             <h2 style={{ fontSize: 20, color: brand.ink, margin: "10px 0 0" }}>
               {tab === null ? "メニュー" : "企業横断管理"}
             </h2>
