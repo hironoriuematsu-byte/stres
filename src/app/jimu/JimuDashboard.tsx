@@ -15,8 +15,9 @@ const InterviewPanel = dynamic(() => import("@/components/InterviewPanel").then(
 const GroupAnalysis = dynamic(() => import("@/components/GroupAnalysis").then((m) => m.GroupAnalysis), { loading: panelLoading, ssr: false });
 const UserAdminPanel = dynamic(() => import("@/components/UserAdminPanel").then((m) => m.UserAdminPanel), { loading: panelLoading, ssr: false });
 const CampaignPanel = dynamic(() => import("@/components/CampaignPanel").then((m) => m.CampaignPanel), { loading: panelLoading, ssr: false });
+const DeptAdminPanel = dynamic(() => import("@/components/DeptAdminPanel").then((m) => m.DeptAdminPanel), { loading: panelLoading, ssr: false });
 
-const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "従業員招待"] as const;
+const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "従業員招待", "部署管理"] as const;
 type Tab = (typeof TABS)[number];
 
 const MENU_ITEMS: MenuItem<Tab>[] = [
@@ -25,6 +26,7 @@ const MENU_ITEMS: MenuItem<Tab>[] = [
   { key: "集団分析", icon: "📊", title: "集団分析", desc: "部署別集計・健康リスク・集団分析報告書" },
   { key: "配布URL・QR", icon: "🔗", title: "配布URL・QR", desc: "従業員に配布する受検用URL・QRコードの確認" },
   { key: "従業員招待", icon: "✉️", title: "従業員招待", desc: "従業員への招待メールの送信(個別・CSV一括)" },
+  { key: "部署管理", icon: "🗂️", title: "部署管理", desc: "受検時に選択できる部署名の登録・編集" },
 ];
 
 export function JimuDashboard({
@@ -125,6 +127,7 @@ export function JimuDashboard({
         <CampaignPanel companyId={companyId} companyName={companyName} fiscalYear={year} manage={false} />
       )}
       {tab === "従業員招待" && <UserAdminPanel fixedCompany={{ code: companyCode, name: companyName }} />}
+      {tab === "部署管理" && <DeptAdminPanel companyId={companyId} companyName={companyName} />}
     </div>
   );
 }

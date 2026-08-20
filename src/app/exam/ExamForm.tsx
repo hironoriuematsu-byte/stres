@@ -20,12 +20,22 @@ type ExamProfile = {
 
 const sections = { 1: SECTION_A, 2: SECTION_B, 4: SECTION_D } as const;
 
-export function ExamForm({ profile }: { profile: ExamProfile }) {
+export function ExamForm({
+  profile,
+  departments = [],
+}: {
+  profile: ExamProfile;
+  departments?: string[]; // 企業ごとに登録された部署の選択肢(空なら直接入力)
+}) {
   const router = useRouter();
   const [step, setStep] = useState(0); // 0=受検者情報 1=A 2=B 3=C 4=D 5=同意 6=結果 7=年度重複
   const [name, setName] = useState(profile.name);
   const [empId, setEmpId] = useState(profile.empId);
   const [dept, setDept] = useState(profile.dept);
+  // 選択肢にない部署は「その他(直接入力)」で入力する
+  const [deptOther, setDeptOther] = useState(
+    departments.length > 0 && profile.dept !== "" && !departments.includes(profile.dept)
+  );
   const [gender, setGender] = useState<"male" | "female" | "">("");
   const [resultId, setResultId] = useState<string | null>(null);
   const [ans, setAns] = useState<Answers>(emptyAnswers());
@@ -147,7 +157,41 @@ export function ExamForm({ profile }: { profile: ExamProfile }) {
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             部署
           </label>
-          <input value={dept} onChange={(e) => setDept(e.target.value)} placeholder="例: 製造部" style={input} />
+          {departments.length > 0 ? (
+            <>
+              <select
+                value={deptOther ? "__other__" : departments.includes(dept) ? dept : ""}
+                onChange={(e) => {
+                  if (e.target.value === "__other__") {
+                    setDeptOther(true);
+                    setDept("");
+                  } else {
+                    setDeptOther(false);
+                    setDept(e.target.value);
+                  }
+                }}
+                style={input}
+              >
+                <option value="">選択してください</option>
+                {departments.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+                <option value="__other__">その他(直接入力)</option>
+              </select>
+              {deptOther && (
+                <input
+                  value={dept}
+                  onChange={(e) => setDept(e.target.value)}
+                  placeholder="部署名を入力してください"
+                  style={{ ...input, marginTop: 8 }}
+                />
+              )}
+            </>
+          ) : (
+            <input value={dept} onChange={(e) => setDept(e.target.value)} placeholder="例: 製造部" style={input} />
+          )}
         </div>
         <div>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>

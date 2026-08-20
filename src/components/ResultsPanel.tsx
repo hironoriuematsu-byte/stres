@@ -28,6 +28,8 @@ export function ResultsPanel({
   const [err, setErr] = useState<string | null>(null);
   const [deptEdit, setDeptEdit] = useState("");
   const [deptBusy, setDeptBusy] = useState(false);
+  const [deptOptions, setDeptOptions] = useState<string[]>([]);
+  const [deptOther, setDeptOther] = useState(false);
 
   const supabase = createClient();
 
@@ -35,7 +37,7 @@ export function ResultsPanel({
     setRows(null);
     setErr(null);
     (async () => {
-      const [{ data: rs, error: e1 }, { data: ps }, { data: allYears }, { data: irs }] = await Promise.all([
+      const [{ data: rs, error: e1 }, { data: ps }, { data: allYears }, { data: irs }, { data: ds }] = await Promise.all([
         supabase
           .from("results")
           // 一覧に必要な列のみ取得(57問分の回答データを転送しない)
@@ -48,6 +50,8 @@ export function ResultsPanel({
         supabase.from("results").select("fiscal_year").eq("company_id", companyId),
         // CSVサマリー用: 面接指導の申出(結果IDで年度を突き合わせる)
         supabase.from("interview_requests").select("result_id").eq("company_id", companyId),
+        // 部署名修正の選択肢(部署マスタ)
+        supabase.from("departments").select("name").eq("company_id", companyId).order("sort_order").order("name"),
       ]);
       if (e1) {
         setErr(e1.message);
@@ -63,6 +67,7 @@ export function ResultsPanel({
       });
       setOtherYears(yearCounts);
       setInterviewResultIds(new Set(((irs as { result_id: string }[]) ?? []).map((x) => x.result_id)));
+      setDeptOptions(((ds as { name: string }[]) ?? []).map((d) => d.name));
       setRows((rs as ResultRow[]) ?? []);
       logAccess(supabase, "view_results", `${companyName}/${fiscalYear}`, companyId);
     })();
@@ -104,6 +109,7 @@ export function ResultsPanel({
     const next = openDetail === r.id ? null : r.id;
     setOpenDetail(next);
     setDeptEdit(r.dept);
+    setDeptOther(deptOptions.length === 0 || !deptOptions.includes(r.dept));
     if (next) logAccess(supabase, "view_result_detail", r.id, companyId);
   };
 
@@ -256,18 +262,48 @@ export function ResultsPanel({
                         style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}
                       >
                         <span style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>部署名の修正:</span>
-                        <input
-                          value={deptEdit}
-                          onChange={(e) => setDeptEdit(e.target.value)}
-                          placeholder="例: 営業部"
-                          style={{
-                            padding: "5px 10px",
-                            fontSize: 13,
-                            border: `1px solid ${brand.line}`,
-                            borderRadius: 8,
-                            width: 180,
-                          }}
-                        />
+                        {deptOptions.length > 0 && (
+                          <select
+                            value={deptOther ? "__other__" : deptOptions.includes(deptEdit) ? deptEdit : ""}
+                            onChange={(e) => {
+                              if (e.target.value === "__other__") {
+                                setDeptOther(true);
+                              } else {
+                                setDeptOther(false);
+                                setDeptEdit(e.target.value);
+                              }
+                            }}
+                            style={{
+                              padding: "5px 10px",
+                              fontSize: 13,
+                              border: `1px solid ${brand.line}`,
+                              borderRadius: 8,
+                              minWidth: 160,
+                            }}
+                          >
+                            <option value="">選択してください</option>
+                            {deptOptions.map((d) => (
+                              <option key={d} value={d}>
+                                {d}
+                              </option>
+                            ))}
+                            <option value="__other__">その他(直接入力)</option>
+                          </select>
+                        )}
+                        {(deptOptions.length === 0 || deptOther) && (
+                          <input
+                            value={deptEdit}
+                            onChange={(e) => setDeptEdit(e.target.value)}
+                            placeholder="例: 営業部"
+                            style={{
+                              padding: "5px 10px",
+                              fontSize: 13,
+                              border: `1px solid ${brand.line}`,
+                              borderRadius: 8,
+                              width: 180,
+                            }}
+                          />
+                        )}
                         <button
                           onClick={() => saveDept(r)}
                           disabled={deptBusy || !deptEdit.trim() || deptEdit.trim() === r.dept}

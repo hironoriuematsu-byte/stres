@@ -34,6 +34,9 @@ const ACTION_LABEL: Record<string, string> = {
   campaign_activated: "配布の再開",
   campaign_deactivated: "配布の停止",
   change_role: "ロール変更",
+  dept_master_added: "部署の追加",
+  dept_master_renamed: "部署名の変更(マスタ)",
+  dept_master_removed: "部署の削除(マスタ)",
 };
 
 // 閲覧(view_*)か操作(データの作成・変更・出力)かの分類
