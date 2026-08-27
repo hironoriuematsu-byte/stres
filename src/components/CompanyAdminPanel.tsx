@@ -70,6 +70,21 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
     router.refresh();
   };
 
+  // 調査票の種類(57項目版/80項目版)を切り替える。受検済みの結果には影響しない
+  const setQuestionnaire = async (c: Company, q: "57" | "80") => {
+    if ((c.questionnaire ?? "57") === q) return;
+    setBusy(true);
+    const { error } = await supabase.from("companies").update({ questionnaire: q }).eq("id", c.id);
+    setBusy(false);
+    if (error) {
+      setNotice("調査票の変更に失敗しました: " + error.message);
+      return;
+    }
+    logAccess(supabase, "company_questionnaire_changed", `${c.name}: ${c.questionnaire ?? "57"}→${q}`, c.id);
+    setNotice(`「${c.name}」の調査票を${q === "80" ? "80項目版" : "57項目版"}に変更しました(今後の受検分から適用されます)。`);
+    router.refresh();
+  };
+
   const rename = async (c: Company) => {
     setBusy(true);
     const { error } = await supabase.from("companies").update({ name: editName.trim() }).eq("id", c.id);
@@ -90,6 +105,8 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
       <p style={{ fontSize: 13, color: "#5B6B6A", margin: "0 0 14px", lineHeight: 1.7 }}>
         契約企業の追加と名称変更ができます。企業コードは招待CSVや識別に使う短い英数字です(例:
         MST001)。誤削除防止のため、削除はこの画面からはできません。
+        「調査票」では企業ごとに57項目版/80項目版を選べます(80項目版は現行57項目に職場環境に関する23項目を追加したもの。
+        高ストレス判定の基準は変わりません)。変更は今後の受検分から適用され、受検済みの結果は影響を受けません。
       </p>
 
       <form onSubmit={add} style={{ display: "grid", gap: 10, gridTemplateColumns: "2fr 1fr auto", alignItems: "end" }}>
@@ -148,6 +165,7 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
                   {label} {sortKey === key ? (sortAsc ? "▲" : "▼") : "△"}
                 </th>
               ))}
+              <th style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>調査票</th>
               <th style={{ textAlign: "left", padding: "9px 10px" }}>操作</th>
             </tr>
           </thead>
@@ -163,6 +181,17 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
                 </td>
                 <td style={{ padding: "9px 10px" }}>
                   <code>{c.code}</code>
+                </td>
+                <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
+                  <select
+                    value={c.questionnaire ?? "57"}
+                    onChange={(e) => setQuestionnaire(c, e.target.value as "57" | "80")}
+                    disabled={busy}
+                    style={{ ...input, padding: "5px 8px", fontSize: 12.5, width: "auto" }}
+                  >
+                    <option value="57">57項目版</option>
+                    <option value="80">80項目版</option>
+                  </select>
                 </td>
                 <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
                   {editing === c.id ? (
@@ -191,7 +220,7 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
             ))}
             {companies.length === 0 && (
               <tr>
-                <td colSpan={3} style={{ padding: 24, textAlign: "center", color: "#8A9694" }}>
+                <td colSpan={4} style={{ padding: 24, textAlign: "center", color: "#8A9694" }}>
                   企業はまだ登録されていません。上のフォームから追加してください。
                 </td>
               </tr>

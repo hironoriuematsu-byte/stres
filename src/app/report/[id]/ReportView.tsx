@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import {
   PolarAngleAxis,
@@ -17,6 +17,12 @@ import { ResultRow } from "@/lib/types";
 import { buildAdvice, computeProfile, hasCompleteAnswers, Gender, ScaleResult } from "@/lib/profile-report";
 import { logAccess } from "@/lib/log";
 import { IMPLEMENTER } from "@/lib/org";
+import {
+  EXT80_GROUP_LABEL,
+  Ext80ScaleResult,
+  computeExt80,
+  isExt80Complete,
+} from "@/lib/questionnaire80";
 
 const CATEGORY_LABEL = {
   stressor: "A. ストレスの原因と考えられる因子",
@@ -74,7 +80,7 @@ export function ReportView({
   backLabel,
   demo = false,
 }: {
-  result: ResultRow & { answers: unknown; gender: Gender | null };
+  result: ResultRow & { answers: unknown; gender: Gender | null; answers_ext?: unknown; questionnaire?: string };
   subjectName: string;
   subjectEmpId: string;
   companyName: string;
@@ -88,6 +94,11 @@ export function ReportView({
     logAccess(supabase, "view_result_detail", `report:${result.id}`, result.company_id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 80項目版の追加23項目(職場環境の資源など)。回答があるときだけ表示する
+  const ext80: Ext80ScaleResult[] | null = isExt80Complete(result.answers_ext)
+    ? computeExt80(result.answers_ext, result.gender === "male" || result.gender === "female" ? result.gender : null)
+    : null;
 
   const detailed = hasCompleteAnswers(result.answers) && (result.gender === "male" || result.gender === "female");
   const profile = detailed ? computeProfile(result.answers as never, result.gender as Gender) : null;
@@ -148,7 +159,8 @@ export function ReportView({
           <div>
             <h1 style={{ fontSize: 20, color: brand.ink, margin: "0 0 4px" }}>ストレスチェック個人結果票</h1>
             <p style={{ fontSize: 11, color: "#7A8886", margin: 0 }}>
-              職業性ストレス簡易調査票(57項目)/ 実施者: {IMPLEMENTER.full} / 実施事務局: {IMPLEMENTER.officeName}
+              職業性ストレス簡易調査票({ext80 ? "80項目" : "57項目"})/ 実施者: {IMPLEMENTER.full} / 実施事務局:{" "}
+              {IMPLEMENTER.officeName}
             </p>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -281,6 +293,61 @@ export function ReportView({
             }}
           >
             この受検データには回答の詳細(または性別の情報)が記録されていないため、尺度別のストレスプロフィールは表示できません(上記の領域別得点と総合判定のみ有効です)。
+          </div>
+        )}
+
+        {ext80 && (
+          <div style={{ marginTop: 20, pageBreakInside: "avoid" }}>
+            <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "0 0 2px" }}>
+              職場環境について(80項目版の追加尺度)
+            </h2>
+            <p style={{ fontSize: 10.5, color: "#8A9694", margin: "0 0 8px", lineHeight: 1.7 }}>
+              新職業性ストレス簡易調査票(推奨尺度セット短縮版)による結果です。
+              <strong>いずれの尺度も点数が高いほど良好</strong>な状態を表します(1〜4点)。
+              「全国平均」は全国調査(1,600名超)の平均値(性別が記録されている場合は同性の平均)です。
+              この部分は高ストレスの判定には用いず、職場環境の改善を検討するための情報です。
+            </p>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
+                  <th style={{ textAlign: "left", padding: "6px 8px" }}>尺度</th>
+                  <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>あなたの得点</th>
+                  <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>全国平均</th>
+                  <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>差</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(["burden", "task", "dept", "org", "outcome"] as const).map((g) => (
+                  <React.Fragment key={g}>
+                    <tr>
+                      <td colSpan={4} style={{ padding: "5px 8px", background: "#F4FAF9", fontWeight: 700, color: brand.tealDark }}>
+                        {EXT80_GROUP_LABEL[g]}
+                      </td>
+                    </tr>
+                    {ext80
+                      .filter((s) => s.group === g)
+                      .map((s) => (
+                        <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
+                          <td style={{ padding: "5px 8px", color: brand.ink }}>{s.label}</td>
+                          <td style={{ padding: "5px 8px", fontWeight: 700 }}>{s.score.toFixed(1)}</td>
+                          <td style={{ padding: "5px 8px", color: "#5B6B6A" }}>{s.norm.toFixed(2)}</td>
+                          <td
+                            style={{
+                              padding: "5px 8px",
+                              fontWeight: 700,
+                              color: s.diff <= -0.5 ? "#B02A2A" : s.diff >= 0.5 ? brand.tealDark : "#5B6B6A",
+                            }}
+                          >
+                            {s.diff > 0 ? "+" : ""}
+                            {s.diff.toFixed(1)}
+                            {s.diff <= -0.5 ? "(平均より低い)" : s.diff >= 0.5 ? "(平均より高い)" : ""}
+                          </td>
+                        </tr>
+                      ))}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 

@@ -14,10 +14,12 @@ export function ResultsPanel({
   companyId,
   companyName,
   fiscalYear,
+  questionnaire = "57",
 }: {
   companyId: string;
   companyName: string;
   fiscalYear: number;
+  questionnaire?: "57" | "80";
 }) {
   const [rows, setRows] = useState<ResultRow[] | null>(null);
   const [people, setPeople] = useState<Record<string, Profile>>({});
@@ -99,6 +101,7 @@ export function ResultsPanel({
         fiscalYear,
         // 表示中の年度の結果に紐づく申出のみを数える
         interviewCount: rows.filter((r) => interviewResultIds.has(r.id)).length,
+        questionnaire,
       }
     );
     downloadCsv(`stresscheck_${companyName}_${fiscalYear}.csv`, content);

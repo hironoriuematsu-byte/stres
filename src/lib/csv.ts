@@ -47,6 +47,7 @@ export type ResultCsvMeta = {
   companyName: string;
   fiscalYear: number;
   interviewCount: number; // 面接指導を希望(申出)した人数
+  questionnaire?: "57" | "80"; // 事業場が使用した調査票
 };
 
 export function resultsCsv(rows: ResultCsvRow[], meta?: ResultCsvMeta): string {
@@ -74,11 +75,15 @@ export function resultsCsv(rows: ResultCsvRow[], meta?: ResultCsvMeta): string {
   const highRate = rows.length ? Math.round((highN / rows.length) * 1000) / 10 : 0;
   const headerLines = [
     ["ストレスチェック結果一覧"],
-    ["システム", `ストレスチェックWeb 職業性ストレス簡易調査票(57項目)準拠/${IMPLEMENTER.officeName}`],
+    [
+      "システム",
+      `ストレスチェックWeb 職業性ストレス簡易調査票(${meta.questionnaire === "80" ? "80項目" : "57項目"})準拠/${IMPLEMENTER.officeName}`,
+    ],
     ["実施者名", IMPLEMENTER.full],
     ["産業医所在地", `${IMPLEMENTER.officeName} ${IMPLEMENTER.officeAddress}`],
     ["事業場名", meta.companyName],
     ["実施年度", `${meta.fiscalYear}年度`],
+    ["調査票", meta.questionnaire === "80" ? "職業性ストレス簡易調査票(80項目版)" : "職業性ストレス簡易調査票(57項目版)"],
     // 人数は数値のまま出力する(Excelで数値として右揃えになる)
     ["受検者数", rows.length],
     ["高ストレス者数", highN],

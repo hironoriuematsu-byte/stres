@@ -65,6 +65,7 @@ describe("CSV出力(受け入れテスト6: Excelで文字化けしない)", () 
     expect(csv).toContain("事業場名,メステート合同会社");
     expect(csv).not.toContain("企業名,");
     expect(csv).toContain("実施年度,2026年度");
+    expect(csv).toContain("調査票,職業性ストレス簡易調査票(57項目版)");
     // 人数はExcelで右揃えになるよう数値のまま(「名」を付けない)
     expect(csv).toContain("受検者数,2\r\n");
     expect(csv).toContain("高ストレス者数,1\r\n");

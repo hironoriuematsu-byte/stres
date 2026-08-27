@@ -10,12 +10,14 @@
 import { computeProfile, hasCompleteAnswers, Gender, SCALES } from "@/lib/profile-report";
 import { Answers } from "@/lib/questionnaire";
 import { groupHealthRisk, GroupHealthRisk } from "@/lib/health-risk";
+import { EXT80_SCALES, computeExt80, isExt80Complete } from "@/lib/questionnaire80";
 
 export const MIN_GROUP = 10;
 
 export type GroupResultInput = {
   dept: string;
   answers: unknown;
+  answers_ext?: unknown; // 80項目版の追加23項目(ある場合のみ)
   gender: string | null;
   high_stress: boolean;
   score_a: number;
@@ -37,6 +39,8 @@ export type DeptAggregate = {
   boss: number | null; // 上司支援 平均(3-12)
   coworker: number | null; // 同僚支援 平均(3-12)
   meanGrades: Record<string, number | null>; // 尺度key → 平均評価点
+  ext80Count: number; // 80項目版の追加分に回答済みの人数
+  ext80Means: Record<string, number | null>; // 追加尺度key → 平均得点(1〜4、高いほど良好)
   healthRisk: GroupHealthRisk; // 仕事のストレス判定図の健康リスク(男女計・全国平均=100)
 };
 
@@ -80,6 +84,21 @@ function aggregate(dept: string, rows: GroupResultInput[]): DeptAggregate {
   };
   const healthRisk = groupHealthRisk({ male: genderJudgeMeans("male"), female: genderJudgeMeans("female") });
 
+  // 80項目版の追加尺度(回答がある人だけで平均する)
+  const extRows = rows.filter((r) => isExt80Complete(r.answers_ext));
+  const ext80Means: Record<string, number | null> = {};
+  if (extRows.length > 0) {
+    const profiles = extRows.map((r) =>
+      computeExt80(r.answers_ext as number[], r.gender === "male" || r.gender === "female" ? r.gender : null)
+    );
+    for (const sc of EXT80_SCALES) {
+      const vals = profiles.map((p) => p.find((x) => x.key === sc.key)!.score);
+      ext80Means[sc.key] = r1(vals.reduce((a, b) => a + b, 0) / vals.length);
+    }
+  } else {
+    for (const sc of EXT80_SCALES) ext80Means[sc.key] = null;
+  }
+
   const meanGrades: Record<string, number | null> = {};
   if (detailed.length > 0) {
     const profiles = detailed.map((r) => computeProfile(r.answers as Answers, r.gender as Gender));
@@ -105,6 +124,8 @@ function aggregate(dept: string, rows: GroupResultInput[]): DeptAggregate {
     boss: mean(js.map((j) => j.boss)),
     coworker: mean(js.map((j) => j.coworker)),
     meanGrades,
+    ext80Count: extRows.length,
+    ext80Means,
     healthRisk,
   };
 }

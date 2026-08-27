@@ -11,7 +11,7 @@ export default async function OfficePage() {
   if (!profile || profile.role !== "office") redirect(roleHome(profile?.role));
 
   const supabase = createClient();
-  const { data: companies } = await supabase.from("companies").select("id, name, code").order("name");
+  const { data: companies } = await supabase.from("companies").select("id, name, code, questionnaire").order("name");
 
   return <OfficeDashboard companies={(companies as Company[]) ?? []} />;
 }

@@ -15,6 +15,7 @@ export type Company = {
   id: string;
   name: string;
   code: string;
+  questionnaire?: "57" | "80";
 };
 
 export type ResultRow = {

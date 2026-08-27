@@ -7,12 +7,14 @@ export const metadata = {
 };
 
 // 紹介用デモ: 実際の受検画面をそのまま体験できる(回答は保存されない)
-export default function DemoExamPage() {
+export default function DemoExamPage({ searchParams }: { searchParams: { q?: string } }) {
+  const questionnaire = searchParams.q === "80" ? "80" : "57";
   return (
     <>
       <DemoNotice />
       <ExamForm
         demo
+        questionnaire={questionnaire}
         profile={{
           userId: "demo-user",
           name: "",

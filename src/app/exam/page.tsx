@@ -27,7 +27,7 @@ export default async function ExamPage() {
   const supabase = createClient();
   const fiscalYear = getFiscalYear();
   const [{ data: company }, { data: existing }, { data: depts }] = await Promise.all([
-    supabase.from("companies").select("name").eq("id", profile.company_id!).single(),
+    supabase.from("companies").select("name, questionnaire").eq("id", profile.company_id!).single(),
     // 年度内1回の原則: 当年度の受検が既にあればフォームを表示しない
     supabase
       .from("results")
@@ -77,6 +77,7 @@ export default async function ExamPage() {
         companyName: company?.name ?? "",
       }}
       departments={((depts as { name: string }[]) ?? []).map((d) => d.name)}
+      questionnaire={company?.questionnaire === "80" ? "80" : "57"}
     />
   );
 }

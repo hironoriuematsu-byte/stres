@@ -8,6 +8,16 @@ import { Badge, Btn, Card, QuestionRow, ScoreBar } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { SECTION_A, SECTION_B, SECTION_C, SECTION_D, Answers, Scores, calcScores, emptyAnswers } from "@/lib/questionnaire";
 import { getFiscalYear } from "@/lib/fiscal";
+import {
+  EXT80_COUNT,
+  Ext80Answers,
+  SECTION_E,
+  SECTION_F,
+  SECTION_G,
+  SECTION_H,
+  emptyExt80,
+  sectionItems,
+} from "@/lib/questionnaire80";
 
 type ExamProfile = {
   userId: string;
@@ -24,13 +34,15 @@ export function ExamForm({
   profile,
   departments = [],
   demo = false,
+  questionnaire = "57",
 }: {
   profile: ExamProfile;
   departments?: string[]; // 企業ごとに登録された部署の選択肢(空なら直接入力)
   demo?: boolean; // 紹介用デモ: 保存せず、その場で判定結果だけを表示する
+  questionnaire?: "57" | "80"; // 企業ごとの調査票設定
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(0); // 0=受検者情報 1=A 2=B 3=C 4=D 5=同意 6=結果 7=年度重複
+  const [step, setStep] = useState(0); // 0=受検者情報 1=A 2=B 3=C 4=D 5=同意 6=結果 7=年度重複 8=追加23項目(80項目版)
   const [name, setName] = useState(profile.name);
   const [empId, setEmpId] = useState(profile.empId);
   const [dept, setDept] = useState(profile.dept);
@@ -41,6 +53,10 @@ export function ExamForm({
   const [gender, setGender] = useState<"male" | "female" | "">("");
   const [resultId, setResultId] = useState<string | null>(null);
   const [ans, setAns] = useState<Answers>(emptyAnswers());
+  // 80項目版で追加される23項目(設問58〜80)の回答
+  const [ext, setExt] = useState<Ext80Answers>(emptyExt80());
+  const is80 = questionnaire === "80";
+  const totalSteps = is80 ? 7 : 6; // 受検者情報+A+B+C+D(+追加)+同意
   const [consent, setConsent] = useState(false);
   const [result, setResult] = useState<Scores | null>(null);
   const [saving, setSaving] = useState(false);
@@ -65,6 +81,16 @@ export function ExamForm({
 
   const complete = (sec: keyof Answers) => ans[sec].every((v) => v != null);
 
+  const setExtAnswer = (i: number, v: number) =>
+    setExt((p) => {
+      const n = [...p];
+      n[i] = v;
+      return n;
+    });
+  const extComplete = ext.every((v) => v != null);
+  // D領域(step4)の次は、80項目版なら追加23項目(step8)、そうでなければ同意(step5)
+  const afterD = is80 ? 8 : 5;
+
   // デモ専用: 57問すべてを試さなくても流れを確認できるよう、未回答をまとめて埋める
   const fillSection = (sec: keyof Answers) => {
     setAns((p) => ({
@@ -72,6 +98,7 @@ export function ExamForm({
       [sec]: p[sec].map((v) => (v == null ? 1 + Math.floor(Math.random() * 4) : v)),
     }));
   };
+  const fillExt = () => setExt((p) => p.map((v) => (v == null ? 1 + Math.floor(Math.random() * 4) : v)));
 
   const submit = async () => {
     const scores = calcScores(ans);
@@ -109,6 +136,8 @@ export function ExamForm({
         score_d: scores.D,
         high_stress: scores.highStress,
         consent,
+        questionnaire,
+        answers_ext: is80 ? ext : null,
       })
       .select("id")
       .single();
@@ -142,7 +171,7 @@ export function ExamForm({
     };
     return (
       <Card style={{ maxWidth: 560, margin: "0 auto" }}>
-        <Badge>STEP 1 / 6</Badge>
+        <Badge>STEP 1 / {totalSteps}</Badge>
         <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 4px" }}>受検者情報</h2>
         <p style={{ fontSize: 13, color: "#5B6B6A", marginBottom: 14 }}>
           ストレスチェックを開始します。氏名・部署・性別を入力してください(社員番号は任意です)。
@@ -245,7 +274,7 @@ export function ExamForm({
     return (
       <Card style={{ maxWidth: 720, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Badge>STEP {step + 1} / 6</Badge>
+          <Badge>STEP {step + 1} / {totalSteps}</Badge>
           <span style={{ fontSize: 13, color: brand.tealDark, fontWeight: 700 }}>
             {answered} / {sec.items.length} 回答済
           </span>
@@ -271,7 +300,7 @@ export function ExamForm({
               (デモ)残りをまとめて回答
             </Btn>
           )}
-          <Btn onClick={() => setStep(step + 1)} disabled={!complete(sec.key)}>
+          <Btn onClick={() => setStep(step === 4 ? afterD : step + 1)} disabled={!complete(sec.key)}>
             次へ
           </Btn>
         </div>
@@ -286,7 +315,7 @@ export function ExamForm({
     return (
       <Card style={{ maxWidth: 720, margin: "0 auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Badge>STEP 4 / 6</Badge>
+          <Badge>STEP 4 / {totalSteps}</Badge>
           <span style={{ fontSize: 13, color: brand.tealDark, fontWeight: 700 }}>{answered} / 9 回答済</span>
         </div>
         <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 2px" }}>{SECTION_C.title}</h2>
@@ -330,11 +359,74 @@ export function ExamForm({
     );
   }
 
+  // 追加23項目(80項目版のみ / 設問58〜80)
+  if (step === 8) {
+    const answered = ext.filter((v) => v != null).length;
+    const blocks = [SECTION_E, SECTION_F, SECTION_G, SECTION_H] as const;
+    let shown = 0;
+    return (
+      <Card style={{ maxWidth: 720, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Badge>STEP 6 / {totalSteps}</Badge>
+          <span style={{ fontSize: 13, color: brand.tealDark, fontWeight: 700 }}>
+            {answered} / {EXT80_COUNT} 回答済
+          </span>
+        </div>
+        <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 2px" }}>職場環境について(追加の質問)</h2>
+        <p style={{ fontSize: 13, color: "#5B6B6A", marginBottom: 8 }}>
+          職場環境の改善に役立てるための質問です。最もあてはまるものを選んでください。
+        </p>
+        {blocks.map((sec) => (
+          <div key={sec.key} style={{ marginTop: 18 }}>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: brand.tealDark,
+                background: "#EDF6F5",
+                borderRadius: 8,
+                padding: "8px 12px",
+              }}
+            >
+              {sec.title}
+            </div>
+            {sectionItems(sec.key).map((it) => {
+              shown++;
+              return (
+                <QuestionRow
+                  key={it.index}
+                  num={shown}
+                  text={it.t}
+                  options={sec.options}
+                  value={ext[it.index]}
+                  onChange={(v) => setExtAnswer(it.index, v)}
+                />
+              );
+            })}
+          </div>
+        ))}
+        <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
+          <Btn tone="ghost" onClick={() => setStep(4)}>
+            戻る
+          </Btn>
+          {demo && (
+            <Btn tone="ghost" onClick={fillExt}>
+              (デモ)残りをまとめて回答
+            </Btn>
+          )}
+          <Btn onClick={() => setStep(5)} disabled={!extComplete}>
+            次へ
+          </Btn>
+        </div>
+      </Card>
+    );
+  }
+
   // 同意
   if (step === 5) {
     return (
       <Card style={{ maxWidth: 620, margin: "0 auto" }}>
-        <Badge>STEP 6 / 6</Badge>
+        <Badge>STEP {totalSteps} / {totalSteps}</Badge>
         <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 8px" }}>結果の取り扱いについて</h2>
         <ul style={{ fontSize: 14, color: "#44534F", lineHeight: 1.9, paddingLeft: 20, margin: "0 0 16px" }}>
           <li>あなたの結果は、あなた本人・実施者(産業医事務所)・実施事務従事者が確認します。</li>
@@ -362,7 +454,7 @@ export function ExamForm({
           </span>
         </label>
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-          <Btn tone="ghost" onClick={() => setStep(4)}>
+          <Btn tone="ghost" onClick={() => setStep(is80 ? 8 : 4)}>
             戻る
           </Btn>
           <Btn onClick={submit} disabled={saving}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -29,6 +29,7 @@ import { SCALES } from "@/lib/profile-report";
 import { aggregateByDept, DeptAggregate, GroupResultInput, MIN_GROUP } from "@/lib/group-report";
 import { NORMS_COMBINED, riskTone } from "@/lib/health-risk";
 import { IMPLEMENTER } from "@/lib/org";
+import { EXT80_GROUP_LABEL, EXT80_SCALES } from "@/lib/questionnaire80";
 import { logAccess } from "@/lib/log";
 
 // 健康リスク値の表示色(全国平均=100 / 120以上要注意 / 150以上要対応)
@@ -355,7 +356,7 @@ export function GroupReportView({
     const supabase = createClient();
     supabase
       .from("results")
-      .select("dept, answers, gender, high_stress, score_a, score_b, score_c")
+      .select("dept, answers, answers_ext, gender, high_stress, score_a, score_b, score_c")
       .eq("company_id", companyId)
       .eq("fiscal_year", fiscalYear)
       .then(({ data, error }) => {
@@ -411,7 +412,8 @@ export function GroupReportView({
         <div style={{ borderBottom: `3px solid ${brand.teal}`, paddingBottom: 10, marginBottom: 14 }}>
           <h1 style={{ fontSize: 20, color: brand.ink, margin: "0 0 4px" }}>ストレスチェック集団分析報告書</h1>
           <p style={{ fontSize: 11, color: "#7A8886", margin: 0 }}>
-            {companyName} / {fiscalYear}年度 / 職業性ストレス簡易調査票(57項目)/ 実施者: {IMPLEMENTER.full} /
+            {companyName} / {fiscalYear}年度 / 職業性ストレス簡易調査票(
+            {groups.some((g) => g.ext80Count > 0) ? "80項目" : "57項目"})/ 実施者: {IMPLEMENTER.full} /
             実施事務局: {IMPLEMENTER.officeName} / 作成日: {new Date().toLocaleDateString("ja-JP")}
           </p>
         </div>
@@ -732,6 +734,72 @@ export function GroupReportView({
                 ※ 回答詳細のない旧データは尺度別集計から除外されています。
               </p>
             </div>
+          </>
+        )}
+
+        {groups.some((g) => g.ext80Count > 0) && (
+          <>
+            <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 6px" }}>
+              職場環境の資源など(80項目版の追加尺度)
+            </h2>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
+                <thead>
+                  <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
+                    <th style={{ textAlign: "left", padding: "5px 8px" }}>尺度</th>
+                    <th style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap", color: "#5B6B6A" }}>全国平均</th>
+                    {groups.map((g) => (
+                      <th key={g.dept} style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap" }}>
+                        {g.dept}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(["burden", "task", "dept", "org", "outcome"] as const).map((grp) => (
+                    <React.Fragment key={grp}>
+                      <tr>
+                        <td colSpan={groups.length + 2} style={{ padding: "5px 8px", background: "#F4FAF9", fontWeight: 700, color: brand.tealDark }}>
+                          {EXT80_GROUP_LABEL[grp]}
+                        </td>
+                      </tr>
+                      {EXT80_SCALES.filter((sc) => sc.group === grp).map((sc) => (
+                        <tr key={sc.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
+                          <td style={{ padding: "5px 8px", color: brand.ink }}>{sc.label}</td>
+                          <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
+                            {sc.norm.all.toFixed(2)}
+                          </td>
+                          {groups.map((g) => {
+                            const v = g.ext80Means[sc.key];
+                            const diff = v == null ? null : v - sc.norm.all;
+                            return (
+                              <td
+                                key={g.dept}
+                                style={{
+                                  padding: "5px 8px",
+                                  background: diff == null ? "#fff" : diff <= -0.5 ? "#FDE3E3" : diff <= -0.25 ? "#FCEADC" : "#fff",
+                                }}
+                              >
+                                {v == null ? "—" : v.toFixed(1)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ fontSize: 10.5, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.7 }}>
+              ※ 新職業性ストレス簡易調査票(推奨尺度セット短縮版)による尺度です。
+              <strong>いずれの尺度も点数が高いほど良好</strong>な状態を表します(1〜4点)。全国平均は全国調査の平均値です。
+              網掛けは全国平均を下回る度合いの目安(
+              <span style={{ background: "#FCEADC", padding: "1px 6px", borderRadius: 4 }}>0.25以上低い</span>{" "}
+              <span style={{ background: "#FDE3E3", padding: "1px 6px", borderRadius: 4 }}>0.5以上低い</span>
+              )で、職場環境改善の検討にご活用ください。80項目版で受検した方のみを集計しており、
+              高ストレスの判定には用いていません。
+            </p>
           </>
         )}
 

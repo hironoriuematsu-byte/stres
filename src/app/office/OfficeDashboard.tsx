@@ -134,7 +134,7 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
       ) : (
         <>
           {tab === "結果一覧" && company && (
-            <ResultsPanel companyId={company.id} companyName={company.name} fiscalYear={year} />
+            <ResultsPanel companyId={company.id} companyName={company.name} fiscalYear={year} questionnaire={company.questionnaire ?? "57"} />
           )}
           {tab === "面接指導申出" && company && (
             <InterviewPanel companyId={company.id} companyName={company.name} />
