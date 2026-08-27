@@ -4,7 +4,14 @@ import { DemoNotice } from "@/app/demo/DemoNotice";
 import { buildDemoPeople, DEMO_COMPANY, demoResultRow } from "@/lib/demo-data";
 
 // 紹介用デモ: 架空の個人結果票(DBは参照しない)
-export default function DemoReportPage({ params }: { params: { kind: string } }) {
+export default function DemoReportPage({
+  params,
+  searchParams,
+}: {
+  params: { kind: string };
+  searchParams: { q?: string };
+}) {
+  const questionnaire = searchParams.q === "80" ? "80" : "57";
   if (params.kind !== "high" && params.kind !== "normal") notFound();
 
   const people = buildDemoPeople();
@@ -16,7 +23,7 @@ export default function DemoReportPage({ params }: { params: { kind: string } })
     <>
       <DemoNotice />
       <ReportView
-        result={demoResultRow(person)}
+        result={demoResultRow(person, questionnaire)}
         subjectName={person.name}
         subjectEmpId={person.empId}
         companyName={DEMO_COMPANY}

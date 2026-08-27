@@ -12,6 +12,7 @@ import { Answers, calcScores, SECTION_A, SECTION_B, SECTION_D } from "@/lib/ques
 import type { GroupResultInput } from "@/lib/group-report";
 import type { ResultRow } from "@/lib/types";
 import type { Gender } from "@/lib/profile-report";
+import { EXT80_ITEMS, Ext80Answers } from "@/lib/questionnaire80";
 
 export const DEMO_COMPANY = "モデル株式会社";
 export const DEMO_FISCAL_YEAR = 2026;
@@ -63,6 +64,7 @@ export type DemoPerson = {
   dept: string;
   gender: Gender;
   answers: Answers;
+  ext: Ext80Answers; // 80項目版の追加23項目
   scores: ReturnType<typeof calcScores>;
   createdAt: string;
 };
@@ -109,6 +111,11 @@ export function buildDemoPeople(): DemoPerson[] {
         D: SECTION_D.items.map(() => answerFor(rand, (supportLack + load) / 2, false)),
       };
 
+      // 80項目版の追加23項目。設問の向き(肯定文/否定文)に沿って、
+      // 職場の資源が乏しい部署ほど悪い回答になるようにする
+      const extBad = clamp01((supportLack * 0.55 + ctrlLack * 0.3 + load * 0.15) * 0.9);
+      const ext: Ext80Answers = EXT80_ITEMS.map((it) => answerFor(rand, extBad, it.r));
+
       const surname = SURNAMES[seq % SURNAMES.length];
       const given = (gender === "male" ? GIVEN_M : GIVEN_F)[Math.floor(rand() * 10)];
       const day = 3 + (seq % 20);
@@ -120,6 +127,7 @@ export function buildDemoPeople(): DemoPerson[] {
         dept: d.name,
         gender,
         answers,
+        ext,
         scores: calcScores(answers),
         createdAt: `${DEMO_FISCAL_YEAR}-06-${String(day).padStart(2, "0")}T10:00:00+09:00`,
       });
@@ -129,10 +137,14 @@ export function buildDemoPeople(): DemoPerson[] {
 }
 
 // 集団分析(GroupReportView)に渡す形式
-export function demoGroupRows(people: DemoPerson[]): GroupResultInput[] {
+export function demoGroupRows(
+  people: DemoPerson[],
+  questionnaire: "57" | "80" = "57"
+): GroupResultInput[] {
   return people.map((p) => ({
     dept: p.dept,
     answers: p.answers,
+    answers_ext: questionnaire === "80" ? p.ext : undefined,
     gender: p.gender,
     high_stress: p.scores.highStress,
     score_a: p.scores.A,
@@ -142,7 +154,10 @@ export function demoGroupRows(people: DemoPerson[]): GroupResultInput[] {
 }
 
 // 個人結果票(ReportView)に渡す形式
-export function demoResultRow(p: DemoPerson): ResultRow & { answers: unknown; gender: Gender } {
+export function demoResultRow(
+  p: DemoPerson,
+  questionnaire: "57" | "80" = "57"
+): ResultRow & { answers: unknown; gender: Gender; answers_ext?: unknown; questionnaire?: string } {
   return {
     id: p.id,
     user_id: p.id,
@@ -158,5 +173,7 @@ export function demoResultRow(p: DemoPerson): ResultRow & { answers: unknown; ge
     created_at: p.createdAt,
     answers: p.answers,
     gender: p.gender,
+    questionnaire,
+    answers_ext: questionnaire === "80" ? p.ext : undefined,
   };
 }
