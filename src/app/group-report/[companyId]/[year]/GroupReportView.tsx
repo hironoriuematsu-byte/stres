@@ -340,15 +340,18 @@ export function GroupReportView({
   companyId,
   companyName,
   fiscalYear,
+  demoRows,
 }: {
   companyId: string;
   companyName: string;
   fiscalYear: number;
+  demoRows?: GroupResultInput[]; // 紹介用デモ: DBを参照せずこのデータで描画する
 }) {
-  const [rows, setRows] = useState<GroupResultInput[] | null>(null);
+  const [rows, setRows] = useState<GroupResultInput[] | null>(demoRows ?? null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
+    if (demoRows) return; // デモは取得もログ記録も行わない
     const supabase = createClient();
     supabase
       .from("results")

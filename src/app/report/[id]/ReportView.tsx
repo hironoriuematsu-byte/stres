@@ -72,6 +72,7 @@ export function ReportView({
   companyName,
   backHref,
   backLabel,
+  demo = false,
 }: {
   result: ResultRow & { answers: unknown; gender: Gender | null };
   subjectName: string;
@@ -79,8 +80,10 @@ export function ReportView({
   companyName: string;
   backHref: string;
   backLabel: string;
+  demo?: boolean; // 紹介用デモ: アクセスログを記録しない
 }) {
   useEffect(() => {
+    if (demo) return;
     const supabase = createClient();
     logAccess(supabase, "view_result_detail", `report:${result.id}`, result.company_id);
     // eslint-disable-next-line react-hooks/exhaustive-deps

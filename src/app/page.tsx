@@ -52,6 +52,22 @@ export default async function Home() {
             ログイン
           </button>
         </Link>
+        <Link href="/demo" style={{ marginLeft: 10 }}>
+          <button
+            style={{
+              background: "#fff",
+              color: brand.tealDark,
+              border: `1px solid ${brand.teal}`,
+              borderRadius: 10,
+              padding: "11px 22px",
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            結果サンプルを見る
+          </button>
+        </Link>
       </Card>
       <p style={{ fontSize: 12, color: "#8A9694", lineHeight: 1.8, marginTop: 14, padding: "0 4px" }}>
         通信はTLSで暗号化され、結果データはSupabase(東京リージョン)に保存時暗号化(AES-256)の上で保管されます。個人結果の閲覧範囲は労働安全衛生法第66条の10に基づき、データベースの行レベルセキュリティで制御されています。

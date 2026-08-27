@@ -1,0 +1,105 @@
+import Link from "next/link";
+import { Badge, Btn, Card } from "@/components/ui";
+import { brand } from "@/lib/brand";
+import { buildDemoPeople, DEMO_COMPANY, DEMO_FISCAL_YEAR } from "@/lib/demo-data";
+
+export const metadata = {
+  title: "サンプル(デモ) | ストレスチェックWeb",
+  description: "架空企業のデータで、個人結果票と集団分析報告書のサンプルをご覧いただけます。",
+};
+
+// 広告・紹介用のデモ。ログイン不要で、架空データのみを表示する
+export default function DemoTopPage() {
+  const people = buildDemoPeople();
+  const high = people.filter((p) => p.scores.highStress).length;
+  const depts = [...new Set(people.map((p) => p.dept))];
+
+  return (
+    <div style={{ maxWidth: 780, margin: "0 auto", display: "grid", gap: 16 }}>
+      <Card>
+        <Badge tone="orange">サンプル(デモ)</Badge>
+        <h2 style={{ fontSize: 22, color: brand.ink, margin: "12px 0 8px" }}>
+          ストレスチェックWeb 結果サンプル
+        </h2>
+        <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.9, margin: 0 }}>
+          実際にお渡しする<strong>個人結果票</strong>と<strong>集団分析報告書</strong>を、架空の企業「{DEMO_COMPANY}」
+          ({DEMO_FISCAL_YEAR}年度・{people.length}名・{depts.length}部署)のデータでご覧いただけます。
+          厚生労働省「職業性ストレス簡易調査票(57項目)」に準拠した判定・集計をそのまま使用しています。
+        </p>
+        <div
+          style={{
+            fontSize: 12.5,
+            color: "#8A6B2E",
+            background: "#FBF3E3",
+            border: "1px solid #EFD9A8",
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginTop: 14,
+            lineHeight: 1.8,
+          }}
+        >
+          このページのデータは<strong>すべて架空のもの</strong>です(実在の企業・個人とは一切関係ありません)。
+          デモ用に自動生成した数値で、実際の受検データベースには保存されていません。
+        </div>
+      </Card>
+
+      <Card>
+        <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 6px" }}>{DEMO_COMPANY} の概要(架空)</h3>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 10 }}>
+          {[
+            ["受検者数", `${people.length} 名`],
+            ["部署数", `${depts.length} 部署`],
+            ["高ストレス者数", `${high} 名`],
+            ["高ストレス率", `${Math.round((high / people.length) * 1000) / 10}%`],
+          ].map(([k, v]) => (
+            <div key={k} style={{ border: `1px solid ${brand.line}`, borderRadius: 10, padding: "10px 18px", textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#5B6B6A" }}>{k}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: brand.tealDark }}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: 12.5, color: "#5B6B6A", margin: "12px 0 0", lineHeight: 1.8 }}>
+          部署: {depts.join(" / ")}
+        </p>
+      </Card>
+
+      <Card>
+        <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 8px" }}>📄 個人結果票(受検者本人にお渡しするもの)</h3>
+        <p style={{ fontSize: 13.5, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 12px" }}>
+          領域別の得点と高ストレス判定に加え、厚労省の素点換算表(男女別)による19尺度のストレスプロフィールを
+          3分類のレーダーチャートで表示します。印刷・PDF保存に対応しています。
+        </p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Link href="/demo/report/high">
+            <Btn tone="orange">高ストレス判定の例を見る</Btn>
+          </Link>
+          <Link href="/demo/report/normal">
+            <Btn tone="ghost">高ストレスに該当しない例を見る</Btn>
+          </Link>
+        </div>
+      </Card>
+
+      <Card>
+        <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 8px" }}>📊 集団分析報告書(事業者へお渡しするもの)</h3>
+        <p style={{ fontSize: 13.5, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 12px" }}>
+          部署別の高ストレス率、仕事のストレス判定図(健康リスク・全国平均との比較)、職場のストレスプロフィール、
+          尺度別の平均評価点までを1つの報告書にまとめます。個人特定防止のため、10名未満の部署は集計から除外されます。
+        </p>
+        <Link href="/demo/group-report">
+          <Btn>集団分析報告書のサンプルを見る</Btn>
+        </Link>
+      </Card>
+
+      <Card>
+        <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8, margin: 0 }}>
+          導入のご相談・お見積りは、うえまつ産業医事務所までお問い合わせください。
+        </p>
+        <div style={{ marginTop: 12 }}>
+          <Link href="/">
+            <Btn tone="ghost">トップページへ</Btn>
+          </Link>
+        </div>
+      </Card>
+    </div>
+  );
+}
