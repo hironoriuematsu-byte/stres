@@ -64,6 +64,19 @@ export default function DemoTopPage() {
       </Card>
 
       <Card>
+        <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 8px" }}>📝 受検の流れ(従業員が回答する画面)</h3>
+        <p style={{ fontSize: 13.5, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 12px" }}>
+          従業員が実際に回答する画面をそのまま体験できます。受検者情報の入力から57問の回答(A: 仕事について /
+          B: 最近1か月の状態 / C: 周りの方々について / D: 満足度)、会社への提供同意の確認、結果表示までの一連の流れです。
+          スマートフォンからも同じ画面で受検でき、所要時間は約10分です。
+          <strong>デモの回答は保存されません</strong>(各設問画面の「残りをまとめて回答」で、流れだけを素早く確認することもできます)。
+        </p>
+        <Link href="/demo/exam">
+          <Btn>受検画面を体験する</Btn>
+        </Link>
+      </Card>
+
+      <Card>
         <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 8px" }}>📄 個人結果票(受検者本人にお渡しするもの)</h3>
         <p style={{ fontSize: 13.5, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 12px" }}>
           領域別の得点と高ストレス判定に加え、厚労省の素点換算表(男女別)による19尺度のストレスプロフィールを

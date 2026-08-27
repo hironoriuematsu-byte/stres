@@ -23,9 +23,11 @@ const sections = { 1: SECTION_A, 2: SECTION_B, 4: SECTION_D } as const;
 export function ExamForm({
   profile,
   departments = [],
+  demo = false,
 }: {
   profile: ExamProfile;
   departments?: string[]; // 企業ごとに登録された部署の選択肢(空なら直接入力)
+  demo?: boolean; // 紹介用デモ: 保存せず、その場で判定結果だけを表示する
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0); // 0=受検者情報 1=A 2=B 3=C 4=D 5=同意 6=結果 7=年度重複
@@ -63,10 +65,26 @@ export function ExamForm({
 
   const complete = (sec: keyof Answers) => ans[sec].every((v) => v != null);
 
+  // デモ専用: 57問すべてを試さなくても流れを確認できるよう、未回答をまとめて埋める
+  const fillSection = (sec: keyof Answers) => {
+    setAns((p) => ({
+      ...p,
+      [sec]: p[sec].map((v) => (v == null ? 1 + Math.floor(Math.random() * 4) : v)),
+    }));
+  };
+
   const submit = async () => {
+    const scores = calcScores(ans);
+
+    // デモ: データベースには保存せず、判定結果のみ表示する
+    if (demo) {
+      setResult(scores);
+      setStep(6);
+      return;
+    }
+
     setSaving(true);
     setSaveError(null);
-    const scores = calcScores(ans);
     const supabase = createClient();
 
     // 本人が入力した氏名・社員番号・部署をプロフィールへ反映
@@ -209,7 +227,7 @@ export function ExamForm({
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-          <Btn tone="ghost" onClick={() => router.push("/my")}>
+          <Btn tone="ghost" onClick={() => router.push(demo ? "/demo" : "/my")}>
             戻る
           </Btn>
           <Btn onClick={() => setStep(1)} disabled={!name || !dept || !gender}>
@@ -244,10 +262,15 @@ export function ExamForm({
             onChange={(v) => setAnswer(sec.key, i, v)}
           />
         ))}
-        <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+        <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
           <Btn tone="ghost" onClick={() => setStep(step - 1)}>
             戻る
           </Btn>
+          {demo && (
+            <Btn tone="ghost" onClick={() => fillSection(sec.key)}>
+              (デモ)残りをまとめて回答
+            </Btn>
+          )}
           <Btn onClick={() => setStep(step + 1)} disabled={!complete(sec.key)}>
             次へ
           </Btn>
@@ -294,6 +317,11 @@ export function ExamForm({
           <Btn tone="ghost" onClick={() => setStep(2)}>
             戻る
           </Btn>
+          {demo && (
+            <Btn tone="ghost" onClick={() => fillSection("C")}>
+              (デモ)残りをまとめて回答
+            </Btn>
+          )}
           <Btn onClick={() => setStep(4)} disabled={!complete("C")}>
             次へ
           </Btn>
@@ -392,25 +420,40 @@ export function ExamForm({
           </div>
         )}
         <div style={{ marginTop: 20, textAlign: "center", display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-          {resultId && (
-            <Link href={`/report/${resultId}`}>
-              <Btn tone="ghost">結果票を見る(印刷・PDF)</Btn>
-            </Link>
+          {demo ? (
+            <>
+              <Link href="/demo/report/high">
+                <Btn tone="ghost">結果票のサンプルを見る</Btn>
+              </Link>
+              <Link href="/demo">
+                <Btn>サンプル一覧へ</Btn>
+              </Link>
+            </>
+          ) : (
+            <>
+              {resultId && (
+                <Link href={`/report/${resultId}`}>
+                  <Btn tone="ghost">結果票を見る(印刷・PDF)</Btn>
+                </Link>
+              )}
+              {result.highStress && (
+                <Link href="/my?interview=1">
+                  <Btn tone="orange">面接指導を申し出る</Btn>
+                </Link>
+              )}
+              <Link href="/my">
+                <Btn>マイページへ</Btn>
+              </Link>
+              <Btn tone="ghost" onClick={signOutAndExit}>
+                ログアウトして終了
+              </Btn>
+            </>
           )}
-          {result.highStress && (
-            <Link href="/my?interview=1">
-              <Btn tone="orange">面接指導を申し出る</Btn>
-            </Link>
-          )}
-          <Link href="/my">
-            <Btn>マイページへ</Btn>
-          </Link>
-          <Btn tone="ghost" onClick={signOutAndExit}>
-            ログアウトして終了
-          </Btn>
         </div>
         <p style={{ fontSize: 12, color: "#8A9694", marginTop: 14, textAlign: "center", lineHeight: 1.7 }}>
-          共用のパソコンをお使いの場合は、終了時に必ず「ログアウトして終了」を押してください。
+          {demo
+            ? "このデモの回答は保存されません。実際の受検では、この結果がご本人のマイページに保存されます。"
+            : "共用のパソコンをお使いの場合は、終了時に必ず「ログアウトして終了」を押してください。"}
         </p>
       </Card>
     );
