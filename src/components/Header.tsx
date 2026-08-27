@@ -58,7 +58,7 @@ export function Header({
           </div>
         </Link>
         <div style={{ fontSize: 12, color: "#7A8886" }}>
-          職業性ストレス簡易調査票(57項目)準拠 / うえまつ産業医事務所
+          職業性ストレス簡易調査票 準拠 / うえまつ産業医事務所
         </div>
       </div>
       {email && (

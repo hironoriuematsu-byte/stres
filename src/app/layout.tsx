@@ -8,7 +8,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "ストレスチェックWeb",
-  description: "職業性ストレス簡易調査票(57項目)準拠 ストレスチェックシステム",
+  description: "職業性ストレス簡易調査票 準拠 ストレスチェックシステム",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

@@ -29,7 +29,7 @@ export default async function JoinPage({ params }: { params: { token: string } }
           {info.company_name} {info.fiscal_year}年度 ストレスチェック
         </h2>
         <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.9, margin: 0 }}>
-          厚生労働省「職業性ストレス簡易調査票(57項目)」によるストレスチェックです。受検にはアカウント登録(本人確認のためのメール認証)が必要です。結果はあなた本人と実施者(産業医事務所)・実施事務従事者のみが確認でき、あなたの同意なく会社側へ個人結果が提供されることはありません。
+          厚生労働省「職業性ストレス簡易調査票」によるストレスチェックです。受検にはアカウント登録(本人確認のためのメール認証)が必要です。結果はあなた本人と実施者(産業医事務所)・実施事務従事者のみが確認でき、あなたの同意なく会社側へ個人結果が提供されることはありません。
         </p>
       </Card>
       <JoinForm token={params.token} />
