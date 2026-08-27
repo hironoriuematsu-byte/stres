@@ -137,6 +137,18 @@ export default function DemoTopPage({ searchParams }: { searchParams: { q?: stri
       </Card>
 
       <Card>
+        <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 8px" }}>🩺 産業医面接指導の申出(高ストレス者向け)</h3>
+        <p style={{ fontSize: 13.5, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 12px" }}>
+          高ストレスと判定された方には、受検直後の結果画面とマイページに「面接指導を申し出る」が表示されます。
+          申出をすると、本人・実施者(産業医)・実施事務従事者へ自動でメールが届き、日程調整に進みます。
+          厚生労働省の指針に基づき、申出には結果を事業者へ提供することへの同意確認が組み込まれています。
+        </p>
+        <Link href="/demo/interview">
+          <Btn tone="orange">申出フォームのサンプルを見る</Btn>
+        </Link>
+      </Card>
+
+      <Card>
         <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 8px" }}>📊 集団分析報告書(事業者へお渡しするもの)</h3>
         <p style={{ fontSize: 13.5, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 12px" }}>
           部署別の高ストレス率、仕事のストレス判定図(健康リスク・全国平均との比較)、職場のストレスプロフィール、

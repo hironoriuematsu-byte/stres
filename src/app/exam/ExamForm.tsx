@@ -514,10 +514,16 @@ export function ExamForm({
         <div style={{ marginTop: 20, textAlign: "center", display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
           {demo ? (
             <>
-              <Link href="/demo/report/high">
+              <Link href={`/demo/report/${result.highStress ? "high" : "normal"}${is80 ? "?q=80" : ""}`}>
                 <Btn tone="ghost">結果票のサンプルを見る</Btn>
               </Link>
-              <Link href="/demo">
+              {/* 実際の受検と同じく、高ストレス判定のときだけ申出への導線を出す */}
+              {result.highStress && (
+                <Link href="/demo/interview">
+                  <Btn tone="orange">面接指導を申し出る</Btn>
+                </Link>
+              )}
+              <Link href={`/demo${is80 ? "?q=80" : ""}`}>
                 <Btn>サンプル一覧へ</Btn>
               </Link>
             </>
