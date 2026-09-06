@@ -303,7 +303,7 @@ export function ReportView({
             </h2>
             <p style={{ fontSize: 10.5, color: "#8A9694", margin: "0 0 8px", lineHeight: 1.7 }}>
               新職業性ストレス簡易調査票(推奨尺度セット短縮版)による結果です。
-              <strong>いずれの尺度も点数が高いほど良好</strong>な状態を表します(すべて「▼低いと注意」)。
+              <strong>いずれの尺度も点数が高いほど良好</strong>な状態を表します(1〜4点。点が低いほど注意が必要という向きで統一されています)。
               「情緒的負担」「役割葛藤」なども点が高いほど負担が小さいことを示します。
               この表は回答値(1〜4点)の平均で、上の<strong>ストレスプロフィール(1〜5の評価点)とは目盛りが異なります</strong>。
               「全国平均」は全国調査(1,600名超)の平均値(性別が記録されている場合は同性の平均)で、尺度ごとに異なる値になります。
@@ -330,41 +330,7 @@ export function ReportView({
                       .filter((s) => s.group === g)
                       .map((s) => (
                         <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
-                          <td style={{ padding: "5px 8px", color: brand.ink }}>
-                            {s.label}
-                            {/* 追加尺度はすべて「高いほど良好」に変換済み */}
-                            <span
-                              style={{
-                                marginLeft: 6,
-                                fontSize: 9.5,
-                                fontWeight: 700,
-                                color: "#0B7268",
-                                background: "#E2F3F1",
-                                border: "1px solid #BFE3DE",
-                                borderRadius: 6,
-                                padding: "0px 6px",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              ▼低いと注意
-                            </span>
-                            {s.single && (
-                              <span
-                                style={{
-                                  marginLeft: 4,
-                                  fontSize: 9.5,
-                                  color: "#8A6B2E",
-                                  background: "#FBF3E3",
-                                  border: "1px solid #EFD9A8",
-                                  borderRadius: 6,
-                                  padding: "0px 6px",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                単一項目・4段階
-                              </span>
-                            )}
-                          </td>
+                          <td style={{ padding: "5px 8px", color: brand.ink }}>{s.label}</td>
                           <td style={{ padding: "5px 8px", fontWeight: 700 }}>{s.score.toFixed(1)}</td>
                           <td style={{ padding: "5px 8px", color: "#5B6B6A" }}>{s.norm.toFixed(2)}</td>
                           <td

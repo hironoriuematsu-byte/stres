@@ -811,40 +811,7 @@ export function GroupReportView({
                       </tr>
                       {SCALES.filter((s) => s.category === cat).map((s) => (
                         <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
-                          <td style={{ padding: "5px 8px", color: brand.ink, whiteSpace: "nowrap" }}>
-                            {s.label}
-                            <span
-                              style={{
-                                marginLeft: 6,
-                                fontSize: 9.5,
-                                fontWeight: 700,
-                                color: s.direction === "negative" ? "#B02A2A" : "#0B7268",
-                                background: s.direction === "negative" ? "#FDF0F0" : "#E2F3F1",
-                                border: `1px solid ${s.direction === "negative" ? "#F3CBCB" : "#BFE3DE"}`,
-                                borderRadius: 6,
-                                padding: "0px 6px",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {s.direction === "negative" ? "▲高いと注意" : "▼低いと注意"}
-                            </span>
-                            {s.male.length === 4 && (
-                              <span
-                                style={{
-                                  marginLeft: 4,
-                                  fontSize: 9.5,
-                                  color: "#8A6B2E",
-                                  background: "#FBF3E3",
-                                  border: "1px solid #EFD9A8",
-                                  borderRadius: 6,
-                                  padding: "0px 6px",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                単一項目・4段階
-                              </span>
-                            )}
-                          </td>
+                          <td style={{ padding: "5px 8px", color: brand.ink, whiteSpace: "nowrap" }}>{s.label}</td>
                           <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
                             {s.male.length === 4 ? "2.5(参考)" : "3.0"}
                           </td>
@@ -862,12 +829,12 @@ export function GroupReportView({
             </div>
             <div style={{ fontSize: 10.5, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.8 }}>
               <p style={{ margin: 0 }}>
-                ※ 平均評価点は、厚生労働省の素点換算表(男女別)による各人の評価点(1〜5の5段階。「単一項目・4段階」の表示がある尺度は1〜4)の集団平均です。
+                ※ 平均評価点は、厚生労働省の素点換算表(男女別)による各人の評価点(1〜5の5段階。単一項目の尺度は1〜4)の集団平均です。
                 「全国平均」列は比較の基準で、5段階尺度は評価点の期待値<strong>3.0(全国平均水準)</strong>、
-                単一項目・4段階の尺度は目盛り中央の<strong>2.5(参考基準。全国調査に基づく平均値ではありません)</strong>を示しています。
-                尺度名の横のタグは点数の読み方を表します:
-                <span style={{ color: "#B02A2A", fontWeight: 700 }}>「▲高いと注意」</span>は点が高いほど悪い方向(負担・反応系)、
-                <span style={{ color: "#0B7268", fontWeight: 700 }}>「▼低いと注意」</span>は点が低いほど悪い方向(コントロール・サポート系)です。
+                単一項目の4段階尺度(自覚的な身体的負担度・職場環境・技能の活用度・仕事の適性度・働きがい。全国平均欄が「2.5(参考)」の尺度)は
+                目盛り中央の<strong>2.5(参考基準。全国調査に基づく平均値ではありません)</strong>を示しています。
+                点数の読み方は尺度によって向きが異なり、<strong>負担・心身の反応の尺度は点が高いほど</strong>、
+                <strong>コントロール・サポート・満足度の尺度は点が低いほど</strong>悪い方向です。
               </p>
               <p style={{ margin: "4px 0 0" }}>
                 ※ 網掛けの基準(悪い方向に換算した平均評価点、5段階の目盛り):{" "}
@@ -912,41 +879,7 @@ export function GroupReportView({
                       </tr>
                       {EXT80_SCALES.filter((sc) => sc.group === grp).map((sc) => (
                         <tr key={sc.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
-                          <td style={{ padding: "5px 8px", color: brand.ink }}>
-                            {sc.label}
-                            {/* 追加尺度はすべて「高いほど良好」に変換済み(上の表と同じ書式で向きを示す) */}
-                            <span
-                              style={{
-                                marginLeft: 6,
-                                fontSize: 9.5,
-                                fontWeight: 700,
-                                color: "#0B7268",
-                                background: "#E2F3F1",
-                                border: "1px solid #BFE3DE",
-                                borderRadius: 6,
-                                padding: "0px 6px",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              ▼低いと注意
-                            </span>
-                            {sc.items.length === 1 && (
-                              <span
-                                style={{
-                                  marginLeft: 4,
-                                  fontSize: 9.5,
-                                  color: "#8A6B2E",
-                                  background: "#FBF3E3",
-                                  border: "1px solid #EFD9A8",
-                                  borderRadius: 6,
-                                  padding: "0px 6px",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                単一項目・4段階
-                              </span>
-                            )}
-                          </td>
+                          <td style={{ padding: "5px 8px", color: brand.ink }}>{sc.label}</td>
                           <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
                             {sc.norm.all.toFixed(2)}
                           </td>
@@ -974,7 +907,7 @@ export function GroupReportView({
             </div>
             <p style={{ fontSize: 10.5, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.7 }}>
               ※ 新職業性ストレス簡易調査票(推奨尺度セット短縮版)による尺度です。
-              <strong>いずれの尺度も点数が高いほど良好</strong>な状態を表します(すべて「▼低いと注意」)。
+              <strong>いずれの尺度も点数が高いほど良好</strong>な状態を表します(1〜4点。点が低いほど注意が必要という向きで統一されています)。
               「情緒的負担」「役割葛藤」なども<strong>点が高いほど負担が小さい</strong>ことを示す点にご注意ください。
               <br />
               <strong>この表の点数は、上の「尺度別 平均評価点」とは目盛りが異なります。</strong>
