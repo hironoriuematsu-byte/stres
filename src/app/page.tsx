@@ -65,7 +65,7 @@ export default async function Home() {
               cursor: "pointer",
             }}
           >
-            結果サンプルを見る
+            デモを体験する
           </button>
         </Link>
       </Card>

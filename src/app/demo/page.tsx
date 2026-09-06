@@ -21,7 +21,7 @@ export default function DemoTopPage({ searchParams }: { searchParams: { q?: stri
       <Card>
         <Badge tone="orange">サンプル(デモ)</Badge>
         <h2 style={{ fontSize: 22, color: brand.ink, margin: "12px 0 8px" }}>
-          ストレスチェックWeb 結果サンプル({q === "80" ? "80項目版" : "57項目版"})
+          ストレスチェックWeb 体験デモ({q === "80" ? "80項目版" : "57項目版"})
         </h2>
         <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.9, margin: 0 }}>
           実際にお渡しする<strong>個人結果票</strong>と<strong>集団分析報告書</strong>を、架空の企業「{DEMO_COMPANY}」
