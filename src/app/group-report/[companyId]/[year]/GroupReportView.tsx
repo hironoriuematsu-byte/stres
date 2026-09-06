@@ -186,11 +186,9 @@ type PlotPoint = {
   label: string; // 番号(ほぼ同じ位置の部署はまとめて表示: 例「①③」)
   worstRisk: number | null; // 点の色分け用(重なった場合は最も高いリスク)
   items: { num: string; dept: string; risk: number | null }[];
-  // 番号は点の上下左右に振り分けて表示する(該当しない向きは空文字)
-  labelTop?: string;
-  labelBottom?: string;
-  labelRight?: string;
-  labelLeft?: string;
+  side?: Side; // 番号を点のどちら側に出すか(引き出し線でどの点かを示す)
+  isRef?: boolean; // 全国平均(⓪)の点
+  name?: string; // 全国平均の説明(ツールチップ用)
 };
 
 // 見分けがつかないほど近い部署を1つの点にまとめる(ラベルの重なり対策)。
@@ -263,14 +261,16 @@ const SIDE_ORDER: Side[] = ["top", "bottom", "right", "left"];
 
 function assignLabelSide(data: PlotPoint[], spanX: number, spanY: number): PlotPoint[] {
   // ラベル1つが占める大きさ(軸幅に対する比率)。文字は縦より横に広い
-  const W = 0.07;
-  const H = 0.06;
+  const W = 0.075;
+  const H = 0.065;
   // 点からラベル中心までのずれ
   const off = (s: Side) => ({
-    dx: s === "right" ? spanX * 0.05 : s === "left" ? -spanX * 0.05 : 0,
-    dy: s === "top" ? spanY * 0.06 : s === "bottom" ? -spanY * 0.06 : 0,
+    dx: s === "right" ? spanX * 0.055 : s === "left" ? -spanX * 0.055 : 0,
+    dy: s === "top" ? spanY * 0.065 : s === "bottom" ? -spanY * 0.065 : 0,
   });
 
+  // 点そのものもラベルの置き場所の障害物として扱う(番号が別の点に重ならないように)
+  const dots = data.map((d) => ({ cx: d.x, cy: d.y }));
   const placed: { cx: number; cy: number }[] = [];
   return [...data]
     .sort((a, b) => b.y - a.y || a.x - b.x)
@@ -280,8 +280,11 @@ function assignLabelSide(data: PlotPoint[], spanX: number, spanY: number): PlotP
         const o = off(s);
         const cx = d.x + o.dx;
         const cy = d.y + o.dy;
-        const hit = placed.some(
-          (p) => Math.abs(p.cx - cx) / spanX < W && Math.abs(p.cy - cy) / spanY < H
+        const hit = [...placed, ...dots].some(
+          (p) =>
+            !(p.cx === d.x && p.cy === d.y) &&
+            Math.abs(p.cx - cx) / spanX < W &&
+            Math.abs(p.cy - cy) / spanY < H
         );
         if (!hit) {
           chosen = s;
@@ -290,14 +293,54 @@ function assignLabelSide(data: PlotPoint[], spanX: number, spanY: number): PlotP
       }
       const o = off(chosen);
       placed.push({ cx: d.x + o.dx, cy: d.y + o.dy });
-      return {
-        ...d,
-        labelTop: chosen === "top" ? d.label : "",
-        labelBottom: chosen === "bottom" ? d.label : "",
-        labelRight: chosen === "right" ? d.label : "",
-        labelLeft: chosen === "left" ? d.label : "",
-      };
+      return { ...d, side: chosen };
     });
+}
+
+// 点と番号を1組で描く。番号は点から少し離した位置に置き、
+// どの点の番号かが必ず分かるように細い引き出し線で結ぶ。
+function PlotShape(props: {
+  cx?: number;
+  cy?: number;
+  fill?: string;
+  payload?: PlotPoint;
+}) {
+  const { cx, cy, fill, payload } = props;
+  if (cx == null || cy == null || !payload) return <g />;
+  const side: Side = payload.side ?? "top";
+  const R = 5.5; // 点の半径
+  const DIST = 17; // 点の中心から番号の中心までの距離(px)
+  const ux = side === "right" ? 1 : side === "left" ? -1 : 0;
+  const uy = side === "bottom" ? 1 : side === "top" ? -1 : 0;
+  const lx = cx + ux * DIST;
+  const ly = cy + uy * DIST;
+  return (
+    <g>
+      <line
+        x1={cx + ux * (R + 1)}
+        y1={cy + uy * (R + 1)}
+        x2={cx + ux * (DIST - 7)}
+        y2={cy + uy * (DIST - 7)}
+        stroke="#8A9694"
+        strokeWidth={1}
+      />
+      <circle cx={cx} cy={cy} r={R} fill={fill} stroke="#fff" strokeWidth={1} />
+      <text
+        x={lx}
+        y={ly}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={12}
+        fontWeight={700}
+        fill={payload.isRef ? "#5B6B6A" : "#22333B"}
+        stroke="#fff"
+        strokeWidth={3}
+        paintOrder="stroke"
+      >
+        {payload.label}
+      </text>
+    </g>
+  );
 }
 
 function JudgeScatter({
@@ -326,7 +369,19 @@ function JudgeScatter({
   const [y0, y1] = axisRange([...data.map((d) => d.y), ...refPoints.map((r) => r.y)]);
   const spanX = x1 - x0;
   const spanY = y1 - y0;
-  const points = assignLabelSide(data, spanX, spanY);
+  // 全国平均(⓪)も同じ配置計算に含め、部署の番号とぶつからないようにする
+  const refAsPoints: PlotPoint[] = refPoints.map((r) => ({
+    x: r.x,
+    y: r.y,
+    label: r.label,
+    worstRisk: null,
+    items: [],
+    isRef: true,
+    name: r.name,
+  }));
+  const laidOut = assignLabelSide([...refAsPoints, ...data], spanX, spanY);
+  const refPts = laidOut.filter((p) => p.isRef);
+  const points = laidOut.filter((p) => !p.isRef);
 
   const inset = (lo: number, hi: number, ratio: number) => lo + (hi - lo) * ratio;
   const highPos = topLeft
@@ -386,7 +441,7 @@ function JudgeScatter({
                 const p = payload[0].payload as Partial<PlotPoint> & { x: number; y: number; label?: string; name?: string };
                 return (
                   <div style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 8, padding: "6px 10px", fontSize: 12, lineHeight: 1.7 }}>
-                    {p.items ? (
+                    {p.items && p.items.length > 0 ? (
                       p.items.map((it) => (
                         <div key={it.num}>
                           <strong>
@@ -406,31 +461,9 @@ function JudgeScatter({
               }}
             />
             {/* 全国平均の位置(男女計・⓪) */}
-            <Scatter data={refPoints} fill="#5B6B6A" isAnimationActive={false} legendType="none">
-              <LabelList
-                dataKey="label"
-                position="top"
-                style={{ fontSize: 12, fontWeight: 700, fill: "#5B6B6A" }}
-              />
-            </Scatter>
-            <Scatter data={points} fill={brand.teal} isAnimationActive={false}>
-              {/* 近い点どうしでラベルがぶつからないよう、上下左右に振り分けて表示する */}
-              {(
-                [
-                  ["labelTop", "top"],
-                  ["labelBottom", "bottom"],
-                  ["labelRight", "right"],
-                  ["labelLeft", "left"],
-                ] as const
-              ).map(([key, pos]) => (
-                <LabelList
-                  key={key}
-                  dataKey={key}
-                  position={pos}
-                  offset={8}
-                  style={{ fontSize: 12, fontWeight: 700, fill: "#22333B" }}
-                />
-              ))}
+            <Scatter data={refPts} fill="#5B6B6A" isAnimationActive={false} legendType="none" shape={PlotShape} />
+            {/* 番号は点から引き出し線でつなぎ、どの点の番号かが分かるようにする */}
+            <Scatter data={points} fill={brand.teal} isAnimationActive={false} shape={PlotShape}>
               {points.map((d, i) => (
                 <Cell key={i} fill={RISK_COLOR[riskTone(d.worstRisk)]} />
               ))}
@@ -641,6 +674,7 @@ export function GroupReportView({
               背景の色が濃い(赤系の)側ほど健康リスクが高い領域です:
               左図は左上(負担が多くコントロールが低い)ほど、右図は左下(上司・同僚の支援がともに少ない)ほどリスクが高くなります。
               図中の番号は下の対応表の部署を表し(位置がほぼ重なる部署は番号をまとめて表示)、⓪は全国平均(男女計)の位置です。
+              番号は重ならない向きに置き、細い線でどの点のものかを示しています。
               軸の範囲は、点が読み取りやすいようにプロットされる範囲に合わせて拡大しています(目盛りの数値でご確認ください)。
               全体・各部署の点が⓪よりリスクの高い側にあるかどうかで、全国平均との比較ができます。
               健康リスクは全国平均=100で、健康問題の起きやすさが全国平均の何倍かを表します(例: 120なら1.2倍)。
