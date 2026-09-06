@@ -166,6 +166,7 @@ export type Ext80ScaleResult = {
   score: number; // 1〜4(高いほど良好)
   norm: number; // 比較する全国平均
   diff: number; // 全国平均との差
+  single: boolean; // 1問だけで構成される尺度(結果票で注記するため)
 };
 
 // 追加尺度の得点を算出する(高得点=良好、1〜4点)
@@ -188,6 +189,7 @@ export function computeExt80(
       score: Math.round(score * 100) / 100,
       norm,
       diff: Math.round((score - norm) * 100) / 100,
+      single: s.items.length === 1,
     };
   });
 }

@@ -912,7 +912,41 @@ export function GroupReportView({
                       </tr>
                       {EXT80_SCALES.filter((sc) => sc.group === grp).map((sc) => (
                         <tr key={sc.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
-                          <td style={{ padding: "5px 8px", color: brand.ink }}>{sc.label}</td>
+                          <td style={{ padding: "5px 8px", color: brand.ink }}>
+                            {sc.label}
+                            {/* 追加尺度はすべて「高いほど良好」に変換済み(上の表と同じ書式で向きを示す) */}
+                            <span
+                              style={{
+                                marginLeft: 6,
+                                fontSize: 9.5,
+                                fontWeight: 700,
+                                color: "#0B7268",
+                                background: "#E2F3F1",
+                                border: "1px solid #BFE3DE",
+                                borderRadius: 6,
+                                padding: "0px 6px",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              ▼低いと注意
+                            </span>
+                            {sc.items.length === 1 && (
+                              <span
+                                style={{
+                                  marginLeft: 4,
+                                  fontSize: 9.5,
+                                  color: "#8A6B2E",
+                                  background: "#FBF3E3",
+                                  border: "1px solid #EFD9A8",
+                                  borderRadius: 6,
+                                  padding: "0px 6px",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                単一項目・4段階
+                              </span>
+                            )}
+                          </td>
                           <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
                             {sc.norm.all.toFixed(2)}
                           </td>
@@ -940,7 +974,14 @@ export function GroupReportView({
             </div>
             <p style={{ fontSize: 10.5, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.7 }}>
               ※ 新職業性ストレス簡易調査票(推奨尺度セット短縮版)による尺度です。
-              <strong>いずれの尺度も点数が高いほど良好</strong>な状態を表します(1〜4点)。全国平均は全国調査の平均値です。
+              <strong>いずれの尺度も点数が高いほど良好</strong>な状態を表します(すべて「▼低いと注意」)。
+              「情緒的負担」「役割葛藤」なども<strong>点が高いほど負担が小さい</strong>ことを示す点にご注意ください。
+              <br />
+              <strong>この表の点数は、上の「尺度別 平均評価点」とは目盛りが異なります。</strong>
+              上の表は素点換算表で1〜5の評価点に変換しているため全国平均が3.0になりますが、
+              この表は回答値(1〜4点)の平均をそのまま用いており、
+              全国平均は尺度ごとに実際の全国調査の値(例: 公正な人事評価 2.04、職場のハラスメント 3.70)になります。
+              数値が3や2.5でないのはこのためで、誤りではありません。
               網掛けは全国平均を下回る度合いの目安(
               <span style={{ background: "#FCEADC", padding: "1px 6px", borderRadius: 4 }}>0.25以上低い</span>{" "}
               <span style={{ background: "#FDE3E3", padding: "1px 6px", borderRadius: 4 }}>0.5以上低い</span>
