@@ -119,13 +119,57 @@ Vercel の Hobby プランは**個人の非商用利用向け**です。商用�
 4. **Deployment Protection** の設定を確認してください。チームのプロジェクトでは保護が既定で有効な場合があり、**本番サイトにログインを要求する設定になっていると、従業員が受検URLを開けません。**
 5. 請求先(Billing)を会社の情報に設定します。**Pro はメンバー1人あたりの課金**のため、当面は1人のままにしておくのが経済的です。
 
+### 手順(具体)
+
+#### 事前準備(移管の前に必ず)
+
+1. **現在の設定を控える**。Vercel のプロジェクト → Settings → Environment Variables を開き、次の5つが登録されていることを確認する。値が画面で表示できるものはコピーして手元に控える。
+
+   | 変数名 | 値の入手先(控えられない場合) |
+   |---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 同上(anon public key) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | 同上(service_role key・**秘密**) |
+   | `RESEND_API_KEY` | Resend で新規作成(既存キーの値は再表示できない) |
+   | `SENDER_EMAIL` | 通知メールの差出人アドレス。Resend → Domains で認証済みのもの |
+
+2. **独自ドメインを先に設定しておく**(手順6)。これを先にやると、移管でURLが変わっても実害がなくなります。
+3. 受検期間中の企業がないタイミングを選ぶ。
+
+#### A. 個人アカウントをチームに変換できる場合(最善)
+
+Vercel のアカウント設定に「Convert to Team」に相当する項目があれば、**プロジェクトを移管せずにそのままチーム化**できます。URL・環境変数・GitHub連携がすべて維持されるため、この方法があれば最優先で選んでください。
+
+1. 右上のアバター → Settings → 一般設定内の Convert to Team
+2. チーム名(例: `mestate`)とチームURLスラッグを決める
+3. プランで **Pro** を選択
+
+#### B. チームを新規作成してプロジェクトを移管する
+
+1. **チームを作成**: 左上のスコープ切替(アカウント名の部分)→ **Create Team**
+   - Team Name: `Mestate LLC` など
+   - Team URL(スラッグ): 例 `mestate` ← 後からの変更は避けたいので慎重に
+   - プラン: **Pro** を選択
+2. **GitHub連携をチームに用意する**: チームの Settings → Git、または移管時の案内に従って、GitHub App がリポジトリ `hironoriuematsu-byte/stres` にアクセスできるよう許可する
+   - これをしないと、移管後に**GitHubへのプッシュで自動デプロイされなくなります**
+3. **プロジェクトを移管**: 個人アカウント側の `stres` プロジェクト → **Settings → General → 最下部の Transfer Project**
+   - 移管先(Destination scope)に作成したチームを選択
+   - **確認画面に表示される「ドメインがどうなるか」の説明を必ず読む**。`stres.vercel.app` が引き継げない旨の表示が出た場合は、いったん中止して先に独自ドメインを設定してください
+4. **環境変数を確認**: チーム側のプロジェクト → Settings → Environment Variables に5つ揃っているか確認。欠けていれば上の表を見て再登録し、**Production / Preview / Development** のどれに適用するかも元と同じに設定する
+5. **再デプロイ**: Deployments → 最新のデプロイ → Redeploy(環境変数を追加した場合は必須)
+6. **Deployment Protection を確認**: Settings → Deployment Protection。**Production に保護がかかっていると受検URLが開けません。**Vercel Authentication は Preview のみ、または無効にする
+7. **請求先を設定**: チームの Settings → Billing で会社名・住所・請求書送付先メール・支払方法を登録。Tax ID(インボイス登録番号)があれば入力
+8. **メンバーは増やさない**: Pro は**メンバー1人あたりの課金**です。当面は1人のままに
+
 ### 移管後の確認
 
-- [ ] `https://stres.vercel.app`(または新URL)が**ログインなしで**開く
+- [ ] `https://stres.vercel.app`(または新URL/独自ドメイン)が**ログインなしで**開く
 - [ ] 配布URL(`/join/...`)が開き、新規登録できる
 - [ ] 確認メールが届く
 - [ ] 受検 → 結果表示までできる
 - [ ] 面接指導の申出で、本人・実施者・実施事務従事者の3者にメールが届く
+- [ ] GitHubにプッシュすると自動デプロイされる(連携が切れていないか)
+- [ ] Supabase → Authentication → URL Configuration の Site URL / Redirect URLs が現在のURLと一致している
 
 ---
 
