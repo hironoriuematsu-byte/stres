@@ -173,8 +173,24 @@ Vercel の Hobby プランは**個人の非商用利用向け**です。商用�
 - 両方のURLが**同じアプリ・同じデータベース**を指します。どちらから入っても同じ結果が見えます。
 - 唯一の実害は、**新ドメインでは再ログインが必要**になることだけです(ログイン状態はドメインごとに管理されるため)。
 
+> ⚠️ 追加するのは **`stres.mestate.jp`**(サブドメイン)です。`mestate.jp` を入力すると、会社ホームページのアドレスをこのアプリに向ける設定になってしまいます。
+> 「Redirect apex domains to www」のチェックは外します(サブドメインには関係しないため)。
+
 手順の概要:
 1. Vercel のプロジェクト → Settings → Domains で `stres.mestate.jp` を追加
+   - Connect to an environment → **Production** を選択
+   - 追加直後は「Invalid Configuration」と表示される(DNS未設定のため。正常)
+   - 画面に **Type / Name / Value** の表が出る。この値をそのままDNSに登録する
+   - 例: `CNAME` / `stres` / `cname.vercel-dns.com`(**実際の値は必ず画面の表示に従う**)
+1-2. DNSの管理場所で、その1件を追加する
+   - **種別(Type)**: CNAME
+   - **ホスト名(Name / ホスト / 名前)**: `stres` ← 入力欄の右に「.mestate.jp」と表示されるタイプの画面では **`stres` だけ**を入力する。何も補われない画面なら `stres.mestate.jp` と入力
+   - **値(Value / 内容 / VALUE)**: Vercelが表示した値(末尾のドットは付けても付けなくてもよい)
+   - **TTL**: 既定のまま(3600 / 自動)
+   - **既存のレコード(@ / www / MX)は絶対に触らない** ― メールもホームページも影響を受けない
+   - Cloudflare をお使いの場合は、そのレコードを **DNS only(グレーの雲)** にする(オレンジの雲=プロキシ有効だと接続できない)
+   - サブドメインに CNAME が使えないDNSの場合は、Vercel が代替として表示する **A レコード**を登録する
+1-3. 反映を待つ(数分〜長くて数時間)。Vercel の Domains 画面で **Refresh** を押し、**Valid Configuration** になれば完了(SSL証明書は自動で発行される)
 2. 表示される CNAME レコードを、`mestate.jp` を管理しているDNSに登録
 3. 反映後、**Supabase の Authentication → URL Configuration** で:
    - **Redirect URLs に新ドメインを追加**する ← 置き換えず、`stres.vercel.app` も残す(両方から登録・パスワード再設定ができるように)
