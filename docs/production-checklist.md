@@ -176,13 +176,15 @@ Vercel の Hobby プランは**個人の非商用利用向け**です。商用�
 > ⚠️ 追加するのは **`stres.mestate.jp`**(サブドメイン)です。`mestate.jp` を入力すると、会社ホームページのアドレスをこのアプリに向ける設定になってしまいます。
 > 「Redirect apex domains to www」のチェックは外します(サブドメインには関係しないため)。
 
-手順の概要:
-1. Vercel のプロジェクト → Settings → Domains で `stres.mestate.jp` を追加
+手順:
+
+**① Vercel のプロジェクト → Settings → Domains で `stres.mestate.jp` を追加**
    - Connect to an environment → **Production** を選択
    - 追加直後は「Invalid Configuration」と表示される(DNS未設定のため。正常)
    - 画面に **Type / Name / Value** の表が出る。この値をそのままDNSに登録する
    - 例: `CNAME` / `stres` / `cname.vercel-dns.com`(**実際の値は必ず画面の表示に従う**)
-1-2. DNSの管理場所で、その1件を追加する
+
+**② DNSの管理場所で、その1件を追加する**
    - **種別(Type)**: CNAME
    - **ホスト名(Name / ホスト / 名前)**: `stres` ← 入力欄の右に「.mestate.jp」と表示されるタイプの画面では **`stres` だけ**を入力する。何も補われない画面なら `stres.mestate.jp` と入力
    - **値(Value / 内容 / VALUE)**: Vercelが表示した値(末尾のドットは付けても付けなくてもよい)
@@ -190,13 +192,26 @@ Vercel の Hobby プランは**個人の非商用利用向け**です。商用�
    - **既存のレコード(@ / www / MX)は絶対に触らない** ― メールもホームページも影響を受けない
    - Cloudflare をお使いの場合は、そのレコードを **DNS only(グレーの雲)** にする(オレンジの雲=プロキシ有効だと接続できない)
    - サブドメインに CNAME が使えないDNSの場合は、Vercel が代替として表示する **A レコード**を登録する
-1-3. 反映を待つ(数分〜長くて数時間)。Vercel の Domains 画面で **Refresh** を押し、**Valid Configuration** になれば完了(SSL証明書は自動で発行される)
-2. 表示される CNAME レコードを、`mestate.jp` を管理しているDNSに登録
-3. 反映後、**Supabase の Authentication → URL Configuration** で:
-   - **Redirect URLs に新ドメインを追加**する ← 置き換えず、`stres.vercel.app` も残す(両方から登録・パスワード再設定ができるように)
+**③ 反映を待つ**(数分〜長くて数時間)。Vercel の Domains 画面で **Refresh** を押し、**Valid Configuration** になれば完了(SSL証明書は自動で発行される)
+
+**④ Supabase の Authentication → URL Configuration を更新**
+   - **Redirect URLs に `https://stres.mestate.jp/**` を追加**する ← 置き換えず、`stres.vercel.app` も残す(両方から登録・パスワード再設定ができるように)
    - Site URL は新ドメインに変更してよい
-4. 新ドメインで「配布URL・QR」を開き直し、**以後はそのQRを配布**(既に配った分はそのまま使えます)
-5. (任意・後日)`stres.vercel.app` へのアクセスを新ドメインへ転送したい場合は、Vercel の Domains 設定でリダイレクトを設定できます。パスは維持されるため、**古いQRからでも自動的に新ドメインへ移動**します
+
+**⑤ 動作確認** ― 新ドメインでログイン、配布URL・QRの表示、パスワード再設定メールのリンク先
+
+**⑥ 以後は新ドメインで「配布URL・QR」を開き直して配布**(既に配った分もそのまま使えます)
+
+**⑦(任意・後日)** `stres.vercel.app` へのアクセスを新ドメインへ転送したい場合は、Vercel の Domains 設定でリダイレクトを設定できます。パスは維持されるため、**古いQRからでも自動的に新ドメインへ移動**します
+
+### うまくいかないときの確認
+
+| 症状 | 原因と対処 |
+|---|---|
+| いつまでも Invalid Configuration | DNSの反映待ち(最大数時間)。`stres` の既存レコードが別にないか確認 |
+| 「Conflicting record」と出る | 同じホスト名 `stres` に A や CNAME が既にある。古いほうを削除 |
+| ページが開かない・証明書エラー | Cloudflare のプロキシ(オレンジの雲)がオンになっていないか確認 |
+| 証明書が発行されない | ドメインに CAA レコードがあり Let's Encrypt が許可されていない可能性 |
 
 > 健康管理Web も同様に `kenko.mestate.jp` を割り当てると、2つのシステムを同じドメイン配下で運用できます。
 
