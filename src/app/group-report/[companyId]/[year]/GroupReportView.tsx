@@ -174,6 +174,10 @@ function gradeCellColor(key: string, v: number | null): string {
   return "#fff";
 }
 
+// 1つの表に並べる部署数の上限。これを超えると表を分割して積み重ねる
+// (A4印刷でも列が切れないようにするため)
+const MAX_COLS = 6;
+
 // 判定図プロット用の番号表記(①〜⑳、それ以降は (21) 形式)
 export function plotNum(i: number): string {
   const circled = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳";
@@ -187,6 +191,7 @@ type PlotPoint = {
   worstRisk: number | null; // 点の色分け用(重なった場合は最も高いリスク)
   items: { num: string; dept: string; risk: number | null }[];
   side?: Side; // 番号を点のどちら側に出すか(引き出し線でどの点かを示す)
+  far?: boolean; // 近い位置が埋まっていた場合、少し離して置く
   isRef?: boolean; // 全国平均(⓪)の点
   name?: string; // 全国平均の説明(ツールチップ用)
 };
@@ -256,18 +261,48 @@ function axisTicks(lo: number, hi: number): number[] {
 
 // 番号を点の上下左右に振り分けて、近い点どうしの文字の重なりを避ける。
 // 番号の実際の表示位置(点から少しずらした位置)どうしを比べ、空いている向きを選ぶ。
-type Side = "top" | "bottom" | "right" | "left";
-const SIDE_ORDER: Side[] = ["top", "bottom", "right", "left"];
+// 番号を置く向き(8方向)。近い順に試して、空いている向きに置く
+type Side =
+  | "top"
+  | "bottom"
+  | "right"
+  | "left"
+  | "top-right"
+  | "top-left"
+  | "bottom-right"
+  | "bottom-left";
+const SIDE_ORDER: Side[] = [
+  "top",
+  "bottom",
+  "right",
+  "left",
+  "top-right",
+  "top-left",
+  "bottom-right",
+  "bottom-left",
+];
+// 各向きの単位ベクトル(斜めは縦横それぞれ0.75倍にして距離をそろえる)
+const SIDE_VEC: Record<Side, { ux: number; uy: number }> = {
+  top: { ux: 0, uy: -1 },
+  bottom: { ux: 0, uy: 1 },
+  right: { ux: 1, uy: 0 },
+  left: { ux: -1, uy: 0 },
+  "top-right": { ux: 0.75, uy: -0.75 },
+  "top-left": { ux: -0.75, uy: -0.75 },
+  "bottom-right": { ux: 0.75, uy: 0.75 },
+  "bottom-left": { ux: -0.75, uy: 0.75 },
+};
 
 function assignLabelSide(data: PlotPoint[], spanX: number, spanY: number): PlotPoint[] {
   // ラベル1つが占める大きさ(軸幅に対する比率)。文字は縦より横に広い
   const W = 0.075;
   const H = 0.065;
-  // 点からラベル中心までのずれ
-  const off = (s: Side) => ({
-    dx: s === "right" ? spanX * 0.055 : s === "left" ? -spanX * 0.055 : 0,
-    dy: s === "top" ? spanY * 0.065 : s === "bottom" ? -spanY * 0.065 : 0,
-  });
+  // 点からラベル中心までのずれ。1周して置けなければ少し離した位置でもう1周する
+  const off = (s: Side, far: boolean) => {
+    const v = SIDE_VEC[s];
+    const k = far ? 1.75 : 1;
+    return { dx: v.ux * spanX * 0.055 * k, dy: -v.uy * spanY * 0.065 * k };
+  };
 
   // 点そのものもラベルの置き場所の障害物として扱う(番号が別の点に重ならないように)
   const dots = data.map((d) => ({ cx: d.x, cy: d.y }));
@@ -276,24 +311,31 @@ function assignLabelSide(data: PlotPoint[], spanX: number, spanY: number): PlotP
     .sort((a, b) => b.y - a.y || a.x - b.x)
     .map((d) => {
       let chosen: Side = "top";
-      for (const s of SIDE_ORDER) {
-        const o = off(s);
-        const cx = d.x + o.dx;
-        const cy = d.y + o.dy;
-        const hit = [...placed, ...dots].some(
-          (p) =>
-            !(p.cx === d.x && p.cy === d.y) &&
-            Math.abs(p.cx - cx) / spanX < W &&
-            Math.abs(p.cy - cy) / spanY < H
-        );
-        if (!hit) {
-          chosen = s;
-          break;
+      let chosenFar = false;
+      let done = false;
+      for (const far of [false, true]) {
+        if (done) break;
+        for (const s of SIDE_ORDER) {
+          const o = off(s, far);
+          const cx = d.x + o.dx;
+          const cy = d.y + o.dy;
+          const hit = [...placed, ...dots].some(
+            (p) =>
+              !(p.cx === d.x && p.cy === d.y) &&
+              Math.abs(p.cx - cx) / spanX < W &&
+              Math.abs(p.cy - cy) / spanY < H
+          );
+          if (!hit) {
+            chosen = s;
+            chosenFar = far;
+            done = true;
+            break;
+          }
         }
       }
-      const o = off(chosen);
+      const o = off(chosen, chosenFar);
       placed.push({ cx: d.x + o.dx, cy: d.y + o.dy });
-      return { ...d, side: chosen };
+      return { ...d, side: chosen, far: chosenFar };
     });
 }
 
@@ -309,9 +351,8 @@ function PlotShape(props: {
   if (cx == null || cy == null || !payload) return <g />;
   const side: Side = payload.side ?? "top";
   const R = 5.5; // 点の半径
-  const DIST = 17; // 点の中心から番号の中心までの距離(px)
-  const ux = side === "right" ? 1 : side === "left" ? -1 : 0;
-  const uy = side === "bottom" ? 1 : side === "top" ? -1 : 0;
+  const DIST = (payload.far ? 28 : 17); // 点の中心から番号の中心までの距離(px)
+  const { ux, uy } = SIDE_VEC[side];
   const lx = cx + ux * DIST;
   const ly = cy + uy * DIST;
   return (
@@ -518,7 +559,12 @@ export function GroupReportView({
   if (rows === null) return <div style={{ maxWidth: 860, margin: "0 auto" }}>読み込み中…</div>;
 
   const { total, depts, excludedDepts } = aggregateByDept(rows);
-  const groups: DeptAggregate[] = [...depts, ...(total ? [total] : [])];
+  // 部署は名前順に固定し、「全体」は最後に置く(部署数が多くても探しやすくするため)
+  const sortedDepts = [...depts].sort((a, b) => a.dept.localeCompare(b.dept, "ja"));
+  const groups: DeptAggregate[] = [...sortedDepts, ...(total ? [total] : [])];
+  // 部署数が多いと表が横に伸びて印刷時に切れるため、6部署ずつに分けて表を積み重ねる
+  const groupBlocks: DeptAggregate[][] = [];
+  for (let i = 0; i < groups.length; i += MAX_COLS) groupBlocks.push(groups.slice(i, i + MAX_COLS));
 
   // 判定図: 部署名の代わりに番号で点を打ち、対応表を図の下に示す(ラベルの重なり対策)
   const plotted = groups.filter(
@@ -786,47 +832,55 @@ export function GroupReportView({
 
             {/* 尺度別平均評価点 */}
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 6px" }}>尺度別 平均評価点(素点換算・5段階)</h2>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
-                <thead>
-                  <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-                    <th style={{ textAlign: "left", padding: "5px 8px" }}>尺度</th>
-                    <th style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap", color: "#5B6B6A" }}>
-                      全国平均
-                    </th>
-                    {groups.map((g) => (
-                      <th key={g.dept} style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap" }}>
-                        {g.dept}
+            {/* 部署が多いときは6部署ずつの表に分けて縦に並べる(印刷で列が切れないように) */}
+            {groupBlocks.map((block, bi) => (
+              <div key={bi} style={{ overflowX: "auto", marginTop: bi === 0 ? 0 : 10, pageBreakInside: "avoid" }}>
+                {groupBlocks.length > 1 && (
+                  <p style={{ fontSize: 11, color: "#5B6B6A", margin: "0 0 3px", fontWeight: 700 }}>
+                    ({bi + 1}/{groupBlocks.length}) {block.map((g) => g.dept).join(" / ")}
+                  </p>
+                )}
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
+                  <thead>
+                    <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
+                      <th style={{ textAlign: "left", padding: "5px 8px" }}>尺度</th>
+                      <th style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap", color: "#5B6B6A" }}>
+                        全国平均
                       </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(["stressor", "reaction", "support"] as const).map((cat) => (
-                    <>
-                      <tr key={cat}>
-                        <td colSpan={groups.length + 2} style={{ padding: "5px 8px", background: "#F4FAF9", fontWeight: 700, color: brand.tealDark }}>
-                          {CATEGORY_LABEL[cat]}
-                        </td>
-                      </tr>
-                      {SCALES.filter((s) => s.category === cat).map((s) => (
-                        <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
-                          <td style={{ padding: "5px 8px", color: brand.ink, whiteSpace: "nowrap" }}>{s.label}</td>
-                          <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
-                            {s.male.length === 4 ? "2.5(参考)" : "3.0"}
-                          </td>
-                          {groups.map((g) => (
-                            <td key={g.dept} style={{ padding: "5px 8px", background: gradeCellColor(s.key, g.meanGrades[s.key]) }}>
-                              {g.meanGrades[s.key] ?? "—"}
-                            </td>
-                          ))}
-                        </tr>
+                      {block.map((g) => (
+                        <th key={g.dept} style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap" }}>
+                          {g.dept}
+                        </th>
                       ))}
-                    </>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(["stressor", "reaction", "support"] as const).map((cat) => (
+                      <React.Fragment key={cat}>
+                        <tr>
+                          <td colSpan={block.length + 2} style={{ padding: "5px 8px", background: "#F4FAF9", fontWeight: 700, color: brand.tealDark }}>
+                            {CATEGORY_LABEL[cat]}
+                          </td>
+                        </tr>
+                        {SCALES.filter((s) => s.category === cat).map((s) => (
+                          <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
+                            <td style={{ padding: "5px 8px", color: brand.ink, whiteSpace: "nowrap" }}>{s.label}</td>
+                            <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
+                              {s.male.length === 4 ? "2.5(参考)" : "3.0"}
+                            </td>
+                            {block.map((g) => (
+                              <td key={g.dept} style={{ padding: "5px 8px", background: gradeCellColor(s.key, g.meanGrades[s.key]) }}>
+                                {g.meanGrades[s.key] ?? "—"}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
             <div style={{ fontSize: 10.5, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.8 }}>
               <p style={{ margin: 0 }}>
                 ※ 平均評価点は、厚生労働省の素点換算表(男女別)による各人の評価点(1〜5の5段階。単一項目の尺度は1〜4)の集団平均です。
@@ -856,55 +910,62 @@ export function GroupReportView({
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 6px" }}>
               職場環境の資源など(80項目版の追加尺度)
             </h2>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
-                <thead>
-                  <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-                    <th style={{ textAlign: "left", padding: "5px 8px" }}>尺度</th>
-                    <th style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap", color: "#5B6B6A" }}>全国平均</th>
-                    {groups.map((g) => (
-                      <th key={g.dept} style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap" }}>
-                        {g.dept}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(["burden", "task", "dept", "org", "outcome"] as const).map((grp) => (
-                    <React.Fragment key={grp}>
-                      <tr>
-                        <td colSpan={groups.length + 2} style={{ padding: "5px 8px", background: "#F4FAF9", fontWeight: 700, color: brand.tealDark }}>
-                          {EXT80_GROUP_LABEL[grp]}
-                        </td>
-                      </tr>
-                      {EXT80_SCALES.filter((sc) => sc.group === grp).map((sc) => (
-                        <tr key={sc.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
-                          <td style={{ padding: "5px 8px", color: brand.ink }}>{sc.label}</td>
-                          <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
-                            {sc.norm.all.toFixed(2)}
-                          </td>
-                          {groups.map((g) => {
-                            const v = g.ext80Means[sc.key];
-                            const diff = v == null ? null : v - sc.norm.all;
-                            return (
-                              <td
-                                key={g.dept}
-                                style={{
-                                  padding: "5px 8px",
-                                  background: diff == null ? "#fff" : diff <= -0.5 ? "#FDE3E3" : diff <= -0.25 ? "#FCEADC" : "#fff",
-                                }}
-                              >
-                                {v == null ? "—" : v.toFixed(1)}
-                              </td>
-                            );
-                          })}
-                        </tr>
+            {groupBlocks.map((block, bi) => (
+              <div key={bi} style={{ overflowX: "auto", marginTop: bi === 0 ? 0 : 10, pageBreakInside: "avoid" }}>
+                {groupBlocks.length > 1 && (
+                  <p style={{ fontSize: 11, color: "#5B6B6A", margin: "0 0 3px", fontWeight: 700 }}>
+                    ({bi + 1}/{groupBlocks.length}) {block.map((g) => g.dept).join(" / ")}
+                  </p>
+                )}
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
+                  <thead>
+                    <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
+                      <th style={{ textAlign: "left", padding: "5px 8px" }}>尺度</th>
+                      <th style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap", color: "#5B6B6A" }}>全国平均</th>
+                      {block.map((g) => (
+                        <th key={g.dept} style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap" }}>
+                          {g.dept}
+                        </th>
                       ))}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(["burden", "task", "dept", "org", "outcome"] as const).map((grp) => (
+                      <React.Fragment key={grp}>
+                        <tr>
+                          <td colSpan={block.length + 2} style={{ padding: "5px 8px", background: "#F4FAF9", fontWeight: 700, color: brand.tealDark }}>
+                            {EXT80_GROUP_LABEL[grp]}
+                          </td>
+                        </tr>
+                        {EXT80_SCALES.filter((sc) => sc.group === grp).map((sc) => (
+                          <tr key={sc.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
+                            <td style={{ padding: "5px 8px", color: brand.ink }}>{sc.label}</td>
+                            <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
+                              {sc.norm.all.toFixed(2)}
+                            </td>
+                            {block.map((g) => {
+                              const v = g.ext80Means[sc.key];
+                              const diff = v == null ? null : v - sc.norm.all;
+                              return (
+                                <td
+                                  key={g.dept}
+                                  style={{
+                                    padding: "5px 8px",
+                                    background: diff == null ? "#fff" : diff <= -0.5 ? "#FDE3E3" : diff <= -0.25 ? "#FCEADC" : "#fff",
+                                  }}
+                                >
+                                  {v == null ? "—" : v.toFixed(1)}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
             <p style={{ fontSize: 10.5, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.7 }}>
               ※ 新職業性ストレス簡易調査票(推奨尺度セット短縮版)による尺度です。
               <strong>いずれの尺度も点数が高いほど良好</strong>な状態を表します(1〜4点。点が低いほど注意が必要という向きで統一されています)。
