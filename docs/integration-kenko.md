@@ -88,6 +88,44 @@
 
 ---
 
+## 4-2. ④⑤ 公開と有効化の手順
+
+### 健康管理Web(kenko-kanri)側 — Vercel
+
+1. Vercel で **Add New → Project** → GitHubの `hironoriuematsu-byte/kenko-kanri` を選ぶ
+   - デプロイするブランチは `claude/health-management-web-mj4bv5`(Settings → Git → Production Branch)
+2. 環境変数(Settings → Environment Variables)
+
+   | 変数名 | 値 |
+   |---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | ストレスチェックWebと**同じ値** |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ストレスチェックWebと**同じ値** |
+   | `NEXT_PUBLIC_STRESS_URL` | `https://stres.mestate.jp` |
+
+   ※ 健康管理Webはサーバー用キー(service_role)もResendキーも使用しません。
+3. 独自ドメイン `kenko.mestate.jp` を追加し、Squarespace のDNSに CNAME を1件登録
+   (`stres` と同じ要領。ホスト名は `kenko`)
+4. **Deployment Protection** が Production にかかっていないか確認
+
+### Supabase — 認証の設定
+
+Authentication → URL Configuration の **Redirect URLs に健康管理WebのURLを追加**する
+(`https://kenko.mestate.jp/**`)。**既存の行は消さない**。
+両アプリでアカウントを共有するため、これを行わないと健康管理Web側でのログインや
+パスワード再設定のリンクが機能しない。
+
+### ストレスチェックWeb側 — Vercel
+
+環境変数 `NEXT_PUBLIC_KENKO_URL` に健康管理WebのURL(`https://kenko.mestate.jp`)を設定し、
+**再デプロイ**する。設定しない限り、ストレスチェックWebに健康管理Webの導線は出ない。
+
+### ⑤ 企業ごとの有効化
+
+ストレスチェックWebの **企業管理** で、健康管理Webも契約している企業の
+「健康管理Web 併用する」にチェックを入れる。チェックした企業の画面にのみ導線が出る。
+
+---
+
 ## 5. 検証済みの内容(2026-09-07)
 
 ローカルのPostgreSQL 16に本番と同じスキーマ(0001〜0016)を作り、その上で確認しました。
