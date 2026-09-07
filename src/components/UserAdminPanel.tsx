@@ -21,6 +21,7 @@ type Member = {
   dept: string | null;
   role: string;
   email: string;
+  hm_company_access?: boolean; // 健康管理Webでは事業者担当者として扱う(兼務)
 };
 
 const input = {
@@ -59,6 +60,7 @@ export function UserAdminPanel({
   // (誤って別の企業のメンバーを開かないようにする)
   const [memberCompanyId, setMemberCompanyId] = useState(defaultCompany?.id ?? "");
   const [members, setMembers] = useState<Member[] | null>(null);
+  const memberCompany = companies?.find((c) => c.id === memberCompanyId);
   const [memberBusy, setMemberBusy] = useState(false);
   const [memberErr, setMemberErr] = useState<string | null>(null);
 
@@ -100,6 +102,20 @@ export function UserAdminPanel({
     const { error } = await supabase.rpc("change_user_role", { p_user: m.user_id, p_role: nextRole });
     if (error) {
       alert("ロールを変更できませんでした: " + error.message);
+      setMemberBusy(false);
+      return;
+    }
+    await loadMembers(memberCompanyId);
+    setMemberBusy(false);
+  };
+
+  // 健康管理Webの自社担当(兼務)の付与・解除。ロールは変えない
+  const setHmAccess = async (m: Member, on: boolean) => {
+    setMemberBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("set_hm_company_access", { p_user: m.user_id, p_on: on });
+    if (error) {
+      alert("設定を変更できませんでした: " + error.message);
       setMemberBusy(false);
       return;
     }
@@ -251,6 +267,8 @@ export function UserAdminPanel({
           <h4 style={{ fontSize: 15, color: brand.ink, margin: "0 0 6px" }}>メンバー一覧・ロール変更</h4>
           <p style={{ fontSize: 12.5, color: "#5B6B6A", margin: "0 0 10px", lineHeight: 1.7 }}>
             実施事務従事者の交代時などに、従業員⇔実施事務従事者のロールを変更できます(実施者アカウントは対象外・操作はログに記録)。
+            {memberCompany?.hm_enabled &&
+              "「事業者担当者を兼ねる」にチェックすると、同じアカウントのまま健康管理Webを自社担当としてご利用いただけます(ストレスチェックでの権限は変わりません)。"}
           </p>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
             <CompanySelect
@@ -281,7 +299,15 @@ export function UserAdminPanel({
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-                    {["氏名", "メールアドレス", "社員番号", "部署", "ロール", "操作"].map((h) => (
+                    {[
+                      "氏名",
+                      "メールアドレス",
+                      "社員番号",
+                      "部署",
+                      "ロール",
+                      ...(memberCompany?.hm_enabled ? ["健康管理Web"] : []),
+                      "操作",
+                    ].map((h) => (
                       <th key={h} style={{ textAlign: "left", padding: "8px 10px", whiteSpace: "nowrap" }}>
                         {h}
                       </th>
@@ -300,6 +326,25 @@ export function UserAdminPanel({
                           {m.role in ROLE_LABEL ? ROLE_LABEL[m.role as Role] : m.role}
                         </Badge>
                       </td>
+                      {memberCompany?.hm_enabled && (
+                        <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                          {m.role === "company" ? (
+                            <span style={{ fontSize: 12, color: "#5B6B6A" }}>利用できます</span>
+                          ) : m.role === "employee" || m.role === "jimu" ? (
+                            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#5B6B6A", cursor: "pointer" }}>
+                              <input
+                                type="checkbox"
+                                checked={m.hm_company_access ?? false}
+                                onChange={(e) => setHmAccess(m, e.target.checked)}
+                                disabled={memberBusy}
+                              />
+                              事業者担当者を兼ねる
+                            </label>
+                          ) : (
+                            ""
+                          )}
+                        </td>
+                      )}
                       <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                         {m.role === "employee" && (
                           <Btn tone="ghost" onClick={() => changeRole(m, "jimu")} disabled={memberBusy} style={{ padding: "5px 12px", fontSize: 12 }}>
@@ -316,7 +361,7 @@ export function UserAdminPanel({
                   ))}
                   {members.length === 0 && (
                     <tr>
-                      <td colSpan={6} style={{ padding: 20, textAlign: "center", color: "#8A9694" }}>
+                      <td colSpan={memberCompany?.hm_enabled ? 7 : 6} style={{ padding: 20, textAlign: "center", color: "#8A9694" }}>
                         メンバーがいません。
                       </td>
                     </tr>
