@@ -17,3 +17,7 @@ export const IMPLEMENTER = {
 
 // 帳票フッターなどで使う発行者表記
 export const ISSUER_LINE = `実施者: ${IMPLEMENTER.full} / 実施事務局: ${IMPLEMENTER.officeName}`;
+
+// 健康管理Web(別アプリ)のURL。環境変数が未設定の場合は連携の導線を表示しない。
+// ストレスチェックWebは健康管理Webに依存せず、単独で動作する。
+export const KENKO_URL = process.env.NEXT_PUBLIC_KENKO_URL ?? "";

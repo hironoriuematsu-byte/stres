@@ -18,7 +18,7 @@ export default async function JimuPage() {
   const supabase = createClient();
   const { data: company } = await supabase
     .from("companies")
-    .select("id, name, code")
+    .select("id, name, code, hm_enabled")
     .eq("id", profile.company_id!)
     .single();
 
@@ -27,6 +27,7 @@ export default async function JimuPage() {
       companyId={profile.company_id!}
       companyName={company?.name ?? "自社"}
       companyCode={company?.code ?? ""}
+      hmEnabled={company?.hm_enabled ?? false}
     />
   );
 }

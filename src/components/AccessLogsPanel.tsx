@@ -37,6 +37,9 @@ const ACTION_LABEL: Record<string, string> = {
   dept_master_added: "部署の追加",
   dept_master_renamed: "部署名の変更(マスタ)",
   dept_master_removed: "部署の削除(マスタ)",
+  company_hm_changed: "健康管理Webの併用設定の変更",
+  hm_view_high_stress: "高ストレス者一覧の閲覧(健康管理Web)",
+  hm_view_stress_history: "受検歴の閲覧(健康管理Web)",
 };
 
 // 閲覧(view_*)か操作(データの作成・変更・出力)かの分類

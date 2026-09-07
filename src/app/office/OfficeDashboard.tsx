@@ -8,6 +8,7 @@ import { Company } from "@/lib/types";
 import { fiscalYearOptions, getFiscalYear } from "@/lib/fiscal";
 import { DashboardMenu, MenuItem } from "@/components/DashboardMenu";
 import { CompanySelect } from "@/components/CompanySelect";
+import { KenkoLink } from "@/components/KenkoLink";
 
 // 各パネルはタブを開いたときに初めて読み込む(初期表示の高速化。
 // グラフ描画・QRコード生成などの大きなライブラリを先読みしない)
@@ -61,6 +62,7 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
           {tab !== null && (
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <CompanySelect companies={companies} value={companyId} onChange={setCompanyId} />
+              <KenkoLink enabled={company?.hm_enabled} />
               <select
                 value={year}
                 onChange={(e) => setYear(Number(e.target.value))}

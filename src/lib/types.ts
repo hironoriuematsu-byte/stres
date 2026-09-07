@@ -16,6 +16,8 @@ export type Company = {
   name: string;
   code: string;
   questionnaire?: "57" | "80";
+  // 健康管理Webを併用する企業のみ true(ストレスチェック単独契約では false)
+  hm_enabled?: boolean;
 };
 
 export type ResultRow = {

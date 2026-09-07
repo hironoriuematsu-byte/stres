@@ -7,6 +7,7 @@ import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { fiscalYearOptions, getFiscalYear } from "@/lib/fiscal";
 import { DashboardMenu, MenuItem } from "@/components/DashboardMenu";
+import { KenkoLink } from "@/components/KenkoLink";
 
 // 各パネルはタブを開いたときに初めて読み込む(初期表示の高速化)
 const panelLoading = () => <Card>読み込み中…</Card>;
@@ -37,10 +38,12 @@ export function JimuDashboard({
   companyId,
   companyName,
   companyCode,
+  hmEnabled,
 }: {
   companyId: string;
   companyName: string;
   companyCode: string;
+  hmEnabled?: boolean; // 健康管理Webを併用する企業のみ導線を出す
 }) {
   const years = fiscalYearOptions();
   const [year, setYear] = useState(getFiscalYear());
@@ -58,6 +61,7 @@ export function JimuDashboard({
             </h2>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <KenkoLink enabled={hmEnabled} />
             <Link href="/guide/jimu">
               <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
                 📘 使い方ガイド

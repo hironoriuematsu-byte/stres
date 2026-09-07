@@ -85,6 +85,20 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
     router.refresh();
   };
 
+  // 健康管理Webの併用の有無。ストレスチェック単独契約では false のままにする
+  const setHmEnabled = async (c: Company, on: boolean) => {
+    setBusy(true);
+    const { error } = await supabase.from("companies").update({ hm_enabled: on }).eq("id", c.id);
+    setBusy(false);
+    if (error) {
+      setNotice("健康管理Webの設定を変更できませんでした: " + error.message);
+      return;
+    }
+    logAccess(supabase, "company_hm_changed", `${c.name}: 健康管理Web ${on ? "利用する" : "利用しない"}`, c.id);
+    setNotice(`「${c.name}」の健康管理Webの併用を${on ? "有効" : "無効"}にしました。`);
+    router.refresh();
+  };
+
   const rename = async (c: Company) => {
     setBusy(true);
     const { error } = await supabase.from("companies").update({ name: editName.trim() }).eq("id", c.id);
@@ -107,6 +121,7 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
         MST001)。誤削除防止のため、削除はこの画面からはできません。
         「調査票」では企業ごとに57項目版/80項目版を選べます(80項目版は現行57項目に職場環境に関する23項目を追加したもの。
         高ストレス判定の基準は変わりません)。変更は今後の受検分から適用され、受検済みの結果は影響を受けません。
+        「健康管理Web」は、健康管理Webも併せてご契約の企業のみチェックしてください(チェックした企業の画面にのみ、健康管理Webへの導線が表示されます)。
       </p>
 
       <form onSubmit={add} style={{ display: "grid", gap: 10, gridTemplateColumns: "2fr 1fr auto", alignItems: "end" }}>
@@ -166,6 +181,7 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
                 </th>
               ))}
               <th style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>調査票</th>
+              <th style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>健康管理Web</th>
               <th style={{ textAlign: "left", padding: "9px 10px" }}>操作</th>
             </tr>
           </thead>
@@ -192,6 +208,17 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
                     <option value="57">57項目版</option>
                     <option value="80">80項目版</option>
                   </select>
+                </td>
+                <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#5B6B6A", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={c.hm_enabled ?? false}
+                      onChange={(e) => setHmEnabled(c, e.target.checked)}
+                      disabled={busy}
+                    />
+                    併用する
+                  </label>
                 </td>
                 <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
                   {editing === c.id ? (
