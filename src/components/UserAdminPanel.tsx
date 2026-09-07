@@ -317,11 +317,11 @@ export function UserAdminPanel({
                 <tbody>
                   {members.map((m) => (
                     <tr key={m.user_id} style={{ borderBottom: `1px solid ${brand.line}` }}>
-                      <td style={{ padding: "8px 10px", fontWeight: 700, color: brand.ink }}>{m.name}</td>
-                      <td style={{ padding: "8px 10px" }}>{m.email}</td>
-                      <td style={{ padding: "8px 10px" }}>{m.emp_id ?? ""}</td>
-                      <td style={{ padding: "8px 10px" }}>{m.dept ?? ""}</td>
-                      <td style={{ padding: "8px 10px" }}>
+                      <td style={{ padding: "8px 10px", fontWeight: 700, color: brand.ink, whiteSpace: "nowrap" }}>{m.name}</td>
+                      <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{m.email}</td>
+                      <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{m.emp_id ?? ""}</td>
+                      <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{m.dept ?? ""}</td>
+                      <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                         <Badge tone={m.role === "jimu" ? "orange" : "gray"}>
                           {m.role in ROLE_LABEL ? ROLE_LABEL[m.role as Role] : m.role}
                         </Badge>
