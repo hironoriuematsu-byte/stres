@@ -21,7 +21,7 @@ const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL�
 type Tab = (typeof TABS)[number];
 
 const MENU_ITEMS: MenuItem<Tab>[] = [
-  { key: "結果一覧", icon: "📋", title: "結果一覧", desc: "自社の受検結果の一覧・詳細・CSV出力・再受験対応" },
+  { key: "結果一覧", icon: "📋", title: "結果一覧", desc: "自社の受検結果の一覧・詳細・CSV出力・再受検対応" },
   { key: "面接指導申出", icon: "🩺", title: "面接指導申出", desc: "産業医面接指導の申出の確認と対応状況の管理" },
   { key: "集団分析", icon: "📊", title: "集団分析", desc: "部署別集計・健康リスク・集団分析報告書" },
   { key: "配布URL・QR", icon: "🔗", title: "配布URL・QR", desc: "従業員に配布する受検用URL・QRコードの確認" },

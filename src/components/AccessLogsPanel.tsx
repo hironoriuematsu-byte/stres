@@ -23,7 +23,7 @@ const ACTION_LABEL: Record<string, string> = {
   view_interview: "申出一覧の表示",
   invite_user: "ユーザー招待",
   interview_request_created: "面接指導の申出",
-  delete_result_for_retake: "結果削除(再受験対応)",
+  delete_result_for_retake: "結果削除(再受検対応)",
   view_group_report: "集団分析報告書の表示",
   update_dept: "部署名の修正",
   company_created: "企業の追加",

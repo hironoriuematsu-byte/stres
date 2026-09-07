@@ -9,7 +9,7 @@
 
 select * from (
   values
-    ('0007', '再受験のための結果削除',
+    ('0007', '再受検のための結果削除',
      (select case when count(*) > 0 then '✅OK' else '❌未適用' end
         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
        where n.nspname = 'public' and p.proname = 'delete_result_for_retake')),

@@ -16,12 +16,12 @@
 
 
 -- ============================================================
--- 0007: 再受験のための結果削除
+-- 0007: 再受検のための結果削除
 --
 -- 結果は原則削除不可(改ざん防止・5年保存)だが、従業員が誤回答を
 -- 申し出た場合に限り、実施者(office)または誓約済みの自社の
 -- 実施事務従事者(jimu)が「当年度かつ本人の直近の結果」のみ
--- 削除できる(削除後に本人が同年度内で再受験する運用)。
+-- 削除できる(削除後に本人が同年度内で再受検する運用)。
 -- 削除操作は必ずアクセスログに記録される。
 -- ============================================================
 
@@ -401,7 +401,7 @@ grant update (questionnaire) on table public.companies to authenticated;
 
 select * from (
   values
-    ('0007', '再受験のための結果削除',
+    ('0007', '再受検のための結果削除',
      (select case when count(*) > 0 then '✅OK' else '❌未適用' end
         from pg_proc p join pg_namespace n on n.oid = p.pronamespace
        where n.nspname = 'public' and p.proname = 'delete_result_for_retake')),
