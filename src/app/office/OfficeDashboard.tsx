@@ -151,7 +151,10 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
           {tab === "配布URL・QR" && company && (
             <CampaignPanel companyId={company.id} companyName={company.name} fiscalYear={year} manage />
           )}
-          {tab === "ユーザー管理" && <UserAdminPanel companies={companies} />}
+          {/* key: 上部で企業を切り替えたら、招待先・メンバー一覧も選び直した状態にする */}
+          {tab === "ユーザー管理" && (
+            <UserAdminPanel key={companyId} companies={companies} defaultCompanyId={companyId} />
+          )}
           {tab === "企業管理" && <CompanyAdminPanel companies={companies} />}
           {tab === "部署管理" && company && <DeptAdminPanel companyId={company.id} companyName={company.name} />}
           {tab === "アクセスログ" && <AccessLogsPanel />}

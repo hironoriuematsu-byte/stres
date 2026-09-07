@@ -37,22 +37,27 @@ const input = {
 export function UserAdminPanel({
   companies,
   fixedCompany,
+  defaultCompanyId,
 }: {
   companies?: Company[];
   fixedCompany?: { code: string; name: string };
+  defaultCompanyId?: string; // 画面上部で企業を選んでいる場合は、それを初期値にする
 }) {
   const jimuMode = Boolean(fixedCompany);
+  const defaultCompany = companies?.find((c) => c.id === defaultCompanyId);
   const [form, setForm] = useState({
     email: "",
-    // 実施者の招待では既定で企業を選ばない(誤って別の企業へ招待しないため)
-    company_code: fixedCompany?.code ?? "",
+    // 画面上部で企業を選んでいればそれを使い、未選択なら企業を選ばない
+    // (誤って別の企業へ招待しないため)
+    company_code: fixedCompany?.code ?? defaultCompany?.code ?? "",
     role: "employee" as InvitePayload["role"],
   });
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   // メンバー一覧・ロール変更(officeのみ)
-  // 既定では企業を選ばない(誤って別の企業のメンバーを開かないようにする)
-  const [memberCompanyId, setMemberCompanyId] = useState("");
+  // 画面上部で企業を選んでいればそれを引き継ぐ。未選択なら企業を選ばない
+  // (誤って別の企業のメンバーを開かないようにする)
+  const [memberCompanyId, setMemberCompanyId] = useState(defaultCompany?.id ?? "");
   const [members, setMembers] = useState<Member[] | null>(null);
   const [memberBusy, setMemberBusy] = useState(false);
   const [memberErr, setMemberErr] = useState<string | null>(null);
