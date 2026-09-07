@@ -20,13 +20,17 @@ const DeptAdminPanel = dynamic(() => import("@/components/DeptAdminPanel").then(
 const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "従業員招待", "部署管理"] as const;
 type Tab = (typeof TABS)[number];
 
-const MENU_ITEMS: MenuItem<Tab>[] = [
+type MenuKey = Tab | "使い方ガイド";
+
+const MENU_ITEMS: MenuItem<MenuKey>[] = [
   { key: "結果一覧", icon: "📋", title: "結果一覧", desc: "自社の受検結果の一覧・詳細・CSV出力・再受検対応" },
   { key: "面接指導申出", icon: "🩺", title: "面接指導申出", desc: "産業医面接指導の申出の確認と対応状況の管理" },
   { key: "集団分析", icon: "📊", title: "集団分析", desc: "部署別集計・健康リスク・集団分析報告書" },
   { key: "配布URL・QR", icon: "🔗", title: "配布URL・QR", desc: "従業員に配布する受検用URL・QRコードの確認" },
   { key: "従業員招待", icon: "✉️", title: "従業員招待", desc: "従業員への招待メールの送信(個別・CSV一括)" },
   { key: "部署管理", icon: "🗂️", title: "部署管理", desc: "受検時に選択できる部署名の登録・編集" },
+  // タブではなく別ページ(マニュアル)へ移動する
+  { key: "使い方ガイド", icon: "📘", title: "使い方ガイド", desc: "はじめての運用の手引き・操作マニュアル", href: "/guide/jimu" },
 ];
 
 export function JimuDashboard({
@@ -54,6 +58,11 @@ export function JimuDashboard({
             </h2>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <Link href="/guide/jimu">
+              <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
+                📘 使い方ガイド
+              </Btn>
+            </Link>
             <Link href="/my">
               <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
                 自分の受検(マイページ)
@@ -117,7 +126,12 @@ export function JimuDashboard({
         )}
       </Card>
 
-      {tab === null && <DashboardMenu items={MENU_ITEMS} onSelect={setTab} />}
+      {tab === null && <DashboardMenu
+          items={MENU_ITEMS}
+          onSelect={(k) => {
+            if (k !== "使い方ガイド") setTab(k);
+          }}
+        />}
       {tab === "結果一覧" && <ResultsPanel companyId={companyId} companyName={companyName} fiscalYear={year} />}
       {tab === "面接指導申出" && <InterviewPanel companyId={companyId} companyName={companyName} />}
       {tab === "集団分析" && (

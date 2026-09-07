@@ -84,6 +84,13 @@ export function Attestation({ initialName }: { initialName: string }) {
           {busy ? "送信中…" : "誓約して閲覧をはじめる"}
         </Btn>
       </div>
+      <p style={{ fontSize: 12.5, color: "#5B6B6A", marginTop: 14, lineHeight: 1.8 }}>
+        はじめて運用される方は、
+        <a href="/guide/jimu" style={{ color: brand.tealDark, fontWeight: 700 }}>
+          使い方ガイド
+        </a>
+        (準備から集団分析報告書のお渡しまでの手引き)をご覧いただけます。
+      </p>
     </Card>
   );
 }
