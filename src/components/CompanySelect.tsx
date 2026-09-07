@@ -13,11 +13,13 @@ export function CompanySelect({
   value,
   onChange,
   autoOpen = false,
+  label = "企業",
 }: {
   companies: Company[];
   value: string;
   onChange: (id: string) => void;
   autoOpen?: boolean; // 未選択のとき最初から検索欄を開いておく
+  label?: string; // 見出しを別に置く場合は "" を渡す
 }) {
   const selected = companies.find((c) => c.id === value);
   const [open, setOpen] = useState(autoOpen && !selected);
@@ -43,6 +45,7 @@ export function CompanySelect({
   return (
     <div style={{ position: "relative" }}>
       <button
+        type="button"
         onClick={() => {
           setOpen((v) => !v);
           setTimeout(() => inputRef.current?.focus(), 0);
@@ -62,7 +65,7 @@ export function CompanySelect({
           maxWidth: 320,
         }}
       >
-        <span style={{ fontSize: 12, fontWeight: 400, color: "#8A9694" }}>企業</span>
+        {label && <span style={{ fontSize: 12, fontWeight: 400, color: "#8A9694" }}>{label}</span>}
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {selected ? selected.name : "選択してください"}
         </span>
@@ -107,6 +110,7 @@ export function CompanySelect({
               hits.map((c) => (
                 <button
                   key={c.id}
+                  type="button"
                   onClick={() => pick(c.id)}
                   style={{
                     display: "block",
@@ -130,6 +134,7 @@ export function CompanySelect({
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
             <span style={{ fontSize: 11.5, color: "#8A9694" }}>{hits.length}社</span>
             <button
+              type="button"
               onClick={() => setOpen(false)}
               style={{
                 background: "#fff",

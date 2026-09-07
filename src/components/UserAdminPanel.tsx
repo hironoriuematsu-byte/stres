@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { Company, ROLE_LABEL, Role } from "@/lib/types";
+import { CompanySelect } from "@/components/CompanySelect";
 import { parseCsv, parseInviteCsv } from "@/lib/parse-csv";
 
 type InvitePayload = {
@@ -50,7 +51,8 @@ export function UserAdminPanel({
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   // メンバー一覧・ロール変更(officeのみ)
-  const [memberCompanyId, setMemberCompanyId] = useState(companies?.[0]?.id ?? "");
+  // 既定では企業を選ばない(誤って別の企業のメンバーを開かないようにする)
+  const [memberCompanyId, setMemberCompanyId] = useState("");
   const [members, setMembers] = useState<Member[] | null>(null);
   const [memberBusy, setMemberBusy] = useState(false);
   const [memberErr, setMemberErr] = useState<string | null>(null);
@@ -125,6 +127,9 @@ export function UserAdminPanel({
     setBusy(false);
   };
 
+  // 招待フォームで選択中の企業(検索付きの選択欄はidで扱うため、企業コードから引く)
+  const inviteCompany = companies?.find((c) => c.code === form.company_code);
+
   const submitSingle = (e: React.FormEvent) => {
     e.preventDefault();
     send([{ ...form }]);
@@ -171,21 +176,16 @@ export function UserAdminPanel({
           <>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>企業</label>
-              <select
-                required
-                value={form.company_code}
-                onChange={(e) => setForm({ ...form, company_code: e.target.value })}
-                style={input}
-              >
-                <option value="">選択してください</option>
-                {[...(companies ?? [])]
-                  .sort((a, b) => a.name.localeCompare(b.name, "ja"))
-                  .map((c) => (
-                    <option key={c.id} value={c.code}>
-                      {c.name}({c.code})
-                    </option>
-                  ))}
-              </select>
+              <div style={{ marginTop: 4 }}>
+                <CompanySelect
+                  label=""
+                  companies={companies ?? []}
+                  value={inviteCompany?.id ?? ""}
+                  onChange={(id) =>
+                    setForm({ ...form, company_code: companies?.find((c) => c.id === id)?.code ?? "" })
+                  }
+                />
+              </div>
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>ロール</label>
@@ -201,7 +201,7 @@ export function UserAdminPanel({
           </>
         )}
         <div style={{ alignSelf: "end" }}>
-          <Btn type="submit" disabled={busy} style={{ width: "100%" }}>
+          <Btn type="submit" disabled={busy || (!jimuMode && !form.company_code)} style={{ width: "100%" }}>
             {busy ? "送信中…" : "招待を送る"}
           </Btn>
         </div>
@@ -231,20 +231,27 @@ export function UserAdminPanel({
             実施事務従事者の交代時などに、従業員⇔実施事務従事者のロールを変更できます(実施者アカウントは対象外・操作はログに記録)。
           </p>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
-            <select
+            <CompanySelect
+              companies={companies ?? []}
               value={memberCompanyId}
-              onChange={(e) => setMemberCompanyId(e.target.value)}
-              style={{ ...input, width: "auto", minWidth: 220 }}
+              onChange={(id) => {
+                setMemberCompanyId(id);
+                // 企業を変えたら、前の企業のメンバーが残らないように消す
+                setMembers(null);
+                setMemberErr(null);
+              }}
+            />
+            <Btn
+              tone="ghost"
+              onClick={() => loadMembers(memberCompanyId)}
+              disabled={memberBusy || !memberCompanyId}
+              style={{ padding: "8px 14px", fontSize: 13 }}
             >
-              {(companies ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}({c.code})
-                </option>
-              ))}
-            </select>
-            <Btn tone="ghost" onClick={() => loadMembers(memberCompanyId)} disabled={memberBusy} style={{ padding: "8px 14px", fontSize: 13 }}>
               {memberBusy ? "読み込み中…" : "メンバーを表示"}
             </Btn>
+            {!memberCompanyId && (
+              <span style={{ fontSize: 12.5, color: "#8A6B2E" }}>企業を選択してください。</span>
+            )}
           </div>
           {memberErr && <div style={{ fontSize: 13, color: "#B02A2A", marginBottom: 8 }}>{memberErr}</div>}
           {members !== null && (
