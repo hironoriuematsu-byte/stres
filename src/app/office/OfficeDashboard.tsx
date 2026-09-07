@@ -7,6 +7,7 @@ import { brand } from "@/lib/brand";
 import { Company } from "@/lib/types";
 import { fiscalYearOptions, getFiscalYear } from "@/lib/fiscal";
 import { DashboardMenu, MenuItem } from "@/components/DashboardMenu";
+import { CompanySelect } from "@/components/CompanySelect";
 
 // 各パネルはタブを開いたときに初めて読み込む(初期表示の高速化。
 // グラフ描画・QRコード生成などの大きなライブラリを先読みしない)
@@ -19,6 +20,9 @@ const AccessLogsPanel = dynamic(() => import("@/components/AccessLogsPanel").the
 const CampaignPanel = dynamic(() => import("@/components/CampaignPanel").then((m) => m.CampaignPanel), { loading: panelLoading, ssr: false });
 const CompanyAdminPanel = dynamic(() => import("@/components/CompanyAdminPanel").then((m) => m.CompanyAdminPanel), { loading: panelLoading, ssr: false });
 const DeptAdminPanel = dynamic(() => import("@/components/DeptAdminPanel").then((m) => m.DeptAdminPanel), { loading: panelLoading, ssr: false });
+
+// 企業を選ばないと表示できないタブ(ユーザー管理・企業管理・アクセスログは企業横断)
+const NEEDS_COMPANY: readonly string[] = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "部署管理"];
 
 const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "ユーザー管理", "企業管理", "部署管理", "アクセスログ"] as const;
 type Tab = (typeof TABS)[number];
@@ -36,7 +40,8 @@ const MENU_ITEMS: MenuItem<Tab>[] = [
 
 export function OfficeDashboard({ companies }: { companies: Company[] }) {
   const years = fiscalYearOptions();
-  const [companyId, setCompanyId] = useState(companies[0]?.id ?? "");
+  // 既定では企業を選ばない(誤って別の企業の結果を開かないようにするため)
+  const [companyId, setCompanyId] = useState("");
   const [year, setYear] = useState(getFiscalYear());
   // 覗き見対策: ログイン直後は結果を表示せず、メニュー画面から選択する
   const [tab, setTab] = useState<Tab | null>(null);
@@ -55,17 +60,7 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
           </div>
           {tab !== null && (
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <select
-                value={companyId}
-                onChange={(e) => setCompanyId(e.target.value)}
-                style={{ padding: "8px 10px", fontSize: 14, border: `1px solid ${brand.line}`, borderRadius: 9 }}
-              >
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <CompanySelect companies={companies} value={companyId} onChange={setCompanyId} />
               <select
                 value={year}
                 onChange={(e) => setYear(Number(e.target.value))}
@@ -130,6 +125,15 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
           <p style={{ fontSize: 14, color: "#5B6B6A", margin: 0 }}>
             契約企業が未登録です。「企業管理」タブから企業を追加してください。
           </p>
+        </Card>
+      ) : NEEDS_COMPANY.includes(tab) && !company ? (
+        <Card>
+          <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 6px" }}>企業を選択してください</h3>
+          <p style={{ fontSize: 13.5, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 12px" }}>
+            「{tab}」は企業ごとの画面です。誤って別の企業を開かないよう、既定では企業を選んでいません。
+            下の欄から対象の企業をお選びください(企業名・企業コードで検索できます)。
+          </p>
+          <CompanySelect companies={companies} value={companyId} onChange={setCompanyId} autoOpen />
         </Card>
       ) : (
         <>

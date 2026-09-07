@@ -43,7 +43,8 @@ export function UserAdminPanel({
   const jimuMode = Boolean(fixedCompany);
   const [form, setForm] = useState({
     email: "",
-    company_code: fixedCompany?.code ?? companies?.[0]?.code ?? "",
+    // 実施者の招待では既定で企業を選ばない(誤って別の企業へ招待しないため)
+    company_code: fixedCompany?.code ?? "",
     role: "employee" as InvitePayload["role"],
   });
   const [busy, setBusy] = useState(false);
@@ -170,12 +171,20 @@ export function UserAdminPanel({
           <>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>企業</label>
-              <select value={form.company_code} onChange={(e) => setForm({ ...form, company_code: e.target.value })} style={input}>
-                {(companies ?? []).map((c) => (
-                  <option key={c.id} value={c.code}>
-                    {c.name}({c.code})
-                  </option>
-                ))}
+              <select
+                required
+                value={form.company_code}
+                onChange={(e) => setForm({ ...form, company_code: e.target.value })}
+                style={input}
+              >
+                <option value="">選択してください</option>
+                {[...(companies ?? [])]
+                  .sort((a, b) => a.name.localeCompare(b.name, "ja"))
+                  .map((c) => (
+                    <option key={c.id} value={c.code}>
+                      {c.name}({c.code})
+                    </option>
+                  ))}
               </select>
             </div>
             <div>
