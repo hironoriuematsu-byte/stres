@@ -1,0 +1,184 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>実施事務従事者向け はじめての運用ガイド</title><style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans CJK JP', sans-serif; color: #22333B; font-size: 10.5pt; line-height: 1.75; }
+  .page { padding: 0; }
+  .cover { border-bottom: 4px solid #0F9B8E; padding-bottom: 12px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .cover .brand { font-size: 20pt; font-weight: 900; color: #0B7268; }
+  .cover .brand span { color: #E8792B; }
+  .cover h1 { font-size: 15pt; margin-top: 4px; }
+  .cover .meta { font-size: 9pt; color: #7A8886; margin-top: 4px; }
+  .cover img { height: 58px; }
+  h2 { font-size: 12.5pt; color: #0B7268; border-left: 6px solid #0F9B8E; padding-left: 10px; margin: 20px 0 8px; page-break-after: avoid; }
+  h3 { font-size: 11pt; color: #22333B; margin: 12px 0 4px; page-break-after: avoid; }
+  p { margin: 4px 0; }
+  ul, ol { margin: 4px 0 8px 22px; }
+  li { margin: 2px 0; }
+  .step { border: 1px solid #DCE8E6; border-radius: 8px; padding: 10px 14px; margin: 8px 0; page-break-inside: avoid; }
+  .step .n { display: inline-block; background: #0F9B8E; color: #fff; font-weight: 700; border-radius: 999px; width: 22px; height: 22px; text-align: center; line-height: 22px; margin-right: 8px; font-size: 10pt; }
+  .step .t { font-weight: 700; }
+  .url { font-family: monospace; background: #EDF6F5; padding: 1px 6px; border-radius: 4px; font-size: 9.5pt; }
+  .warn { background: #FBF3E3; border: 1px solid #EFD9A8; border-radius: 8px; padding: 8px 12px; margin: 8px 0; color: #8A6B2E; page-break-inside: avoid; }
+  .info { background: #E2F3F1; border-radius: 8px; padding: 8px 12px; margin: 8px 0; color: #0B7268; page-break-inside: avoid; }
+  .tmpl { background: #F7F9F9; border: 1px dashed #B9CCC9; border-radius: 8px; padding: 12px 14px; margin: 8px 0; font-size: 9.5pt; line-height: 1.9; white-space: pre-wrap; page-break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0; page-break-inside: avoid; }
+  th { background: #EDF6F5; color: #0B7268; text-align: left; padding: 5px 8px; border: 1px solid #DCE8E6; }
+  td { padding: 5px 8px; border: 1px solid #DCE8E6; vertical-align: top; }
+  .chk { list-style: none; margin-left: 0; }
+  .chk li { padding-left: 22px; position: relative; margin: 3px 0; }
+  .chk li:before { content: "□"; position: absolute; left: 2px; color: #0F9B8E; font-weight: 700; }
+  .foot { margin-top: 24px; padding-top: 8px; border-top: 1px solid #DCE8E6; font-size: 8.5pt; color: #8A9694; }
+</style></head>
+<body><div class="page">
+<div class="cover">
+  <div>
+    <div class="brand">ストレスチェック<span>Web</span></div>
+    <h1>実施事務従事者向け はじめての運用ガイド</h1>
+    <div class="meta">発行: うえまつ産業医事務所(Mestate LLC) / 実施者: 医師(産業医) 上松 弘典 / https://stres.mestate.jp</div>
+  </div>
+  <img src="../../public/logo.png" alt="mestate">
+</div>
+
+<p>はじめてストレスチェックWebを運用される実施事務従事者の方が、<b>準備から報告書のお渡しまでを順番どおりに進められる</b>ようにまとめたガイドです。
+操作の詳細は別冊の「実施事務従事者向けマニュアル」をご覧ください。<b>迷ったら、いつでも実施者(うえまつ産業医事務所)にご連絡ください。</b></p>
+
+<h2>0. 全体の流れ(年1回)</h2>
+<table>
+<tr><th>時期</th><th>やること</th><th>だいたいの所要</th></tr>
+<tr><td>準備(実施の1か月前)</td><td>①誓約 ②部署の登録 ③実施時期の決定・社内周知</td><td>1時間</td></tr>
+<tr><td>案内(実施開始日)</td><td>④受検用URL・QRを従業員へ配布</td><td>30分</td></tr>
+<tr><td>受検期間(2〜4週間)</td><td>⑤問い合わせ対応 ⑥受検状況の確認・未受検者への再案内</td><td>随時</td></tr>
+<tr><td>締切後</td><td>⑦面接指導の申出への対応 ⑧集団分析報告書の作成・提供</td><td>1〜2時間</td></tr>
+<tr><td>年度末</td><td>⑨記録の保存(システムが自動で5年保存)</td><td>—</td></tr>
+</table>
+<div class="info"><b>あなたが行うのは事務のみです。</b>高ストレスかどうかの判定、面接指導、結果の医学的な解釈は、すべて実施者(産業医)が行います。判断に迷うことがあれば、ご自身で判断せず実施者にお回しください。</div>
+
+<h2>1. 準備 ― はじめてログインする</h2>
+<div class="step"><span class="n">1</span><span class="t">招待メールからパスワードを設定する</span><br>実施者がアカウントを作成すると「アカウントのご招待」メールが届きます。メール内のボタンからパスワード(8文字以上)を設定してください。<br><b>登録したメールアドレスは、ログインとパスワード再発行に必要です。メモ等に控えてください。</b></div>
+<div class="step"><span class="n">2</span><span class="t">初回ログイン時に「誓約」を行う</span><br>氏名を入力し、次の内容にチェックして送信します。これを行わないと結果を閲覧できません。
+<ul>
+<li>労働者の<b>解雇・昇進・異動の決定権(人事権)を持っていない</b>こと</li>
+<li>実施事務を通じて知った労働者の秘密を<b>漏らさない</b>こと(守秘義務・労働安全衛生法第105条)</li>
+</ul>
+入力した氏名は操作記録に表示されます。</div>
+<div class="warn"><b>人事権をお持ちの方は実施事務従事者になれません</b>(労働安全衛生規則第52条の10)。採用・解雇・昇進・異動を決定する立場の方が担当されている場合は、担当者の変更を実施者にご相談ください。</div>
+
+<h2>2. 準備 ― 部署を登録する(最初にこれをやってください)</h2>
+<p>部署名がばらばらだと(例: 「営業」と「営業部」)、集団分析で<b>別々の部署として集計されてしまいます</b>。受検案内を出す前に、必ず部署を登録してください。</p>
+<div class="step"><span class="n">1</span><span class="t">メニューから「🗂️ 部署管理」を開く</span></div>
+<div class="step"><span class="n">2</span><span class="t">自社の部署名を追加する</span><br>登録した部署が、従業員の受検画面で<b>選択肢として表示</b>されます。一覧にない場合は従業員が直接入力もできます。</div>
+<div class="info"><b>10名未満の部署は集団分析に表示されません</b>(個人が特定されないようにするためです)。小さな部署が多い場合は、「営業1課・営業2課」ではなく「営業部」のように、10名以上のまとまりで登録することをご検討ください。分け方に迷ったら実施者にご相談ください。</div>
+
+<h2>3. 準備 ― 実施時期を決めて社内に知らせる</h2>
+<ul>
+<li>受検期間は<b>2〜4週間</b>が目安です(繁忙期を避けてください)。</li>
+<li>実施することと日程は、<b>衛生委員会等で調査審議のうえ、事業者から全従業員へ周知</b>していただきます。</li>
+<li>対象は原則として<b>常時使用する労働者全員</b>です(契約期間1年未満の方、週の所定労働時間が通常の労働者の3/4未満の方は義務の対象外)。</li>
+</ul>
+<div class="warn">受検は<b>義務ではなく本人の任意</b>です。受検しないことを理由に不利益な取り扱いをすることは法律で禁止されています。「必ず受けること」といった案内はしないでください。</div>
+
+<h2>4. 案内 ― 受検用URL・QRコードを配布する</h2>
+<div class="step"><span class="n">1</span><span class="t">メニューから「🔗 配布URL・QR」を開く</span><br>自社のその年度の受検用URLとQRコードが表示されます。<b>表示されない場合は未発行です。実施者にご依頼ください</b>(発行は実施者が行います)。</div>
+<div class="step"><span class="n">2</span><span class="t">社内メール・掲示・給与明細への同封などで配布する</span><br>URLはコピー、QRコードは画像として保存できます。従業員は自分でメールアドレスとパスワードを登録して受検します。</div>
+<div class="step"><span class="n">3</span><span class="t">個別に案内したい場合は「✉️ 従業員招待」から</span><br>メールアドレスを入力して招待メールを送れます。人数が多い場合は、メールアドレスを1列だけ並べたCSVでまとめて送ることもできます。</div>
+
+<h3>社内案内文の例(そのままお使いいただけます)</h3>
+<div class="tmpl">件名: 【○○年度】ストレスチェックのご案内(○月○日〜○月○日)
+
+従業員のみなさま
+
+労働安全衛生法に基づくストレスチェックを、下記のとおり実施します。
+ご自身のストレスの状態を知り、セルフケアに役立てていただくためのものです。
+
+■ 期間: ○月○日(○)〜 ○月○日(○)
+■ 所要時間: 約10分(スマートフォン・パソコンのどちらでも受検できます)
+■ 受検方法: 下記のURLまたはQRコードを開き、
+  メールアドレスとパスワードを登録してから回答してください
+  URL: (配布URL・QR画面のURLを貼り付け)
+
+■ プライバシーについて
+・結果を見ることができるのは、ご本人・実施者(産業医 上松弘典)・
+  実施事務従事者(担当: ○○)のみです。
+・ご本人が同意しない限り、会社に個人の結果が提供されることはありません。
+・受検の有無や結果を理由に、不利益な取り扱いを受けることはありません。
+・受検は任意です。
+
+■ 高ストレスと判定された場合
+医師(産業医)による面接指導を申し出ることができます。
+申出の方法は結果画面に表示されます。
+
+ご不明な点は、○○(担当者名・連絡先)までお問い合わせください。</div>
+<div class="warn">案内文には<b>担当者(あなた)の氏名と連絡先</b>を必ず入れてください。「メールが届かない」等の問い合わせ先が分からないと、受検率が下がります。</div>
+
+<h2>5. 受検期間中 ― よくある問い合わせ</h2>
+<table>
+<tr><th>従業員からの相談</th><th>ご案内する内容</th></tr>
+<tr><td>確認メールが届かない</td><td>迷惑メールフォルダの確認を案内。それでも届かない場合は実施者へ連絡</td></tr>
+<tr><td>パスワードを忘れた</td><td>ログイン画面の「パスワードを忘れた方」から本人が再設定できます</td></tr>
+<tr><td>社員番号がわからない</td><td><b>社員番号の入力は任意</b>です。空欄のままで受検できます</td></tr>
+<tr><td>部署の一覧に自分の部署がない</td><td>「その他(直接入力)」で入力してもらってください(後で修正できます)</td></tr>
+<tr><td>間違えて回答してしまった</td><td>あなたが結果を削除すれば、同じ年度内に受け直せます(次項)</td></tr>
+<tr><td>共用パソコンで受ける</td><td>終了時に結果画面の「ログアウトして終了」を押すよう案内してください</td></tr>
+<tr><td>結果を会社に見られたくない</td><td>同意しない限り会社には提供されません。同意はいつでも変更できます</td></tr>
+</table>
+
+<h3>「間違えて回答した」と申出があったとき</h3>
+<div class="step"><span class="n">1</span><span class="t">本人からの申出であることを確認する</span></div>
+<div class="step"><span class="n">2</span><span class="t">「📋 結果一覧」で該当者の行をクリック →「再受験のため削除」</span><br>削除できるのは<b>当年度かつ本人の直近の結果のみ</b>です。操作は記録されます。</div>
+<div class="step"><span class="n">3</span><span class="t">本人に再受検を案内する</span><br>削除後、本人のマイページに受検ボタンが戻ります。</div>
+
+<h3>受検状況の確認と再案内</h3>
+<p>「📋 結果一覧」で年度を選ぶと、<b>受検済みの人数と一覧</b>が表示されます。
+未受検の方は、社内の名簿と突き合わせてご確認ください(システムは未受検者の一覧を作りません)。
+締切の数日前に、全員宛てに「まだの方はお早めに」という案内を一度出すと受検率が上がります。</p>
+<div class="warn">未受検者への声かけは<b>全体への案内</b>にとどめ、個人を名指しして督促しないでください。受検は任意です。</div>
+
+<h2>6. 締切後 ― 面接指導の申出に対応する</h2>
+<div class="step"><span class="n">1</span><span class="t">申出があるとメールが届く</span><br>本人・実施者・あなたの3者に通知されます。内容はシステムにログインして確認します。</div>
+<div class="step"><span class="n">2</span><span class="t">「🩺 面接指導申出」で内容を確認する</span><br>氏名・部署・相談したいこと・連絡事項が表示されます。</div>
+<div class="step"><span class="n">3</span><span class="t">実施者と本人の日程を調整する</span><br>調整がついたら状況を「日程調整済」に、面接が終わったら「実施済」に更新します。</div>
+<div class="info">面接指導の申出をした従業員は、<b>結果を事業者へ提供することに同意したものとみなされます</b>(厚生労働省の指針)。申出の事実や内容は、面接の調整に必要な範囲を超えて共有しないでください。<b>申出を理由とする不利益な取り扱いは法律で禁止</b>されています。</div>
+
+<h2>7. 締切後 ― 集団分析報告書を作成する</h2>
+<div class="step"><span class="n">1</span><span class="t">「📊 集団分析」を開き、年度を選ぶ</span></div>
+<div class="step"><span class="n">2</span><span class="t">「集団分析報告書」を開く</span><br>部署別の高ストレス者率、仕事のストレス判定図(健康リスク)、職場のストレスプロフィール、尺度別の平均評価点がまとまって表示されます。</div>
+<div class="step"><span class="n">3</span><span class="t">「印刷 / PDFとして保存」で保存し、事業者へお渡しする</span><br>10名未満の部署は個人が特定されないよう自動的に除外されています。</div>
+<div class="info">集団分析の結果は<b>個人が特定されない集計データ</b>なので、事業者(会社)にお渡しできます。職場環境の改善のためにご活用いただくものです。読み方や改善策については、実施者(産業医)がご説明します。衛生委員会での報告資料としてお使いください。</div>
+
+<h2>8. 年度末 ― 記録の保存</h2>
+<ul>
+<li>結果は<b>システム内で5年間保存</b>されます。あなたが別途保管する必要はありません。</li>
+<li>結果の削除・改変は原則できません(誤回答による再受験の場合のみ例外)。</li>
+<li>CSVを出力した場合は、<b>ファイルの取り扱いに十分ご注意ください</b>(個人情報です。共有フォルダやメール添付での送付は避けてください)。</li>
+</ul>
+
+<h2>9. やってはいけないこと</h2>
+<table>
+<tr><th>禁止事項</th><th>理由</th></tr>
+<tr><td>業務上の必要なく個人の結果を閲覧する</td><td>閲覧はすべて記録され、実施者が確認できます</td></tr>
+<tr><td>個人の結果・申出の内容を上司や人事に伝える</td><td>守秘義務違反(労働安全衛生法第105条)</td></tr>
+<tr><td>アカウントを他の人と共有する・貸す</td><td>誰が操作したか追えなくなります</td></tr>
+<tr><td>受検や申出をしたことを理由に不利益な扱いをする</td><td>法律で禁止されています</td></tr>
+<tr><td>受検を強制する・個人を名指しで督促する</td><td>受検は任意です</td></tr>
+</table>
+
+<h2>10. はじめての運用チェックリスト</h2>
+<ul class="chk">
+<li>招待メールからパスワードを設定し、誓約を済ませた</li>
+<li>「部署管理」で自社の部署を登録した</li>
+<li>実施時期を決め、衛生委員会等で審議・周知した</li>
+<li>「配布URL・QR」が表示されることを確認した(未発行なら実施者へ依頼)</li>
+<li>案内文に担当者名・連絡先・期間・プライバシーの説明を入れた</li>
+<li>従業員へURL・QRを配布した</li>
+<li>締切数日前に再案内を出した</li>
+<li>面接指導の申出に対応した(該当者がいる場合)</li>
+<li>集団分析報告書をPDFで保存し、事業者へお渡しした</li>
+<li>不明点は実施者に確認した</li>
+</ul>
+
+<h2>11. 困ったときは</h2>
+<p>操作の詳細は別冊「実施事務従事者向けマニュアル」に記載しています。
+それでも解決しない場合、また判断に迷う場合は、<b>実施者(うえまつ産業医事務所)</b>へご連絡ください。
+従業員の健康状態に関わる相談は、ご自身で判断せず必ず実施者へお回しください。</p>
+
+<div class="foot">ストレスチェックWeb 実施事務従事者向け はじめての運用ガイド / 発行: うえまつ産業医事務所(Mestate LLC) / 実施者: 医師(産業医) 上松 弘典 / 本システムは労働安全衛生法第66条の10に基づくストレスチェック(職業性ストレス簡易調査票)を実施するものです。結果データは5年間保存され、原則削除・改変できません。 Copyright © Mestate LLC All Rights Reserved.</div>
+</div></body></html>
