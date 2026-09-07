@@ -25,8 +25,10 @@ export default async function JoinPage({ params }: { params: { token: string } }
     <div style={{ maxWidth: 560, margin: "0 auto", display: "grid", gap: 14 }}>
       <Card>
         <Badge>ストレスチェックのご案内</Badge>
-        <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 6px" }}>
-          {info.company_name} {info.fiscal_year}年度 ストレスチェック
+        {/* 企業名が長くても読みやすいよう、企業名と年度・件名は行を分ける */}
+        <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 6px", lineHeight: 1.5 }}>
+          <span style={{ display: "block" }}>{info.company_name}</span>
+          <span style={{ display: "block" }}>{info.fiscal_year}年度 ストレスチェック</span>
         </h2>
         <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.9, margin: 0 }}>
           厚生労働省「職業性ストレス簡易調査票」によるストレスチェックです。受検にはアカウント登録(本人確認のためのメール認証)が必要です。結果はあなた本人と実施者(産業医事務所)・実施事務従事者のみが確認でき、あなたの同意なく会社側へ個人結果が提供されることはありません。
