@@ -7,11 +7,13 @@ export const runtime = "nodejs";
 type InviteInput = {
   email: string;
   company_code: string;
-  role?: "employee" | "jimu";
+  role?: "employee" | "jimu" | "company";
 };
 
-// 事業者担当者(company)は現在の運用では発行しない
-const ALLOWED_ROLES = new Set(["employee", "jimu"]);
+// 実施者が発行できるロール。
+// 事業者担当者(company)は、健康管理Webを併用する企業に限る(下でさらに検証する)。
+// ストレスチェック単独のご契約では、これまでどおり事業者側にアカウントを発行しない。
+const ALLOWED_ROLES = new Set(["employee", "jimu", "company"]);
 
 export async function POST(req: Request) {
   // 1) 呼び出し元が office ロールであることを検証(セッションCookieベース)
@@ -80,10 +82,17 @@ export async function POST(req: Request) {
 
       const { data: company } = await admin
         .from("companies")
-        .select("id")
+        .select("id, hm_enabled")
         .eq("code", inv.company_code)
         .single();
       if (!company) throw new Error(`企業コード「${inv.company_code}」が見つかりません`);
+
+      // 事業者担当者は健康管理Webを併用する企業のみ
+      if (role === "company" && !company.hm_enabled) {
+        throw new Error(
+          "事業者担当者は、健康管理Webを併用する企業のみ発行できます(企業管理でチェックしてください)"
+        );
+      }
 
       // jimuは自社以外の企業へ招待できない
       if (callerRole === "jimu" && company.id !== callerProfile?.company_id) {

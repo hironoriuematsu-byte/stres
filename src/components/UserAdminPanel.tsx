@@ -11,7 +11,7 @@ import { parseCsv, parseInviteCsv } from "@/lib/parse-csv";
 type InvitePayload = {
   email: string;
   company_code: string;
-  role: "employee" | "jimu";
+  role: "employee" | "jimu" | "company";
 };
 
 type Member = {
@@ -186,9 +186,16 @@ export function UserAdminPanel({
                   label=""
                   companies={companies ?? []}
                   value={inviteCompany?.id ?? ""}
-                  onChange={(id) =>
-                    setForm({ ...form, company_code: companies?.find((c) => c.id === id)?.code ?? "" })
-                  }
+                  onChange={(id) => {
+                    const next = companies?.find((c) => c.id === id);
+                    setForm({
+                      ...form,
+                      company_code: next?.code ?? "",
+                      // 事業者担当者は健康管理Web併用の企業のみ。対象外の企業に
+                      // 切り替えたときは従業員に戻す
+                      role: form.role === "company" && !next?.hm_enabled ? "employee" : form.role,
+                    });
+                  }}
                 />
               </div>
             </div>
@@ -201,6 +208,8 @@ export function UserAdminPanel({
               >
                 <option value="employee">従業員</option>
                 <option value="jimu">実施事務従事者</option>
+                {/* 事業者担当者は健康管理Webを併用する企業でのみ発行する */}
+                {inviteCompany?.hm_enabled && <option value="company">事業者担当者</option>}
               </select>
             </div>
           </>
@@ -211,6 +220,14 @@ export function UserAdminPanel({
           </Btn>
         </div>
       </form>
+
+      {form.role === "company" && (
+        <p style={{ fontSize: 12.5, color: "#8A6B2E", margin: "10px 0 0", lineHeight: 1.8 }}>
+          事業者担当者(人事・衛生管理のご担当者)のアカウントです。ストレスチェックで閲覧できるのは、
+          ご本人が事業者への提供に同意した結果と集団分析のみで、同意のない個人結果は表示されません。
+          健康管理Webでは自社の情報をご覧いただけます。
+        </p>
+      )}
 
       <div style={{ marginTop: 18, borderTop: `1px solid ${brand.line}`, paddingTop: 14 }}>
         <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 6 }}>
