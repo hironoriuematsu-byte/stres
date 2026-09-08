@@ -3,6 +3,7 @@ import { getSessionProfile, roleHome } from "@/lib/auth-server";
 import { createClient } from "@/lib/supabase/server";
 import { Badge, Card } from "@/components/ui";
 import { KenkoLink } from "@/components/KenkoLink";
+import { ProfileSetup } from "./ProfileSetup";
 import { brand } from "@/lib/brand";
 
 // 事業者担当者(company)ロール。
@@ -25,6 +26,19 @@ export default async function CompanyPage() {
     : { data: null };
 
   const hmEnabled = Boolean(company?.hm_enabled);
+
+  // 事業者担当者は受検を行わないため、氏名を入力する機会がない。
+  // 未設定のままだと操作記録で誰の操作か分からないため、初回に登録していただく
+  const needsName = !profile?.name || profile.name === "未設定";
+  if (needsName) {
+    return (
+      <ProfileSetup
+        initialName=""
+        initialDept={profile?.dept ?? ""}
+        companyName={company?.name ?? ""}
+      />
+    );
+  }
 
   return (
     <Card style={{ maxWidth: 620, margin: "0 auto" }}>
