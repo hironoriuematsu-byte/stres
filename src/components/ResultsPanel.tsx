@@ -32,6 +32,8 @@ export function ResultsPanel({
   const [deptBusy, setDeptBusy] = useState(false);
   const [deptOptions, setDeptOptions] = useState<string[]>([]);
   const [deptOther, setDeptOther] = useState(false);
+  // 報告書(様式第6号の2)の「在籍労働者数」。任意入力
+  const [headcount, setHeadcount] = useState("");
 
   const supabase = createClient();
 
@@ -81,7 +83,15 @@ export function ResultsPanel({
   const shown = onlyHigh ? rows.filter((r) => r.high_stress) : rows;
   const highCount = rows.filter((r) => r.high_stress).length;
 
-  const exportCsv = () => {
+  const exportCsv = async () => {
+    // 集団ごとの分析の実施の有無(集団分析報告書を開いた記録から判定する)
+    let groupAnalysisDone: boolean | null = null;
+    const { data: done, error: doneErr } = await supabase.rpc("group_analysis_done", {
+      p_company: companyId,
+      p_year: fiscalYear,
+    });
+    if (!doneErr) groupAnalysisDone = Boolean(done);
+
     const content = resultsCsv(
       rows.map((r) => ({
         created_at: r.created_at,
@@ -102,6 +112,8 @@ export function ResultsPanel({
         // 表示中の年度の結果に紐づく申出のみを数える
         interviewCount: rows.filter((r) => interviewResultIds.has(r.id)).length,
         questionnaire,
+        headcount: headcount.trim() === "" ? null : Number(headcount),
+        groupAnalysisDone,
       }
     );
     downloadCsv(`stresscheck_${companyName}_${fiscalYear}.csv`, content);
@@ -171,12 +183,29 @@ export function ResultsPanel({
             受検 {rows.length} 名 / 高ストレス {highCount} 名({rows.length ? Math.round((highCount / rows.length) * 100) : 0}%)
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <Btn tone="ghost" onClick={() => setOnlyHigh(!onlyHigh)} style={{ padding: "8px 14px", fontSize: 13 }}>
             {onlyHigh ? "全員を表示" : "高ストレス者のみ"}
           </Btn>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#5B6B6A" }}>
+            在籍労働者数(任意)
+            <input
+              type="number"
+              min={0}
+              value={headcount}
+              onChange={(e) => setHeadcount(e.target.value)}
+              placeholder="例: 120"
+              style={{
+                width: 90,
+                padding: "7px 9px",
+                fontSize: 13,
+                border: `1px solid ${brand.line}`,
+                borderRadius: 8,
+              }}
+            />
+          </label>
           <Btn tone="ghost" onClick={exportCsv} style={{ padding: "8px 14px", fontSize: 13 }}>
-            CSV出力
+            ストレスチェック結果報告書のサマリ・CSV出力
           </Btn>
         </div>
       </div>
