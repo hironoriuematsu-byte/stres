@@ -12,11 +12,17 @@ export async function getSessionProfile(): Promise<{
 
   if (!user) return { user: null, profile: null };
 
-  const { data: profile } = await supabase
+  const COLS = "user_id, role, name, emp_id, dept, company_id, no_personnel_authority, attested_at";
+  let { data: profile } = await supabase
     .from("profiles")
-    .select("user_id, role, name, emp_id, dept, company_id, no_personnel_authority, attested_at")
+    .select(`${COLS}, hm_company_access`)
     .eq("user_id", user.id)
     .single();
+
+  // 0017 が未適用でこの列が無い環境でもログインできるようにする
+  if (!profile) {
+    ({ data: profile } = await supabase.from("profiles").select(COLS).eq("user_id", user.id).single());
+  }
 
   return { user, profile: (profile as Profile) ?? null };
 }

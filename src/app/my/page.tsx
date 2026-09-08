@@ -13,9 +13,12 @@ export default async function My() {
   const supabase = createClient();
   const { data: company } = await supabase
     .from("companies")
-    .select("name")
+    .select("name, hm_enabled")
     .eq("id", profile.company_id!)
     .single();
+
+  // 健康管理Webの導線は、併用企業かつ「事業者担当者を兼ねる」方にのみ表示する
+  const hmAccess = Boolean(company?.hm_enabled && profile.hm_company_access);
 
   return (
     <MyPage
@@ -23,6 +26,7 @@ export default async function My() {
       name={profile.name === "未設定" ? "" : profile.name}
       companyId={profile.company_id!}
       companyName={company?.name ?? ""}
+      hmAccess={hmAccess}
     />
   );
 }

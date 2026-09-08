@@ -102,7 +102,16 @@ export async function POST(req: Request) {
       const { data: invited, error: invErr } = await admin.auth.admin.inviteUserByEmail(inv.email, {
         redirectTo: `${origin}/auth/callback?next=/account/update-password`,
       });
-      if (invErr) throw new Error(invErr.message);
+      if (invErr) {
+        // 既に登録済みのメールアドレスには招待メールを送れない。
+        // ロールを変えたい場合は「メンバー一覧・ロール変更」で行う
+        if (/already|registered|exists/i.test(invErr.message)) {
+          throw new Error(
+            "このメールアドレスは既に登録されています。ロールの変更は下の「メンバー一覧・ロール変更」から行ってください"
+          );
+        }
+        throw new Error(invErr.message);
+      }
 
       // 氏名・社員番号・部署は本人が受検時に入力する(管理者側では設定しない)
       const { error: profErr } = await admin.from("profiles").upsert({

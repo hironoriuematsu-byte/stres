@@ -22,12 +22,15 @@ export default async function JimuPage() {
     .eq("id", profile.company_id!)
     .single();
 
+  // 健康管理Webの導線は、併用企業かつ「事業者担当者を兼ねる」方にのみ表示する
+  const hmEnabled = Boolean(company?.hm_enabled && profile.hm_company_access);
+
   return (
     <JimuDashboard
       companyId={profile.company_id!}
       companyName={company?.name ?? "自社"}
       companyCode={company?.code ?? ""}
-      hmEnabled={company?.hm_enabled ?? false}
+      hmEnabled={hmEnabled}
     />
   );
 }

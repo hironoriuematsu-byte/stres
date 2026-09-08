@@ -9,6 +9,7 @@ export type Profile = {
   company_id: string | null;
   no_personnel_authority: boolean;
   attested_at: string | null;
+  hm_company_access?: boolean; // 健康管理Webでは事業者担当者として扱う(兼務)
 };
 
 export type Company = {

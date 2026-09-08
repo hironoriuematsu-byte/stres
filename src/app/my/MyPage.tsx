@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card, ScoreBar } from "@/components/ui";
+import { KenkoLink } from "@/components/KenkoLink";
 import { brand } from "@/lib/brand";
 import { InterviewRequest, ResultRow, STATUS_LABEL } from "@/lib/types";
 import { getFiscalYear } from "@/lib/fiscal";
@@ -14,11 +15,13 @@ export function MyPage({
   name,
   companyId,
   companyName,
+  hmAccess,
 }: {
   userId: string;
   name: string;
   companyId: string;
   companyName: string;
+  hmAccess?: boolean; // 事業者担当者を兼ねる方のみ、健康管理Webへの導線を出す
 }) {
   const [results, setResults] = useState<ResultRow[] | null>(null);
   const [requests, setRequests] = useState<InterviewRequest[]>([]);
@@ -161,24 +164,27 @@ export function MyPage({
             </h2>
             {companyName && <p style={{ fontSize: 13, color: "#5B6B6A", margin: 0 }}>{companyName}</p>}
           </div>
-          {takenThisYear ? (
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: brand.tealDark,
-                background: "#E2F3F1",
-                borderRadius: 10,
-                padding: "10px 16px",
-              }}
-            >
-              ✓ {currentFy}年度は受検済みです
-            </div>
-          ) : (
-            <Link href="/exam">
-              <Btn>ストレスチェックを受検する</Btn>
-            </Link>
-          )}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <KenkoLink enabled={hmAccess} />
+            {takenThisYear ? (
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: brand.tealDark,
+                  background: "#E2F3F1",
+                  borderRadius: 10,
+                  padding: "10px 16px",
+                }}
+              >
+                ✓ {currentFy}年度は受検済みです
+              </div>
+            ) : (
+              <Link href="/exam">
+                <Btn>ストレスチェックを受検する</Btn>
+              </Link>
+            )}
+          </div>
         </div>
         {notice && (
           <div

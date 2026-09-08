@@ -88,12 +88,15 @@ export function UserAdminPanel({
     setMemberBusy(false);
   };
 
-  const changeRole = async (m: Member, nextRole: "employee" | "jimu") => {
-    const label = nextRole === "jimu" ? "実施事務従事者" : "従業員";
+  const changeRole = async (m: Member, nextRole: "employee" | "jimu" | "company") => {
+    const label =
+      nextRole === "jimu" ? "実施事務従事者" : nextRole === "company" ? "事業者担当者" : "従業員";
     const extra =
       nextRole === "jimu"
         ? "変更後、本人は初回アクセス時に誓約(氏名確認・人事権なしの確認)を行うと結果閲覧などが可能になります。"
-        : "変更後、本人は自分のマイページ(受検・自分の結果)のみ利用できます。";
+        : nextRole === "company"
+          ? "変更後、本人は健康管理Webで自社の情報を利用できます。ストレスチェックでは、ご本人の同意がある結果のみが対象です。"
+          : "変更後、本人は自分のマイページ(受検・自分の結果)のみ利用できます。";
     if (!confirm(`${m.name || m.email} さんのロールを「${label}」に変更します。\n\n${extra}\n・操作はアクセスログに記録されます\n\nよろしいですか?`)) {
       return;
     }
@@ -352,6 +355,17 @@ export function UserAdminPanel({
                           </Btn>
                         )}
                         {m.role === "jimu" && (
+                          <Btn tone="ghost" onClick={() => changeRole(m, "employee")} disabled={memberBusy} style={{ padding: "5px 12px", fontSize: 12 }}>
+                            従業員に戻す
+                          </Btn>
+                        )}
+                        {/* 事業者担当者への変更は健康管理Web併用の企業のみ */}
+                        {memberCompany?.hm_enabled && (m.role === "employee" || m.role === "jimu") && (
+                          <Btn tone="ghost" onClick={() => changeRole(m, "company")} disabled={memberBusy} style={{ padding: "5px 12px", fontSize: 12, marginLeft: 6 }}>
+                            事業者担当者にする
+                          </Btn>
+                        )}
+                        {m.role === "company" && (
                           <Btn tone="ghost" onClick={() => changeRole(m, "employee")} disabled={memberBusy} style={{ padding: "5px 12px", fontSize: 12 }}>
                             従業員に戻す
                           </Btn>
