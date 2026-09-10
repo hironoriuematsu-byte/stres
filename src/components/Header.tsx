@@ -51,9 +51,18 @@ export function Header({
           <img
             src="/logo.png"
             alt="mestate うえまつ産業医事務所"
-            style={{ height: 54, width: "auto", display: "block" }}
+            // 画面幅が狭いときはロゴと題字を少し小さくして1行に収める
+            style={{ height: "clamp(40px, 12vw, 54px)", width: "auto", display: "block" }}
           />
-          <div style={{ fontSize: 22, fontWeight: 800, color: brand.tealDark, cursor: "pointer" }}>
+          <div
+            style={{
+              fontSize: "clamp(16px, 5vw, 22px)",
+              fontWeight: 800,
+              color: brand.tealDark,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
             ストレスチェック<span style={{ color: brand.orange }}>Web</span>
           </div>
         </Link>
@@ -62,41 +71,64 @@ export function Header({
         </div>
       </div>
       {email && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#5B6B6A" }}>
-          <span>
+        // スマートフォンの幅では氏名とボタンが行を分けて並ぶ。
+        // 氏名やボタンの文字が途中で折り返さないようにする
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            rowGap: 8,
+            fontSize: 13,
+            color: "#5B6B6A",
+            flexWrap: "wrap",
+          }}
+        >
+          <span
+            style={{
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: "100%",
+            }}
+          >
             {roleLabel ? `${roleLabel} / ` : ""}
             {name || email}
           </span>
-          <Link
-            href={onAccountPage ? homeHref : "/account"}
-            style={{
-              background: "#fff",
-              border: `1px solid ${brand.line}`,
-              borderRadius: 8,
-              padding: "6px 12px",
-              fontSize: 12,
-              fontWeight: 700,
-              color: brand.tealDark,
-              textDecoration: "none",
-            }}
-          >
-            {onAccountPage ? homeLabel : "アカウント設定"}
-          </Link>
-          <button
-            onClick={signOut}
-            style={{
-              background: "#fff",
-              border: `1px solid ${brand.line}`,
-              borderRadius: 8,
-              padding: "6px 12px",
-              fontSize: 12,
-              fontWeight: 700,
-              color: brand.tealDark,
-              cursor: "pointer",
-            }}
-          >
-            ログアウト
-          </button>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            <Link
+              href={onAccountPage ? homeHref : "/account"}
+              style={{
+                background: "#fff",
+                border: `1px solid ${brand.line}`,
+                borderRadius: 8,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 700,
+                color: brand.tealDark,
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {onAccountPage ? homeLabel : "アカウント設定"}
+            </Link>
+            <button
+              onClick={signOut}
+              style={{
+                background: "#fff",
+                border: `1px solid ${brand.line}`,
+                borderRadius: 8,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 700,
+                color: brand.tealDark,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              ログアウト
+            </button>
+          </div>
         </div>
       )}
     </header>
