@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
   const { data: profiles, error } = await admin
     .from("profiles")
-    .select("user_id, name, emp_id, dept, role, hm_company_access")
+    .select("user_id, name, emp_id, dept, role, hm_company_access, hm_view_only")
     .eq("company_id", companyId)
     .order("role")
     .order("name");

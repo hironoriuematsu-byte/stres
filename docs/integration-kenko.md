@@ -161,6 +161,17 @@ Authentication → URL Configuration の **Redirect URLs に健康管理WebのUR
 | 1 | `supabase/migrations/0017_hm_company_access.sql` | ストレスチェックWeb |
 | 2 | kenko-kanri の `supabase/migrations/0123_hm_company_access.sql` | 健康管理Web |
 
+### 閲覧のみの担当者(2026-09-14 追加)
+
+`profiles.hm_view_only`(0020)が true の事業者担当者は、健康管理Webで
+**閲覧のみ**(登録・編集・取込は不可)になる。ストレスチェックWeb側の権限は変わらない。
+
+- 設定は **ユーザー管理 → メンバー一覧**の「閲覧のみ(登録・編集不可)」チェック
+  (事業者担当者と、兼務の印が付いた方に表示)
+- 付与・解除は実施者のみ(`set_hm_view_only()` 経由)。操作はアクセスログに残る
+- 健康管理Web側は `hm_company_can_write()`(kenko 0128)で判定する。
+  適用順は **stres 0020 → kenko 0128**
+
 > 実施事務従事者は「人事権を有しない者」であることが前提(安衛則52条の10第2項)。
 > 兼務する場合も、その方が解雇・昇進・異動の直接の権限を持たないことをご確認いただく。
 > なお健康管理Webで扱うのは健診・面談・議事録などであり、ストレスチェックの個人結果は

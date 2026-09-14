@@ -22,6 +22,7 @@ type Member = {
   role: string;
   email: string;
   hm_company_access?: boolean; // 健康管理Webでは事業者担当者として扱う(兼務)
+  hm_view_only?: boolean; // 健康管理Webでは閲覧のみ(登録・編集・取込は不可)
 };
 
 const input = {
@@ -117,6 +118,20 @@ export function UserAdminPanel({
     setMemberBusy(true);
     const supabase = createClient();
     const { error } = await supabase.rpc("set_hm_company_access", { p_user: m.user_id, p_on: on });
+    if (error) {
+      alert("設定を変更できませんでした: " + error.message);
+      setMemberBusy(false);
+      return;
+    }
+    await loadMembers(memberCompanyId);
+    setMemberBusy(false);
+  };
+
+  // 健康管理Webの「閲覧のみ」の設定・解除
+  const setViewOnly = async (m: Member, on: boolean) => {
+    setMemberBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("set_hm_view_only", { p_user: m.user_id, p_on: on });
     if (error) {
       alert("設定を変更できませんでした: " + error.message);
       setMemberBusy(false);
@@ -271,7 +286,7 @@ export function UserAdminPanel({
           <p style={{ fontSize: 12.5, color: "#5B6B6A", margin: "0 0 10px", lineHeight: 1.7 }}>
             実施事務従事者の交代時などに、従業員⇔実施事務従事者のロールを変更できます(実施者アカウントは対象外・操作はログに記録)。
             {memberCompany?.hm_enabled &&
-              "「事業者担当者を兼ねる」にチェックすると、同じアカウントのまま健康管理Webを自社担当としてご利用いただけます(ストレスチェックでの権限は変わりません)。"}
+              "「事業者担当者を兼ねる」にチェックすると、同じアカウントのまま健康管理Webを自社担当としてご利用いただけます(ストレスチェックでの権限は変わりません)。「閲覧のみ」にチェックすると、健康管理Webで登録・編集・取込ができなくなります(閲覧は可能)。"}
           </p>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
             <CompanySelect
@@ -345,6 +360,18 @@ export function UserAdminPanel({
                             </label>
                           ) : (
                             ""
+                          )}
+                          {/* 健康管理Webを使う方(事業者担当者・兼務)には「閲覧のみ」を設定できる */}
+                          {(m.role === "company" || m.hm_company_access) && (
+                            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#5B6B6A", cursor: "pointer", marginTop: 4 }}>
+                              <input
+                                type="checkbox"
+                                checked={m.hm_view_only ?? false}
+                                onChange={(e) => setViewOnly(m, e.target.checked)}
+                                disabled={memberBusy}
+                              />
+                              閲覧のみ(登録・編集不可)
+                            </label>
                           )}
                         </td>
                       )}
