@@ -89,10 +89,20 @@ export function AccessLogsPanel() {
     const id = r.company_id ?? people[r.user_id]?.company_id ?? null;
     return (id && companies[id]) || "—";
   };
+  // 「対象」は企業列と重なる部分(企業名)を省き、年度などの補足だけを短く出す。
   // 「report:<id>」のような内部の識別子は読みやすい表記にする
-  const targetLabel = (t: string | null): string => {
+  const targetLabel = (r: LogRow): string => {
+    const t = r.target ?? "";
     if (!t) return "";
     if (t.startsWith("report:")) return `個人結果票 (${t.slice(7, 15)}…)`;
+    const company = companyOf(r);
+    if (company !== "—") {
+      if (t === company) return "";
+      if (t.startsWith(company + "/")) {
+        const rest = t.slice(company.length + 1);
+        return /^\d{4}$/.test(rest) ? `${rest}年度` : rest;
+      }
+    }
     return t;
   };
 
@@ -139,7 +149,7 @@ export function AccessLogsPanel() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-              {["日時", "ユーザー", "ロール", "企業", "種別", "内容", "対象"].map((h) => (
+              {["日時", "ユーザー", "ロール", "企業", "種別", "内容", "補足"].map((h) => (
                 <th key={h} style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>
                   {h}
                 </th>
@@ -169,8 +179,8 @@ export function AccessLogsPanel() {
                   )}
                 </td>
                 <td style={{ padding: "8px 10px" }}>{ACTION_LABEL[r.action] ?? r.action}</td>
-                <td style={{ padding: "8px 10px", maxWidth: 260, wordBreak: "break-all" }}>
-                  {targetLabel(r.target)}
+                <td style={{ padding: "8px 10px", whiteSpace: "nowrap", color: "#5B6B6A" }}>
+                  {targetLabel(r)}
                 </td>
               </tr>
             ))}
