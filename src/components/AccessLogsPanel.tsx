@@ -158,7 +158,9 @@ export function AccessLogsPanel() {
                 <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                   {r.role && r.role in ROLE_LABEL ? ROLE_LABEL[r.role as Role] : r.role ?? ""}
                 </td>
-                <td style={{ padding: "8px 10px", fontWeight: 700, color: brand.tealDark }}>{companyOf(r)}</td>
+                <td style={{ padding: "8px 10px", fontWeight: 700, color: brand.tealDark, whiteSpace: "nowrap" }}>
+                  {companyOf(r)}
+                </td>
                 <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                   {kindOf(r.action) === "view" ? (
                     <Badge tone="gray">閲覧</Badge>
@@ -167,7 +169,7 @@ export function AccessLogsPanel() {
                   )}
                 </td>
                 <td style={{ padding: "8px 10px" }}>{ACTION_LABEL[r.action] ?? r.action}</td>
-                <td style={{ padding: "8px 10px", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis" }}>
+                <td style={{ padding: "8px 10px", maxWidth: 260, wordBreak: "break-all" }}>
                   {targetLabel(r.target)}
                 </td>
               </tr>
