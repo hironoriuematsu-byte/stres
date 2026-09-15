@@ -1,7 +1,11 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 
-export async function getSessionProfile(): Promise<{
+// 1回の画面表示(リクエスト)の中で、レイアウトとページの両方から呼ばれても
+// ログイン確認とプロフィールの問い合わせを1回にまとめる(React の cache による同一リクエスト内の共有)。
+// 以前は毎回 Supabase Auth への確認が2回走っていた
+export const getSessionProfile = cache(async function getSessionProfile(): Promise<{
   user: { id: string; email?: string } | null;
   profile: Profile | null;
 }> {
@@ -25,7 +29,7 @@ export async function getSessionProfile(): Promise<{
   }
 
   return { user, profile: (profile as Profile) ?? null };
-}
+});
 
 export function roleHome(role: string | undefined | null): string {
   switch (role) {

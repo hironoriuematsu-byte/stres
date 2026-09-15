@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { startNavigationProgress } from "@/lib/navigate";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card, QuestionRow, ScoreBar } from "@/components/ui";
@@ -256,7 +257,7 @@ export function ExamForm({
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-          <Btn tone="ghost" onClick={() => router.push(demo ? "/demo" : "/my")}>
+          <Btn tone="ghost" onClick={() => { startNavigationProgress(); router.push(demo ? "/demo" : "/my"); }}>
             戻る
           </Btn>
           <Btn onClick={() => setStep(1)} disabled={!name || !dept || !gender}>
