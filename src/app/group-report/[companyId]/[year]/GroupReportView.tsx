@@ -996,7 +996,8 @@ export function GroupReportView({
         <p style={{ fontSize: 10.5, color: "#8A9694", marginTop: 18, lineHeight: 1.7 }}>
           本報告書は職場環境改善の検討資料であり、個人を特定できる情報は含まれていません。
           衛生委員会等での審議にご活用ください。
-          実施者: {IMPLEMENTER.full}(所属: {IMPLEMENTER.officeName} {IMPLEMENTER.officeAddress})/ ストレスチェックWeb
+          <br />
+          実施者: {IMPLEMENTER.full}(所属: {IMPLEMENTER.officeName} {IMPLEMENTER.officeAddress})
         </p>
       </div>
     </div>

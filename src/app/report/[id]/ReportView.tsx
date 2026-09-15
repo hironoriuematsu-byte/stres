@@ -342,7 +342,8 @@ export function ReportView({
         <p style={{ fontSize: 10.5, color: "#8A9694", marginTop: 18, lineHeight: 1.7 }}>
           本結果票は労働安全衛生法第66条の10に基づくストレスチェックの個人結果であり、医療上の診断ではありません。
           本人の同意なく事業者へ提供されることはありません。結果は5年間保存されます。
-          実施者: {IMPLEMENTER.full}(所属: {IMPLEMENTER.officeName} {IMPLEMENTER.officeAddress})/ ストレスチェックWeb
+          <br />
+          実施者: {IMPLEMENTER.full}(所属: {IMPLEMENTER.officeName} {IMPLEMENTER.officeAddress})
         </p>
       </div>
 
