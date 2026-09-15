@@ -135,7 +135,7 @@ export function AccessLogsPanel() {
                 <td style={{ padding: "8px 10px", fontWeight: 700, color: brand.ink }}>
                   {people[r.user_id]?.name ?? r.user_id.slice(0, 8)}
                 </td>
-                <td style={{ padding: "8px 10px" }}>
+                <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                   {r.role && r.role in ROLE_LABEL ? ROLE_LABEL[r.role as Role] : r.role ?? ""}
                 </td>
                 <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
