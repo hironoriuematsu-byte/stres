@@ -14,7 +14,7 @@ export function PrintHeader({
   title: string;
   companyName: string;
   meta?: string; // 年度などの補足(企業名の右に小さく)
-  note?: string; // 調査票・実施者などの1行(下段)
+  note?: string; // 調査票・実施者などの補足(下段)。改行(\n)を入れるとその位置で行を分ける
 }) {
   return (
     <div
@@ -47,7 +47,11 @@ export function PrintHeader({
             </span>
           )}
         </h1>
-        {note && <p style={{ fontSize: 11, color: "#7A8886", margin: "4px 0 0" }}>{note}</p>}
+        {note && (
+          <p style={{ fontSize: 11, color: "#7A8886", margin: "4px 0 0", lineHeight: 1.6, whiteSpace: "pre-line" }}>
+            {note}
+          </p>
+        )}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
