@@ -154,11 +154,15 @@ export function StressReportForm({
     <div style={{ maxWidth: 900, margin: "0 auto" }}>
       <style>{`
         @media print {
-          .no-print { display: none !important; }
+          /* 画面のヘッダ(ロゴ・アカウント設定など)やフッタ、ボタン類は印刷しない。報告書の枠内だけを印刷する */
+          header, footer, .no-print { display: none !important; }
+          main { padding: 0 !important; }
+          body { background: #fff !important; }
+          .report-sheet { border: none !important; box-shadow: none !important; padding: 0 !important; }
           input, select, textarea { border: none !important; background: transparent !important; padding: 0 !important; font-weight: 700; }
           select { appearance: none; -webkit-appearance: none; }
-          body { background: #fff !important; }
         }
+        @page { size: A4; margin: 12mm; }
       `}</style>
 
       <div className="no-print" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "12px 0" }}>
@@ -169,7 +173,7 @@ export function StressReportForm({
         <Btn onClick={() => window.print()}>🖨 印刷 / PDF保存</Btn>
       </div>
 
-      <div style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 12, padding: "20px 24px" }}>
+      <div className="report-sheet" style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 12, padding: "20px 24px" }}>
         <PrintHeader
           title="心理的な負担の程度を把握するための検査結果等報告書 記載項目（様式第６号の３ 転記用）"
           companyName={companyName}
