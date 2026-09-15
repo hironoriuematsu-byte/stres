@@ -50,6 +50,7 @@ const kindOf = (action: string): Exclude<LogKind, "all"> =>
 export function AccessLogsPanel() {
   const [rows, setRows] = useState<LogRow[] | null>(null);
   const [people, setPeople] = useState<Record<string, Profile>>({});
+  const [companies, setCompanies] = useState<Record<string, string>>({});
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [kind, setKind] = useState<LogKind>("all");
@@ -60,10 +61,17 @@ export function AccessLogsPanel() {
     let q = supabase.from("access_logs").select("*").order("created_at", { ascending: false }).limit(300);
     if (from) q = q.gte("created_at", `${from}T00:00:00+09:00`);
     if (to) q = q.lte("created_at", `${to}T23:59:59+09:00`);
-    const [{ data: logs }, { data: ps }] = await Promise.all([q, supabase.from("profiles").select("user_id, name")]);
+    const [{ data: logs }, { data: ps }, { data: cs }] = await Promise.all([
+      q,
+      supabase.from("profiles").select("user_id, name, company_id"),
+      supabase.from("companies").select("id, name"),
+    ]);
     const map: Record<string, Profile> = {};
     ((ps as Profile[]) ?? []).forEach((p) => (map[p.user_id] = p));
     setPeople(map);
+    const cmap: Record<string, string> = {};
+    ((cs as { id: string; name: string }[]) ?? []).forEach((c) => (cmap[c.id] = c.name));
+    setCompanies(cmap);
     setRows((logs as LogRow[]) ?? []);
   };
 
@@ -75,6 +83,18 @@ export function AccessLogsPanel() {
   if (rows === null) return <Card>読み込み中…</Card>;
 
   const shown = kind === "all" ? rows : rows.filter((r) => kindOf(r.action) === kind);
+
+  // どの企業に関する操作かを示す。ログに企業が記録されていなければ、操作した方の所属企業を出す
+  const companyOf = (r: LogRow): string => {
+    const id = r.company_id ?? people[r.user_id]?.company_id ?? null;
+    return (id && companies[id]) || "—";
+  };
+  // 「report:<id>」のような内部の識別子は読みやすい表記にする
+  const targetLabel = (t: string | null): string => {
+    if (!t) return "";
+    if (t.startsWith("report:")) return `個人結果票 (${t.slice(7, 15)}…)`;
+    return t;
+  };
 
   return (
     <Card>
@@ -119,7 +139,7 @@ export function AccessLogsPanel() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-              {["日時", "ユーザー", "ロール", "種別", "内容", "対象"].map((h) => (
+              {["日時", "ユーザー", "ロール", "企業", "種別", "内容", "対象"].map((h) => (
                 <th key={h} style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>
                   {h}
                 </th>
@@ -138,6 +158,7 @@ export function AccessLogsPanel() {
                 <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                   {r.role && r.role in ROLE_LABEL ? ROLE_LABEL[r.role as Role] : r.role ?? ""}
                 </td>
+                <td style={{ padding: "8px 10px", fontWeight: 700, color: brand.tealDark }}>{companyOf(r)}</td>
                 <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                   {kindOf(r.action) === "view" ? (
                     <Badge tone="gray">閲覧</Badge>
@@ -147,13 +168,13 @@ export function AccessLogsPanel() {
                 </td>
                 <td style={{ padding: "8px 10px" }}>{ACTION_LABEL[r.action] ?? r.action}</td>
                 <td style={{ padding: "8px 10px", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {r.target ?? ""}
+                  {targetLabel(r.target)}
                 </td>
               </tr>
             ))}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ padding: 24, textAlign: "center", color: "#8A9694" }}>
+                <td colSpan={7} style={{ padding: 24, textAlign: "center", color: "#8A9694" }}>
                   ログはありません。
                 </td>
               </tr>
