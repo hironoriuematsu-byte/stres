@@ -139,7 +139,7 @@ export function JimuDashboard({
       {tab === "結果一覧" && <ResultsPanel companyId={companyId} companyName={companyName} fiscalYear={year} />}
       {tab === "面接指導申出" && <InterviewPanel companyId={companyId} companyName={companyName} />}
       {tab === "集団分析" && (
-        <GroupAnalysis companyId={companyId} fiscalYear={year} reportHref={`/group-report/${companyId}/${year}`} />
+        <GroupAnalysis companyId={companyId} fiscalYear={year} reportHref={`/group-report/${companyId}/${year}`} formHref={`/stress-report/${companyId}/${year}`} />
       )}
       {tab === "配布URL・QR" && (
         <CampaignPanel companyId={companyId} companyName={companyName} fiscalYear={year} manage={false} />

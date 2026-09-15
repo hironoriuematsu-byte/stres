@@ -19,10 +19,12 @@ export function GroupAnalysis({
   companyId,
   fiscalYear,
   reportHref,
+  formHref,
 }: {
   companyId: string;
   fiscalYear: number;
   reportHref?: string;
+  formHref?: string; // 検査結果等報告書(様式第6号の3)の記載項目(転記用)
 }) {
   const [rows, setRows] = useState<GroupAnalysisRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -70,6 +72,24 @@ export function GroupAnalysis({
             }}
           >
             📄 集団分析報告書(印刷・PDF)
+          </a>
+        )}
+        {formHref && (
+          <a
+            href={formHref}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: brand.tealDark,
+              border: `1px solid ${brand.teal}`,
+              borderRadius: 10,
+              padding: "8px 14px",
+              textDecoration: "none",
+            }}
+          >
+            📝 検査結果等報告書の記載項目(様式第6号の3)
           </a>
         )}
       </div>
