@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Btn } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER } from "@/lib/org";
+import { PrintHeader } from "@/components/PrintHeader";
 
 export type ReportInfo = {
   company_id: string;
@@ -169,15 +170,12 @@ export function StressReportForm({
       </div>
 
       <div style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 12, padding: "20px 24px" }}>
-        <div style={{ textAlign: "center", marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: "#5B6B6A" }}>様式第６号の３（第52条の21関係）転記用</div>
-          <h1 style={{ fontSize: 20, color: brand.ink, margin: "4px 0 0" }}>
-            心理的な負担の程度を把握するための検査結果等報告書 記載項目
-          </h1>
-          <div style={{ fontSize: 13, color: "#5B6B6A", marginTop: 4 }}>
-            {companyName} / {fiscalYear}年度のストレスチェック
-          </div>
-        </div>
+        <PrintHeader
+          title="心理的な負担の程度を把握するための検査結果等報告書 記載項目（様式第６号の３ 転記用）"
+          companyName={companyName}
+          meta={`${fiscalYear}年度のストレスチェック`}
+          note={`実施者: ${IMPLEMENTER.full} / 実施事務局: ${IMPLEMENTER.officeName}`}
+        />
 
         {notApplied && (
           <p className="no-print" style={{ color: "#B02A2A", fontSize: 13, background: "#FDE3E3", padding: "8px 12px", borderRadius: 8 }}>

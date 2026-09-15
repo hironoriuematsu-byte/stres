@@ -29,6 +29,7 @@ import { SCALES } from "@/lib/profile-report";
 import { aggregateByDept, DeptAggregate, GroupResultInput, MIN_GROUP } from "@/lib/group-report";
 import { NORMS_COMBINED, riskTone } from "@/lib/health-risk";
 import { IMPLEMENTER } from "@/lib/org";
+import { PrintHeader } from "@/components/PrintHeader";
 import { EXT80_GROUP_LABEL, EXT80_SCALES } from "@/lib/questionnaire80";
 import { logAccess } from "@/lib/log";
 
@@ -600,14 +601,13 @@ export function GroupReportView({
       </div>
 
       <div className="report-sheet" style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 12, padding: 28 }}>
-        <div style={{ borderBottom: `3px solid ${brand.teal}`, paddingBottom: 10, marginBottom: 14 }}>
-          <h1 style={{ fontSize: 20, color: brand.ink, margin: "0 0 4px" }}>ストレスチェック集団分析報告書</h1>
-          <p style={{ fontSize: 11, color: "#7A8886", margin: 0 }}>
-            {companyName} / {fiscalYear}年度 / 職業性ストレス簡易調査票(
-            {groups.some((g) => g.ext80Count > 0) ? "80項目" : "57項目"})/ 実施者: {IMPLEMENTER.full} /
-            実施事務局: {IMPLEMENTER.officeName} / 作成日: {new Date().toLocaleDateString("ja-JP")}
-          </p>
-        </div>
+        {/* ヘッダ: 受検した企業名を大きく表示し、ロゴと「ストレスチェックWeb」を右に置く */}
+        <PrintHeader
+          title="ストレスチェック集団分析報告書"
+          companyName={companyName}
+          meta={`${fiscalYear}年度`}
+          note={`職業性ストレス簡易調査票(${groups.some((g) => g.ext80Count > 0) ? "80項目" : "57項目"}) / 実施者: ${IMPLEMENTER.full} / 実施事務局: ${IMPLEMENTER.officeName} / 作成日: ${new Date().toLocaleDateString("ja-JP")}`}
+        />
 
         {/* サマリー */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>

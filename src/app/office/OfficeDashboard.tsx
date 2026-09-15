@@ -55,8 +55,19 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div>
             <Badge tone="orange">実施者(産業医)ダッシュボード</Badge>
-            <h2 style={{ fontSize: 20, color: brand.ink, margin: "10px 0 0" }}>
-              {tab === null ? "メニュー" : "企業横断管理"}
+            {/* 選択中の企業(事業場)名を大きく表示し、どの企業の画面かを明確にする */}
+            {tab !== null && company && (
+              <div style={{ fontSize: 12, color: "#5B6B6A", marginTop: 10 }}>選択中の事業場</div>
+            )}
+            <h2
+              style={{
+                fontSize: tab !== null && company ? 26 : 20,
+                color: brand.ink,
+                margin: tab !== null && company ? "0" : "10px 0 0",
+                lineHeight: 1.3,
+              }}
+            >
+              {tab === null ? "メニュー" : company ? company.name : "企業横断管理（企業を選択してください）"}
             </h2>
           </div>
           {tab !== null && (

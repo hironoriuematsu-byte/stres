@@ -87,14 +87,15 @@ export function resultsCsv(rows: ResultCsvRow[], meta?: ResultCsvMeta): string {
   const highRate = rows.length ? Math.round((highN / rows.length) * 1000) / 10 : 0;
   const headerLines = [
     ["ストレスチェック結果報告書のサマリ"],
+    ["事業場名", meta.companyName],
+    ["実施年度", `${meta.fiscalYear}年度`],
+    ["発行", `mestate ${IMPLEMENTER.officeName}（${IMPLEMENTER.corporateName}） ストレスチェックWeb`],
     [
       "システム",
-      `ストレスチェックWeb 職業性ストレス簡易調査票(${meta.questionnaire === "80" ? "80項目" : "57項目"})準拠/${IMPLEMENTER.officeName}`,
+      `ストレスチェックWeb 職業性ストレス簡易調査票(${meta.questionnaire === "80" ? "80項目" : "57項目"})準拠`,
     ],
     ["実施者名", IMPLEMENTER.full],
     ["産業医所在地", `${IMPLEMENTER.officeName} ${IMPLEMENTER.officeAddress}`],
-    ["事業場名", meta.companyName],
-    ["実施年度", `${meta.fiscalYear}年度`],
     // 報告書(様式第6号の2)の「検査実施年月」。最後に受検した方の実施月
     ["検査実施年月", examMonthLabel(rows)],
     ["調査票", meta.questionnaire === "80" ? "職業性ストレス簡易調査票(80項目版)" : "職業性ストレス簡易調査票(57項目版)"],

@@ -17,6 +17,7 @@ import { ResultRow } from "@/lib/types";
 import { buildAdvice, computeProfile, hasCompleteAnswers, Gender, ScaleResult } from "@/lib/profile-report";
 import { logAccess } from "@/lib/log";
 import { IMPLEMENTER } from "@/lib/org";
+import { PrintHeader } from "@/components/PrintHeader";
 import {
   EXT80_GROUP_LABEL,
   Ext80ScaleResult,
@@ -144,28 +145,13 @@ export function ReportView({
           padding: 28,
         }}
       >
-        {/* ヘッダ */}
-        <div
-          style={{
-            borderBottom: `3px solid ${brand.teal}`,
-            paddingBottom: 10,
-            marginBottom: 14,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <div>
-            <h1 style={{ fontSize: 20, color: brand.ink, margin: "0 0 4px" }}>ストレスチェック個人結果票</h1>
-            <p style={{ fontSize: 11, color: "#7A8886", margin: 0 }}>
-              職業性ストレス簡易調査票({ext80 ? "80項目" : "57項目"})/ 実施者: {IMPLEMENTER.full} / 実施事務局:{" "}
-              {IMPLEMENTER.officeName}
-            </p>
-          </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="mestate うえまつ産業医事務所" style={{ height: 52, width: "auto" }} />
-        </div>
+        {/* ヘッダ: 受検した企業名を大きく表示し、ロゴと「ストレスチェックWeb」を右に置く */}
+        <PrintHeader
+          title="ストレスチェック個人結果票"
+          companyName={companyName}
+          meta={`${result.fiscal_year}年度`}
+          note={`職業性ストレス簡易調査票(${ext80 ? "80項目" : "57項目"}) / 実施者: ${IMPLEMENTER.full} / 実施事務局: ${IMPLEMENTER.officeName}`}
+        />
 
         <table style={{ width: "100%", fontSize: 13, marginBottom: 16, borderCollapse: "collapse" }}>
           <tbody>
