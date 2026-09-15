@@ -587,6 +587,8 @@ export function GroupReportView({
           main { padding: 0 !important; }
           body { background: #fff !important; }
           .report-sheet { border: none !important; box-shadow: none !important; padding: 0 !important; }
+          .print-break-before { break-before: page; page-break-before: always; }
+          .print-keep { break-inside: avoid; page-break-inside: avoid; }
         }
         @page { size: A4; margin: 12mm; }
       `}</style>
@@ -681,7 +683,7 @@ export function GroupReportView({
                 <tbody>
                   {groups.map((g) => (
                     <tr key={g.dept} style={{ borderBottom: `1px solid ${brand.line}`, background: g.dept === "全体" ? "#F4FAF9" : "#fff" }}>
-                      <td style={{ padding: "6px 8px", fontWeight: 700, color: brand.ink }}>{g.dept}</td>
+                      <td style={{ padding: "6px 8px", fontWeight: 700, color: brand.ink, whiteSpace: "nowrap" }}>{g.dept}</td>
                       <td style={{ padding: "6px 8px" }}>{g.n}</td>
                       <td style={{ padding: "6px 8px" }}>{g.highN}</td>
                       <td style={{ padding: "6px 8px" }}>{g.highRate}%</td>
@@ -714,7 +716,8 @@ export function GroupReportView({
               </table>
             </div>
 
-            {/* 判定図プロット */}
+            {/* 判定図プロット: 印刷では次のページの先頭から始め、図が途中で切れないようにする */}
+            <div className="print-break-before">
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 0" }}>仕事のストレス判定図(部署プロット・健康リスク)</h2>
             <p style={{ fontSize: 11, color: "#8A9694", margin: "2px 0 0" }}>
               背景の色が濃い(赤系の)側ほど健康リスクが高い領域です:
@@ -725,7 +728,7 @@ export function GroupReportView({
               全体・各部署の点が⓪よりリスクの高い側にあるかどうかで、全国平均との比較ができます。
               健康リスクは全国平均=100で、健康問題の起きやすさが全国平均の何倍かを表します(例: 120なら1.2倍)。
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 8 }}>
+            <div className="print-keep" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 8 }}>
               <JudgeScatter
                 title="量的負担 × コントロール判定図"
                 xLabel="仕事のコントロール"
@@ -803,6 +806,7 @@ export function GroupReportView({
               総合健康リスク = A×B÷100 で算出しています。判定図は男女別のため、男女それぞれの平均点で算出し受検者数で加重平均した値(男女計)を表示しています。
               総合健康リスクが120以上の集団は仕事のストレスに関する問題がある可能性があり、職場環境改善の優先的な検討をおすすめします。
             </p>
+            </div>
 
             {/* 職場のストレスプロフィール(レーダーチャート) */}
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 0" }}>
