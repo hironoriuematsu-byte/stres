@@ -49,7 +49,7 @@ export function PrintHeader({
         </h1>
         {note && <p style={{ fontSize: 11, color: "#7A8886", margin: "4px 0 0" }}>{note}</p>}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="mestate うえまつ産業医事務所" style={{ height: 56, width: "auto" }} />
         <div style={{ lineHeight: 1.2, textAlign: "center" }}>
