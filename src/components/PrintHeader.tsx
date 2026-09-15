@@ -1,8 +1,9 @@
 import React from "react";
 import { brand } from "@/lib/brand";
+import { BrandLogo } from "@/components/BrandLogo";
 
 // 印刷・PDF用の共通ヘッダ。
-//   左: 帳票名と、受検した企業(事業場)名を大きく表示
+//   左: 帳票名と、受検した企業(事業場)名を大きく表示(丸みのある書体)
 //   右: ロゴ(mestate うえまつ産業医事務所)と「ストレスチェックWeb」の表記
 // 企業名は帳票を見た人がどの事業場の結果か一目で分かるよう、帳票名より大きく出す
 export function PrintHeader({
@@ -33,6 +34,8 @@ export function PrintHeader({
         <h1
           style={{
             fontSize: 24,
+            fontFamily: brand.softFont,
+            fontWeight: 700,
             color: brand.ink,
             margin: "2px 0 0",
             lineHeight: 1.3,
@@ -41,15 +44,16 @@ export function PrintHeader({
         >
           {companyName}
           {meta && (
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#5B6B6A", marginLeft: 10 }}>{meta}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#5B6B6A", marginLeft: 10, fontFamily: "inherit" }}>
+              {meta}
+            </span>
           )}
         </h1>
         {note && <p style={{ fontSize: 11, color: "#7A8886", margin: "4px 0 0" }}>{note}</p>}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="mestate うえまつ産業医事務所" style={{ height: 52, width: "auto" }} />
-        <div style={{ lineHeight: 1.2 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        <BrandLogo markHeight={48} textSize={11} />
+        <div style={{ lineHeight: 1.2, textAlign: "center" }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: brand.tealDark, whiteSpace: "nowrap" }}>
             ストレスチェック<span style={{ color: brand.orange }}>Web</span>
           </div>

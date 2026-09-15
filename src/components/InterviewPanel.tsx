@@ -70,7 +70,7 @@ export function InterviewPanel({
   return (
     <Card>
       <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 12px" }}>
-        <span style={{ color: brand.tealDark }}>{companyName}</span> 面接指導の申出一覧
+        <span style={{ color: brand.tealDark, fontFamily: brand.softFont }}>{companyName}</span> 面接指導の申出一覧
       </h3>
       {err && <div style={{ fontSize: 13, color: "#B02A2A", marginBottom: 10 }}>{err}</div>}
       <div style={{ overflowX: "auto" }}>

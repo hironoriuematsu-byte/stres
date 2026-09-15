@@ -57,7 +57,7 @@ export function JimuDashboard({
           <div>
             <Badge tone="orange">実施事務従事者ダッシュボード</Badge>
             <div style={{ fontSize: 12, color: "#5B6B6A", marginTop: 10 }}>事業場</div>
-            <h2 style={{ fontSize: 26, color: brand.ink, margin: 0, lineHeight: 1.3 }}>{companyName}</h2>
+            <h2 style={{ fontSize: 26, fontFamily: brand.softFont, color: brand.ink, margin: 0, lineHeight: 1.3 }}>{companyName}</h2>
             {tab === null && <div style={{ fontSize: 13, color: "#5B6B6A", marginTop: 2 }}>メニュー</div>}
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>

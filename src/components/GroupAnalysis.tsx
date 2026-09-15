@@ -56,6 +56,8 @@ export function GroupAnalysis({
     <Card>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>集団分析(部署別・{fiscalYear}年度)</h3>
+        {/* 帳票へのボタンは右にまとめて並べる */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end", marginLeft: "auto" }}>
         {reportHref && (
           <a
             href={reportHref}
@@ -92,6 +94,7 @@ export function GroupAnalysis({
             📝 検査結果等報告書の記載項目(様式第6号の3)
           </a>
         )}
+        </div>
       </div>
       <p style={{ fontSize: 12, color: brand.orange, fontWeight: 700, margin: "0 0 12px" }}>
         ※ 10名未満の部署は個人特定防止のため表示されません(全体は受検者の合計が10名以上であれば表示されます)

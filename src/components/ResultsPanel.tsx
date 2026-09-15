@@ -179,7 +179,7 @@ export function ResultsPanel({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <div>
           <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 2px" }}>
-            <span style={{ color: brand.tealDark }}>{companyName}</span> 結果一覧({fiscalYear}年度)
+            <span style={{ color: brand.tealDark, fontFamily: brand.softFont }}>{companyName}</span> 結果一覧({fiscalYear}年度)
           </h3>
           <p style={{ fontSize: 13, color: "#5B6B6A", margin: 0 }}>
             受検 {rows.length} 名 / 高ストレス {highCount} 名({rows.length ? Math.round((highCount / rows.length) * 100) : 0}%)
