@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { brand } from "@/lib/brand";
-import { BrandLogo } from "@/components/BrandLogo";
 import { ROLE_LABEL, Role } from "@/lib/types";
 
 export function Header({
@@ -48,8 +47,13 @@ export function Header({
     >
       <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
         <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 12 }}>
-          {/* 画面幅が狭いときはロゴと題字を少し小さくして1行に収める */}
-          <BrandLogo markHeight="clamp(34px, 10vw, 46px)" textSize="clamp(8px, 2.2vw, 10.5px)" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="mestate うえまつ産業医事務所"
+            // 画面幅が狭いときはロゴと題字を少し小さくして1行に収める
+            style={{ height: "clamp(40px, 12vw, 54px)", width: "auto", display: "block" }}
+          />
           <div
             style={{
               fontSize: "clamp(16px, 5vw, 22px)",

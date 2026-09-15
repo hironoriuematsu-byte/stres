@@ -62,7 +62,6 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
             <h2
               style={{
                 fontSize: tab !== null && company ? 26 : 20,
-                fontFamily: tab !== null && company ? brand.softFont : undefined,
                 color: brand.ink,
                 margin: tab !== null && company ? "0" : "10px 0 0",
                 lineHeight: 1.3,
