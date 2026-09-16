@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
+import { startNavigationProgress } from "@/lib/navigate";
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
@@ -62,6 +63,7 @@ export default function UpdatePasswordPage() {
       );
       return;
     }
+    startNavigationProgress();
     router.push("/");
     router.refresh();
   };

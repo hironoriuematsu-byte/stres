@@ -9,6 +9,7 @@ import { KenkoLink } from "@/components/KenkoLink";
 import { brand } from "@/lib/brand";
 import { InterviewRequest, ResultRow, STATUS_LABEL } from "@/lib/types";
 import { getFiscalYear } from "@/lib/fiscal";
+import { LoadingCard } from "@/components/LoadingCard";
 
 export function MyPage({
   userId,
@@ -147,7 +148,7 @@ export function MyPage({
   };
 
   if (results === null) {
-    return <Card style={{ maxWidth: 720, margin: "0 auto" }}>読み込み中…</Card>;
+    return <LoadingCard style={{ maxWidth: 720, margin: "0 auto" }} />;
   }
 
   const currentFy = getFiscalYear();

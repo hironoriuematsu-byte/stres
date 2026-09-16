@@ -6,6 +6,7 @@ import { Badge, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { InterviewRequest, Profile, STATUS_LABEL } from "@/lib/types";
 import { logAccess } from "@/lib/log";
+import { LoadingCard } from "@/components/LoadingCard";
 
 const NEXT_STATUS: Record<string, InterviewRequest["status"][]> = {
   pending: ["scheduled", "cancelled"],
@@ -65,7 +66,7 @@ export function InterviewPanel({
     reload();
   };
 
-  if (rows === null) return <Card>読み込み中…</Card>;
+  if (rows === null) return <LoadingCard />;
 
   return (
     <Card>

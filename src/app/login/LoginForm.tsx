@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
+import { startNavigationProgress } from "@/lib/navigate";
 
 const input = {
   width: "100%",
@@ -40,6 +41,7 @@ export function LoginForm() {
         const { error } = await supabase.auth.setSession({ access_token, refresh_token });
         if (!error) {
           window.history.replaceState(null, "", window.location.pathname);
+          startNavigationProgress();
           router.push(next);
           router.refresh();
         }
@@ -71,6 +73,7 @@ export function LoginForm() {
       }
       return;
     }
+    startNavigationProgress();
     router.push(next);
     router.refresh();
   };

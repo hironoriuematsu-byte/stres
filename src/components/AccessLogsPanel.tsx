@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { Profile, ROLE_LABEL, Role } from "@/lib/types";
+import { LoadingCard } from "@/components/LoadingCard";
 
 type LogRow = {
   id: number;
@@ -80,7 +81,7 @@ export function AccessLogsPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (rows === null) return <Card>読み込み中…</Card>;
+  if (rows === null) return <LoadingCard />;
 
   const shown = kind === "all" ? rows : rows.filter((r) => kindOf(r.action) === kind);
 

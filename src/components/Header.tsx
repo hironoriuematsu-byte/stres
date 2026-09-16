@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { brand } from "@/lib/brand";
 import { ROLE_LABEL, Role } from "@/lib/types";
+import { startNavigationProgress } from "@/lib/navigate";
 
 export function Header({
   email,
@@ -24,6 +25,7 @@ export function Header({
   const homeLabel = role === "employee" ? "マイページ" : "ダッシュボード";
 
   const signOut = async () => {
+    startNavigationProgress();
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");

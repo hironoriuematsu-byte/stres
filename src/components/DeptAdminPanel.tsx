@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { logAccess } from "@/lib/log";
+import { LoadingCard } from "@/components/LoadingCard";
 
 type Dept = { id: string; name: string; sort_order: number };
 
@@ -108,7 +109,7 @@ export function DeptAdminPanel({
     load();
   };
 
-  if (rows === null) return <Card>読み込み中…</Card>;
+  if (rows === null) return <LoadingCard />;
 
   return (
     <Card>

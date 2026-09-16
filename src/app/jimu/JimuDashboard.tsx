@@ -4,13 +4,15 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Badge, Btn, Card } from "@/components/ui";
+import { LoadingCard } from "@/components/LoadingCard";
 import { brand } from "@/lib/brand";
 import { fiscalYearOptions, getFiscalYear } from "@/lib/fiscal";
 import { DashboardMenu, MenuItem } from "@/components/DashboardMenu";
 import { KenkoLink } from "@/components/KenkoLink";
 
 // 各パネルはタブを開いたときに初めて読み込む(初期表示の高速化)
-const panelLoading = () => <Card>読み込み中…</Card>;
+// タブの部品を読み込む間も、上端の進行バーを出す(LoadingCard が表示中に出す)
+const panelLoading = () => <LoadingCard />;
 const ResultsPanel = dynamic(() => import("@/components/ResultsPanel").then((m) => m.ResultsPanel), { loading: panelLoading, ssr: false });
 const InterviewPanel = dynamic(() => import("@/components/InterviewPanel").then((m) => m.InterviewPanel), { loading: panelLoading, ssr: false });
 // 集団分析タブには報告書そのもの(部署別集計・判定図・健康リスク)を直接表示する

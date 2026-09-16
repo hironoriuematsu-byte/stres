@@ -9,10 +9,12 @@ import { fiscalYearOptions, getFiscalYear } from "@/lib/fiscal";
 import { DashboardMenu, MenuItem } from "@/components/DashboardMenu";
 import { CompanySelect } from "@/components/CompanySelect";
 import { KenkoLink } from "@/components/KenkoLink";
+import { LoadingCard } from "@/components/LoadingCard";
 
 // 各パネルはタブを開いたときに初めて読み込む(初期表示の高速化。
 // グラフ描画・QRコード生成などの大きなライブラリを先読みしない)
-const panelLoading = () => <Card>読み込み中…</Card>;
+// タブの部品を読み込む間も、上端の進行バーを出す(LoadingCard が表示中に出す)
+const panelLoading = () => <LoadingCard />;
 const ResultsPanel = dynamic(() => import("@/components/ResultsPanel").then((m) => m.ResultsPanel), { loading: panelLoading, ssr: false });
 const InterviewPanel = dynamic(() => import("@/components/InterviewPanel").then((m) => m.InterviewPanel), { loading: panelLoading, ssr: false });
 // 集団分析タブには報告書そのもの(部署別集計・判定図・健康リスク)を直接表示する

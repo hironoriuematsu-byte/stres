@@ -7,6 +7,7 @@ import { brand } from "@/lib/brand";
 import { Profile, ResultRow } from "@/lib/types";
 import { downloadCsv, resultsCsv } from "@/lib/csv";
 import { logAccess } from "@/lib/log";
+import { LoadingCard } from "@/components/LoadingCard";
 import { getFiscalYear } from "@/lib/fiscal";
 
 // office / jimu 共通: 結果一覧(高ストレスフィルタ・CSV出力・詳細閲覧ログ)
@@ -78,7 +79,7 @@ export function ResultsPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId, fiscalYear]);
 
-  if (rows === null) return <Card>読み込み中…</Card>;
+  if (rows === null) return <LoadingCard />;
 
   const shown = onlyHigh ? rows.filter((r) => r.high_stress) : rows;
   const highCount = rows.filter((r) => r.high_stress).length;

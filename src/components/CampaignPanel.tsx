@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { logAccess } from "@/lib/log";
+import { LoadingCard } from "@/components/LoadingCard";
 
 type Campaign = {
   id: string;
@@ -118,7 +119,7 @@ export function CampaignPanel({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (campaign === "loading") return <Card>読み込み中…</Card>;
+  if (campaign === "loading") return <LoadingCard />;
 
   return (
     <Card>

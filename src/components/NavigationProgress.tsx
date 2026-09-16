@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { NAV_PROGRESS_EVENT } from "@/lib/navigate";
+import { NAV_PROGRESS_EVENT, NAV_PROGRESS_STOP_EVENT } from "@/lib/navigate";
 
 // 画面の切り替え中に、上端の進行バーと「読み込んでいます…」の表示を出す。
 // サーバー側でデータを集めている間は画面が変わらないため、押した直後に
@@ -55,14 +55,21 @@ export default function NavigationProgress() {
 
     // ボタンから router.push / router.replace で切り替えるとき(lib/navigate.ts)
     const onManual = () => start();
+    // パネルの読み込みが終わったとき(components/LoadingCard)。URLが変わらない場面でも消せるようにする
+    const onStop = () => {
+      setActive(false);
+      if (timer.current) clearTimeout(timer.current);
+    };
 
     document.addEventListener("click", onClick, true);
     document.addEventListener("submit", onSubmit, true);
     window.addEventListener(NAV_PROGRESS_EVENT, onManual);
+    window.addEventListener(NAV_PROGRESS_STOP_EVENT, onStop);
     return () => {
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("submit", onSubmit, true);
       window.removeEventListener(NAV_PROGRESS_EVENT, onManual);
+      window.removeEventListener(NAV_PROGRESS_STOP_EVENT, onStop);
       if (timer.current) clearTimeout(timer.current);
     };
   }, []);

@@ -34,6 +34,7 @@ import { EXT80_GROUP_LABEL, EXT80_SCALES } from "@/lib/questionnaire80";
 import { logAccess } from "@/lib/log";
 import { yAxisWidthFor } from "@/lib/chart";
 import { questionnaireLabel } from "@/lib/questionnaire-label";
+import { LoadingCard } from "@/components/LoadingCard";
 
 // 健康リスク値の表示色(全国平均=100 / 120以上要注意 / 150以上要対応)
 const RISK_COLOR = {
@@ -617,7 +618,7 @@ export function GroupReportView({
       </div>
     );
   }
-  if (rows === null) return <div style={{ maxWidth: 860, margin: "0 auto" }}>読み込み中…</div>;
+  if (rows === null) return <LoadingCard plain style={{ maxWidth: 860, margin: "0 auto" }} />;
 
   const { total, depts, excludedDepts } = aggregateByDept(rows);
   // 部署は名前順に固定し、「全体」は最後に置く(部署数が多くても探しやすくするため)
