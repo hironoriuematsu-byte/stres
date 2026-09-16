@@ -43,6 +43,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             color: "#8A9694",
           }}
         >
+          <a href="/privacy" style={{ color: "#5B6B6A", textDecoration: "underline" }}>
+            個人情報の取扱いについて
+          </a>
+          <span style={{ margin: "0 10px" }}>|</span>
           Copyright © Mestate LLC All Rights Reserved.
         </footer>
       </body>

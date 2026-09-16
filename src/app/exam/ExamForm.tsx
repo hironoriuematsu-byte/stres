@@ -435,6 +435,14 @@ export function ExamForm({
           <li>同意はあとから結果画面でいつでも追加・撤回できます。</li>
           <li>同意の有無にかかわらず、個人が特定されない集団分析(10名以上の部署のみ)には利用されます。</li>
           <li>高ストレスと判定された場合、このシステムから産業医面接指導の申出ができます。</li>
+          <li>
+            回答と結果は暗号化のうえ日本国内（東京）のサーバーに保存します。保存と画面処理には米国の事業者（Supabase、Vercel）のサービスを利用しています。
+            詳しくは
+            <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: brand.tealDark, fontWeight: 700 }}>
+              個人情報の取扱いについて
+            </a>
+            をご覧ください。
+          </li>
         </ul>
         <label
           style={{

@@ -191,6 +191,13 @@ export function LoginForm() {
           </Link>
         </div>
       </form>
+      {/* 個人情報保護法第32条に基づく安全管理措置の概要(保存先・外部事業者)の案内 */}
+      <p style={{ fontSize: 12, color: "#7A8886", lineHeight: 1.7, margin: "16px 0 0" }}>
+        回答と結果は暗号化のうえ日本国内（東京）のサーバーに保存します。保存と画面処理には米国の事業者（Supabase、Vercel）のサービスを利用しています。
+        <Link href="/privacy" style={{ color: brand.tealDark, fontWeight: 700, marginLeft: 4 }}>
+          個人情報の取扱いについて
+        </Link>
+      </p>
     </Card>
   );
 }
