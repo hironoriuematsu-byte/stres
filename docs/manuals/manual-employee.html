@@ -1,7 +1,9 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>従業員向け(受検のしかた)</title><style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Noto Sans CJK JP', sans-serif; color: #22333B; font-size: 10.5pt; line-height: 1.75; }
-  .page { padding: 0; }
+  /* 画面表示では上下左右に余白を取り、PDF(印刷)は build-manuals.js 側の14mm余白に任せる */
+  .page { padding: 28px 36px 48px; max-width: 960px; margin: 0 auto; }
+  @media print { .page { padding: 0; max-width: none; margin: 0; } }
   .cover { border-bottom: 4px solid #0F9B8E; padding-bottom: 12px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .cover .brand { font-size: 20pt; font-weight: 900; color: #0B7268; }
   .cover .brand span { color: #E8792B; }
@@ -28,7 +30,7 @@
   <div>
     <div class="brand">ストレスチェック<span>Web</span> かんたんマニュアル</div>
     <h1>従業員向け(受検のしかた)</h1>
-    <div class="meta">発行: うえまつ産業医事務所(Mestate LLC) / アプリURL: https://stres.vercel.app</div>
+    <div class="meta">発行: うえまつ産業医事務所(Mestate LLC) / アプリURL: https://stres.mestate.jp</div>
   </div>
   <img src="../../public/logo.png" alt="mestate">
 </div>
@@ -43,7 +45,7 @@
 <div class="step"><span class="n">3</span><span class="t">届いた確認メールのボタンを押す</span><br>「【ストレスチェックWeb】メールアドレスの確認」というメールが届きます。ボタンを押すと登録完了です(届かないときは迷惑メールフォルダを確認)。</div>
 
 <h2>3. ログインのしかた(2回目以降)</h2>
-<div class="step"><span class="n">1</span><span class="t"><span class="url">https://stres.vercel.app</span> を開く</span></div>
+<div class="step"><span class="n">1</span><span class="t"><span class="url">https://stres.mestate.jp</span> を開く</span></div>
 <div class="step"><span class="n">2</span><span class="t">メールアドレスとパスワードを入力してログイン</span><br>パスワードを忘れたら「パスワードを忘れた方」から再設定できます。</div>
 <div class="warn">安全のため、<b>ブラウザを閉じるとログアウト</b>されます。また<b>20分間操作がないと自動的にログアウト</b>します。毎回メールアドレスとパスワードでログインしてください。</div>
 

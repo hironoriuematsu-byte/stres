@@ -1,7 +1,9 @@
 <!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>実施者向け(管理者マニュアル)</title><style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Noto Sans CJK JP', sans-serif; color: #22333B; font-size: 10.5pt; line-height: 1.75; }
-  .page { padding: 0; }
+  /* 画面表示では上下左右に余白を取り、PDF(印刷)は build-manuals.js 側の14mm余白に任せる */
+  .page { padding: 28px 36px 48px; max-width: 960px; margin: 0 auto; }
+  @media print { .page { padding: 0; max-width: none; margin: 0; } }
   .cover { border-bottom: 4px solid #0F9B8E; padding-bottom: 12px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .cover .brand { font-size: 20pt; font-weight: 900; color: #0B7268; }
   .cover .brand span { color: #E8792B; }
@@ -29,7 +31,7 @@
   <div>
     <div class="brand">ストレスチェック<span>Web</span> 利用マニュアル</div>
     <h1>実施者向け(管理者マニュアル)</h1>
-    <div class="meta">対象: 実施者(医師・産業医 上松 弘典) / 発行: うえまつ産業医事務所(Mestate LLC) / アプリURL: https://stres.vercel.app</div>
+    <div class="meta">対象: 実施者(医師・産業医 上松 弘典) / 発行: うえまつ産業医事務所(Mestate LLC) / アプリURL: https://stres.mestate.jp</div>
   </div>
   <img src="../../public/logo.png" alt="mestate">
 </div>
@@ -122,7 +124,7 @@
 <div class="info">実施事務従事者の操作も氏名つきで記録されます。ログは削除できません。</div>
 
 <h2>12. 紹介用サンプル(デモ)</h2>
-<p><span class="url">https://stres.vercel.app/demo</span> は<b>ログイン不要</b>で開ける紹介用ページです。架空の「モデル株式会社」(100名・5部署)のデータで、受検画面の体験、個人結果票(高ストレス/非該当)、産業医面接指導の申出フォーム、集団分析報告書のサンプルを表示できます。57項目版・80項目版を切り替えられます。</p>
+<p><span class="url">https://stres.mestate.jp/demo</span> は<b>ログイン不要</b>で開ける紹介用ページです。架空の「モデル株式会社」(100名・5部署)のデータで、受検画面の体験、個人結果票(高ストレス/非該当)、産業医面接指導の申出フォーム、集団分析報告書のサンプルを表示できます。57項目版・80項目版を切り替えられます。</p>
 <div class="info">データはすべて架空で、実際の受検データベースには保存されません(実企業の集計・CSV・ログにも混ざりません)。営業・導入説明にそのままご利用いただけます。</div>
 
 <h2>13. 運用上の注意</h2>
