@@ -309,3 +309,25 @@ Pro 化すると、同じ組織にある開発用プロジェクトにも comput
 > **判断の目安**: 費用差は月$10です。稼働中のシステムが労働安全衛生法に基づく医療データを扱っていることを踏まえると、**案A**をお勧めします。どうしても抑えたい場合は案B、案Cは受検期間外に限ってください。
 
 なお、**削除するのは開発用の `kenko-kanri-dev` だけ**です。本番のストレスチェックWeb用プロジェクトは絶対に削除しないでください(削除するとデータは復旧できません)。削除前に、開発用プロジェクトに残しておきたいSQL(`0101_` 以降のmigrationファイル)がリポジトリに保存されているかを必ず確認してください。
+
+---
+
+## 9. 認証メールの本文を現行ドメイン(stres.mestate.jp)に更新する【2026-09-16 追加】
+
+招待・確認・パスワード再設定・メールアドレス変更のメール本文は **Supabase のダッシュボードに保存されているテンプレート**で、リポジトリのコードでは変更できません。
+本文の末尾に旧URL(`https://stres.vercel.app`)が残っている場合は、次の手順で貼り替えます。
+
+1. Supabase → **Authentication → Emails → Templates** を開く
+2. 次の4つを順に開き、**Subject** と **Message body** を `docs/email-templates/` の同名ファイルの内容に置き換えて **Save**
+   | テンプレート | ファイル | 件名 |
+   |---|---|---|
+   | Invite user | `invite.html` | 【ストレスチェックWeb】アカウントのご案内 |
+   | Confirm signup | `confirm-signup.html` | 【ストレスチェックWeb】メールアドレスの確認 |
+   | Reset password | `reset-password.html` | 【ストレスチェックWeb】パスワード再設定のご案内 |
+   | Change Email Address | `change-email.html` | 【ストレスチェックWeb】メールアドレス変更の確認 |
+   (ファイル冒頭のコメント行 `<!-- … -->` は貼り付けなくてよい)
+3. **Authentication → URL Configuration** で **Site URL** が `https://stres.mestate.jp` になっていることを確認(Redirect URLs に `https://stres.mestate.jp/**` があることも確認)
+4. 動作確認: ユーザー管理から自分のテスト用アドレスを招待し、届いたメールの末尾URLとボタンのリンク先が `stres.mestate.jp` になっていること
+
+> ボタンのリンク先は、招待やパスワード再設定を行った画面のドメインが使われます(アプリ側で指定)。
+> 実施者が `stres.mestate.jp` で操作していれば、テンプレートを直さなくてもボタンは新ドメインに飛びます。旧URLが残るのは本文末尾の固定文だけです。

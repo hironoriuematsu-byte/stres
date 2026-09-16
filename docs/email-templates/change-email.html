@@ -1,0 +1,13 @@
+<!-- Supabase → Authentication → Emails → Templates → "Change Email Address"
+     件名: 【ストレスチェックWeb】メールアドレス変更の確認
+     アカウント設定でメールアドレスを変更したとき、新しいアドレスに届く -->
+<div style="font-family:'Meiryo','Hiragino Sans','Yu Gothic',sans-serif;color:#22333B;font-size:15px;line-height:1.8;max-width:560px;">
+  <h2 style="font-size:20px;color:#22333B;margin:0 0 16px;">メールアドレス変更の確認</h2>
+  <p>このメールは、うえまつ産業医事務所(Mestate LLC)が運営する「ストレスチェックWeb」から自動送信しています。</p>
+  <p>ログイン用のメールアドレスを {{ .Email }} から {{ .NewEmail }} に変更するお申し込みを受け付けました。下のボタンを押すと変更が完了します。</p>
+  <p style="margin:24px 0;">
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#0F9B8E;color:#fff;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:10px;">メールアドレスの変更を確定する</a>
+  </p>
+  <p style="font-size:13px;color:#7A8886;">お申し込みに心当たりがない場合は、本メールを破棄してください。メールアドレスは変更されません。</p>
+  <p style="font-size:13px;color:#7A8886;">うえまつ産業医事務所(Mestate LLC) / ストレスチェックWeb <a href="https://stres.mestate.jp" style="color:#0B7268;">https://stres.mestate.jp</a></p>
+</div>

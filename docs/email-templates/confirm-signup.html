@@ -1,0 +1,13 @@
+<!-- Supabase → Authentication → Emails → Templates → "Confirm signup"
+     件名: 【ストレスチェックWeb】メールアドレスの確認
+     配布URL(QR)から従業員が自分で登録したときに届く -->
+<div style="font-family:'Meiryo','Hiragino Sans','Yu Gothic',sans-serif;color:#22333B;font-size:15px;line-height:1.8;max-width:560px;">
+  <h2 style="font-size:20px;color:#22333B;margin:0 0 16px;">メールアドレスの確認</h2>
+  <p>このメールは、うえまつ産業医事務所(Mestate LLC)が運営する「ストレスチェックWeb」から自動送信しています。</p>
+  <p>ストレスチェックWebへの登録ありがとうございます。下のボタンを押すと登録が完了し、受検を始められます。</p>
+  <p style="margin:24px 0;">
+    <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#0F9B8E;color:#fff;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:10px;">メールアドレスを確認して受検を始める</a>
+  </p>
+  <p style="font-size:13px;color:#7A8886;">このメールに心当たりがない場合は、本メールを破棄してください。</p>
+  <p style="font-size:13px;color:#7A8886;">うえまつ産業医事務所(Mestate LLC) / ストレスチェックWeb <a href="https://stres.mestate.jp" style="color:#0B7268;">https://stres.mestate.jp</a></p>
+</div>
