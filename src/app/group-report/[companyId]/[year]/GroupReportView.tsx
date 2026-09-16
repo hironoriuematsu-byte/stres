@@ -556,22 +556,65 @@ export function GroupReportView({
 
   useEffect(() => {
     if (demoRows) return; // デモは取得もログ記録も行わない
-    const supabase = createClient();
-    supabase
-      .from("results")
-      .select("dept, answers, answers_ext, gender, high_stress, score_a, score_b, score_c")
-      .eq("company_id", companyId)
-      .eq("fiscal_year", fiscalYear)
-      .then(({ data, error }) => {
-        if (error) setErr(error.message);
-        setRows((data as GroupResultInput[]) ?? []);
-        logAccess(supabase, "view_group_report", `${companyName}/${fiscalYear}`, companyId);
-      });
+    let cancelled = false;
+    setRows(null);
+    setErr(null);
+    (async () => {
+      const supabase = createClient();
+      // ログイン状態を先に確認する。ダッシュボードを長時間開いたままタブを切り替えると、
+      // 期限切れのセッションのまま問い合わせて(権限制御により)0件が返ることがあるため、
+      // ここで確認・更新し、無効ならログイン画面へ送る
+      const {
+        data: { user },
+        error: userErr,
+      } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (userErr || !user) {
+        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
+      const { data, error } = await supabase
+        .from("results")
+        .select("dept, answers, answers_ext, gender, high_stress, score_a, score_b, score_c")
+        .eq("company_id", companyId)
+        .eq("fiscal_year", fiscalYear);
+      if (cancelled) return;
+      if (error) {
+        setErr(error.message);
+        return;
+      }
+      const fetched = (data as GroupResultInput[]) ?? [];
+      if (fetched.length === 0) {
+        // 0件のときは、権限チェック付きの集計関数でも0件かを照合する。
+        // 集計関数には受検者がいるのに直接の取得が0件なら、表示側の問題(セッション等)なので案内を出す
+        const { data: ga } = await supabase.rpc("group_analysis", { target_company: companyId, target_year: fiscalYear });
+        if (cancelled) return;
+        const hasData = Array.isArray(ga) && ga.some((g: { n?: number; count?: number }) => Number(g.n ?? g.count ?? 0) > 0);
+        if (hasData) {
+          setErr("受検データを読み込めませんでした。ページを再読み込みしてから、もう一度「集団分析」を開いてください。");
+          return;
+        }
+      }
+      setRows(fetched);
+      logAccess(supabase, "view_group_report", `${companyName}/${fiscalYear}`, companyId);
+    })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId, fiscalYear]);
 
   if (err) {
-    return <div style={{ maxWidth: 860, margin: "0 auto", color: "#B02A2A", fontSize: 14 }}>取得エラー: {err}</div>;
+    return (
+      <div style={{ maxWidth: 860, margin: "0 auto", color: "#B02A2A", fontSize: 14, lineHeight: 1.8 }}>
+        {err}
+        <div style={{ marginTop: 10 }}>
+          <Btn tone="ghost" onClick={() => window.location.reload()} style={{ padding: "8px 14px", fontSize: 13 }}>
+            再読み込み
+          </Btn>
+        </div>
+      </div>
+    );
   }
   if (rows === null) return <div style={{ maxWidth: 860, margin: "0 auto" }}>読み込み中…</div>;
 
