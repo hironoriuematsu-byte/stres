@@ -176,7 +176,7 @@ export function ResultsPanel({
 
   return (
     <Card>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div>
           <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 2px" }}>
             <span style={{ color: brand.tealDark }}>{companyName}</span> 結果一覧({fiscalYear}年度)
@@ -185,9 +185,10 @@ export function ResultsPanel({
             受検 {rows.length} 名 / 高ストレス {highCount} 名({rows.length ? Math.round((highCount / rows.length) * 100) : 0}%)
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <Btn tone="ghost" onClick={() => setOnlyHigh(!onlyHigh)} style={{ padding: "8px 14px", fontSize: 13 }}>
-            {onlyHigh ? "全員を表示" : "高ストレス者のみ"}
+        {/* 操作列は画面左から: CSV出力 → 在籍労働者数(CSVのサマリ用) → 高ストレス者の絞り込み */}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-start" }}>
+          <Btn tone="ghost" onClick={exportCsv} style={{ padding: "8px 14px", fontSize: 13 }}>
+            ストレスチェック個人結果一覧CSV
           </Btn>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#5B6B6A" }}>
             在籍労働者数(任意)
@@ -206,8 +207,8 @@ export function ResultsPanel({
               }}
             />
           </label>
-          <Btn tone="ghost" onClick={exportCsv} style={{ padding: "8px 14px", fontSize: 13 }}>
-            ストレスチェック結果報告書のサマリ・CSV出力
+          <Btn tone="ghost" onClick={() => setOnlyHigh(!onlyHigh)} style={{ padding: "8px 14px", fontSize: 13 }}>
+            {onlyHigh ? "全員を表示" : "高ストレス者のみ"}
           </Btn>
         </div>
       </div>
