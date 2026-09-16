@@ -36,7 +36,7 @@ export default async function StressReportPage({
   const supabase = createClient();
   const [{ data: company }, { data: info, error: infoErr }, { data: summary, error: sumErr }] =
     await Promise.all([
-      supabase.from("companies").select("name").eq("id", params.companyId).maybeSingle(),
+      supabase.from("companies").select("name, questionnaire").eq("id", params.companyId).maybeSingle(),
       supabase.from("company_report_info").select("*").eq("company_id", params.companyId).maybeSingle(),
       supabase.rpc("stress_report_summary", { p_company: params.companyId, p_year: year }),
     ]);
@@ -61,6 +61,7 @@ export default async function StressReportPage({
       summary={(summary as ReportSummary | null) ?? null}
       notApplied={notApplied}
       canEdit={profile.role === "office" || profile.role === "jimu"}
+      questionnaire={(company as { questionnaire?: "57" | "80" }).questionnaire === "80" ? "80" : "57"}
     />
   );
 }

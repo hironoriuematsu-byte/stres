@@ -16,6 +16,7 @@ import { brand } from "@/lib/brand";
 import { ResultRow } from "@/lib/types";
 import { buildAdvice, computeProfile, hasCompleteAnswers, Gender, ScaleResult } from "@/lib/profile-report";
 import { logAccess } from "@/lib/log";
+import { questionnaireLabel } from "@/lib/questionnaire-label";
 import { IMPLEMENTER } from "@/lib/org";
 import { PrintHeader } from "@/components/PrintHeader";
 import {
@@ -150,7 +151,8 @@ export function ReportView({
           title="ストレスチェック個人結果票"
           companyName={companyName}
           meta={`${result.fiscal_year}年度`}
-          note={`職業性ストレス簡易調査票(${ext80 ? "80項目" : "57項目"}) / 実施者: ${IMPLEMENTER.full} / 実施事務局: ${IMPLEMENTER.officeName}`}
+          note={`${questionnaireLabel(!!ext80)} / 実施者: ${IMPLEMENTER.full} / 実施事務局: ${IMPLEMENTER.officeName}`}
+          questionnaire={ext80 ? "80" : "57"}
         />
 
         <table style={{ width: "100%", fontSize: 13, marginBottom: 16, borderCollapse: "collapse" }}>

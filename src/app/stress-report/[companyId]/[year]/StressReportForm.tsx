@@ -54,6 +54,7 @@ export function StressReportForm({
   summary,
   notApplied,
   canEdit,
+  questionnaire = "57",
 }: {
   companyId: string;
   companyName: string;
@@ -62,6 +63,7 @@ export function StressReportForm({
   summary: ReportSummary | null;
   notApplied: boolean;
   canEdit: boolean;
+  questionnaire?: "57" | "80"; // 企業が採用した調査票の版(ヘッダの表記用)
 }) {
   const [info, setInfo] = useState<ReportInfo>(
     initialInfo ?? {
@@ -179,6 +181,7 @@ export function StressReportForm({
           companyName={companyName}
           meta={`${fiscalYear}年度のストレスチェック`}
           note={`実施者: ${IMPLEMENTER.full} / 実施事務局: ${IMPLEMENTER.officeName}`}
+          questionnaire={questionnaire}
         />
 
         {notApplied && (

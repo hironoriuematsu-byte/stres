@@ -1,5 +1,6 @@
 import React from "react";
 import { brand } from "@/lib/brand";
+import { questionnaireCompliance } from "@/lib/questionnaire-label";
 
 // 印刷・PDF用の共通ヘッダ。
 //   左: 帳票名と、受検した企業(事業場)名を大きく表示
@@ -10,11 +11,13 @@ export function PrintHeader({
   companyName,
   meta,
   note,
+  questionnaire,
 }: {
   title: string;
   companyName: string;
   meta?: string; // 年度などの補足(企業名の右に小さく)
   note?: string; // 調査票・実施者などの補足(下段)。改行(\n)を入れるとその位置で行を分ける
+  questionnaire?: "57" | "80"; // 企業が採用した調査票の版。ロゴ横の「〜 準拠」表記を切り替える(未指定は57項目)
 }) {
   return (
     <div
@@ -60,7 +63,7 @@ export function PrintHeader({
           <div style={{ fontSize: 18, fontWeight: 800, color: brand.tealDark, whiteSpace: "nowrap" }}>
             ストレスチェック<span style={{ color: brand.orange }}>Web</span>
           </div>
-          <div style={{ fontSize: 10, color: "#7A8886", whiteSpace: "nowrap" }}>職業性ストレス簡易調査票 準拠</div>
+          <div style={{ fontSize: 10, color: "#7A8886", whiteSpace: "nowrap" }}>{questionnaireCompliance(questionnaire === "80")}</div>
         </div>
       </div>
     </div>

@@ -33,6 +33,7 @@ import { PrintHeader } from "@/components/PrintHeader";
 import { EXT80_GROUP_LABEL, EXT80_SCALES } from "@/lib/questionnaire80";
 import { logAccess } from "@/lib/log";
 import { yAxisWidthFor } from "@/lib/chart";
+import { questionnaireLabel } from "@/lib/questionnaire-label";
 
 // 健康リスク値の表示色(全国平均=100 / 120以上要注意 / 150以上要対応)
 const RISK_COLOR = {
@@ -622,6 +623,8 @@ export function GroupReportView({
   // 部署は名前順に固定し、「全体」は最後に置く(部署数が多くても探しやすくするため)
   const sortedDepts = [...depts].sort((a, b) => a.dept.localeCompare(b.dept, "ja"));
   const groups: DeptAggregate[] = [...sortedDepts, ...(total ? [total] : [])];
+  // 80項目版の回答が含まれていれば「新職業性ストレス簡易調査票 短縮版」として表記する
+  const is80 = groups.some((g) => g.ext80Count > 0);
   // 部署数が多いと表が横に伸びて印刷時に切れるため、6部署ずつに分けて表を積み重ねる
   const groupBlocks: DeptAggregate[][] = [];
   for (let i = 0; i < groups.length; i += MAX_COLS) groupBlocks.push(groups.slice(i, i + MAX_COLS));
@@ -693,10 +696,11 @@ export function GroupReportView({
           meta={`${fiscalYear}年度`}
           note={[
             // 1行が長いと印刷時に途中で折り返して作成日が3行目に落ちるため、3行に分けて記載する
-            `職業性ストレス簡易調査票(${groups.some((g) => g.ext80Count > 0) ? "80項目" : "57項目"}) / 実施者: ${IMPLEMENTER.full}`,
+            `${questionnaireLabel(is80)} / 実施者: ${IMPLEMENTER.full}`,
             `実施事務局: ${IMPLEMENTER.officeName}`,
             `作成日: ${new Date().toLocaleDateString("ja-JP")}`,
           ].join("\n")}
+          questionnaire={is80 ? "80" : "57"}
         />
 
         {/* サマリー */}
