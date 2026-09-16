@@ -151,7 +151,11 @@ export function ReportView({
           title="ストレスチェック個人結果票"
           companyName={companyName}
           meta={`${result.fiscal_year}年度`}
-          note={`${questionnaireLabel(!!ext80)} / 実施者: ${IMPLEMENTER.full} / 実施事務局: ${IMPLEMENTER.officeName}`}
+          note={[
+            // 1行にすると途中で折り返すため、実施事務局は次の行に分けて記載する
+            `${questionnaireLabel(!!ext80)} / 実施者: ${IMPLEMENTER.full}`,
+            `実施事務局: ${IMPLEMENTER.officeName}`,
+          ].join("\n")}
           questionnaire={ext80 ? "80" : "57"}
         />
 
