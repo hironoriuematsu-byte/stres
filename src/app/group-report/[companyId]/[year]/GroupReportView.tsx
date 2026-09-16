@@ -609,8 +609,9 @@ export function GroupReportView({
           companyName={companyName}
           meta={`${fiscalYear}年度`}
           note={[
-            `職業性ストレス簡易調査票(${groups.some((g) => g.ext80Count > 0) ? "80項目" : "57項目"}) / 実施者: ${IMPLEMENTER.full} / 実施事務局: ${IMPLEMENTER.officeName}`,
-            // 作成日は見やすいよう次の行に分けて記載する
+            // 1行が長いと印刷時に途中で折り返して作成日が3行目に落ちるため、3行に分けて記載する
+            `職業性ストレス簡易調査票(${groups.some((g) => g.ext80Count > 0) ? "80項目" : "57項目"}) / 実施者: ${IMPLEMENTER.full}`,
+            `実施事務局: ${IMPLEMENTER.officeName}`,
             `作成日: ${new Date().toLocaleDateString("ja-JP")}`,
           ].join("\n")}
         />
