@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { createClient } from "@/lib/supabase/client";
+import { yAxisWidthFor } from "@/lib/chart";
 import { Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { GroupAnalysisRow } from "@/lib/types";
@@ -51,6 +52,11 @@ export function GroupAnalysis({
   if (rows === null) return <Card>読み込み中…</Card>;
 
   const chartData = rows.map((r) => ({ dept: r.dept, 高ストレス率: Number(r.high_rate) }));
+  // 部署名の長さに合わせて縦軸の幅を決める(固定幅だと長い部署名の先頭が切れる)
+  const yAxisWidth = yAxisWidthFor(
+    chartData.map((d) => d.dept),
+    12
+  );
 
   return (
     <Card>
@@ -111,7 +117,7 @@ export function GroupAnalysis({
               <BarChart data={chartData} layout="vertical" margin={{ left: 16, right: 24 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={brand.line} />
                 <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
-                <YAxis type="category" dataKey="dept" width={120} tick={{ fontSize: 12 }} />
+                <YAxis type="category" dataKey="dept" width={yAxisWidth} tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(v) => `${v}%`} />
                 <Bar dataKey="高ストレス率" fill={brand.teal} radius={[0, 6, 6, 0]} barSize={22} />
               </BarChart>

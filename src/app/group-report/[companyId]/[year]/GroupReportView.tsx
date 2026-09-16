@@ -32,6 +32,7 @@ import { IMPLEMENTER } from "@/lib/org";
 import { PrintHeader } from "@/components/PrintHeader";
 import { EXT80_GROUP_LABEL, EXT80_SCALES } from "@/lib/questionnaire80";
 import { logAccess } from "@/lib/log";
+import { yAxisWidthFor } from "@/lib/chart";
 
 // 健康リスク値の表示色(全国平均=100 / 120以上要注意 / 150以上要対応)
 const RISK_COLOR = {
@@ -663,7 +664,18 @@ export function GroupReportView({
                 <BarChart data={groups.map((g) => ({ dept: g.dept, 高ストレス率: g.highRate }))} layout="vertical" margin={{ left: 16, right: 32 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={brand.line} />
                   <XAxis type="number" unit="%" domain={[0, 100]} tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="dept" width={110} tick={{ fontSize: 11 }} />
+                  {/* 部署名の長さに合わせて幅を決める(固定幅だと長い部署名の先頭が切れる)。印刷幅を考えて上限は控えめにする */}
+                  <YAxis
+                    type="category"
+                    dataKey="dept"
+                    width={yAxisWidthFor(
+                      groups.map((g) => g.dept),
+                      11,
+                      110,
+                      260
+                    )}
+                    tick={{ fontSize: 11 }}
+                  />
                   <Tooltip formatter={(v) => `${v}%`} />
                   <Bar dataKey="高ストレス率" fill={brand.teal} radius={[0, 6, 6, 0]} barSize={20} isAnimationActive={false}>
                     <LabelList dataKey="高ストレス率" position="right" formatter={(v: number) => `${v}%`} style={{ fontSize: 11 }} />
