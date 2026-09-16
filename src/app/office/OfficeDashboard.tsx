@@ -15,7 +15,11 @@ import { KenkoLink } from "@/components/KenkoLink";
 const panelLoading = () => <Card>読み込み中…</Card>;
 const ResultsPanel = dynamic(() => import("@/components/ResultsPanel").then((m) => m.ResultsPanel), { loading: panelLoading, ssr: false });
 const InterviewPanel = dynamic(() => import("@/components/InterviewPanel").then((m) => m.InterviewPanel), { loading: panelLoading, ssr: false });
-const GroupAnalysis = dynamic(() => import("@/components/GroupAnalysis").then((m) => m.GroupAnalysis), { loading: panelLoading, ssr: false });
+// 集団分析タブには報告書そのもの(部署別集計・判定図・健康リスク)を直接表示する
+const GroupReportView = dynamic(
+  () => import("@/app/group-report/[companyId]/[year]/GroupReportView").then((m) => m.GroupReportView),
+  { loading: panelLoading, ssr: false }
+);
 const UserAdminPanel = dynamic(() => import("@/components/UserAdminPanel").then((m) => m.UserAdminPanel), { loading: panelLoading, ssr: false });
 const AccessLogsPanel = dynamic(() => import("@/components/AccessLogsPanel").then((m) => m.AccessLogsPanel), { loading: panelLoading, ssr: false });
 const CampaignPanel = dynamic(() => import("@/components/CampaignPanel").then((m) => m.CampaignPanel), { loading: panelLoading, ssr: false });
@@ -158,7 +162,7 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
             <InterviewPanel companyId={company.id} companyName={company.name} />
           )}
           {tab === "集団分析" && company && (
-            <GroupAnalysis companyId={company.id} fiscalYear={year} reportHref={`/group-report/${company.id}/${year}`} formHref={`/stress-report/${company.id}/${year}`} />
+            <GroupReportView companyId={company.id} companyName={company.name} fiscalYear={year} embedded formHref={`/stress-report/${company.id}/${year}`} />
           )}
           {tab === "配布URL・QR" && company && (
             <CampaignPanel companyId={company.id} companyName={company.name} fiscalYear={year} manage />

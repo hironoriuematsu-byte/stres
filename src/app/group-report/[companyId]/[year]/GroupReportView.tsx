@@ -530,14 +530,29 @@ export function GroupReportView({
   companyName,
   fiscalYear,
   demoRows,
+  embedded = false,
+  formHref,
+  autoPrint = false,
 }: {
   companyId: string;
   companyName: string;
   fiscalYear: number;
   demoRows?: GroupResultInput[]; // 紹介用デモ: DBを参照せずこのデータで描画する
+  // ダッシュボードの「集団分析」タブに埋め込むとき true。戻るボタンを出さず、
+  // 印刷は専用ページ(?print=1)を別タブで開いて行う(ダッシュボードのタブ等が印刷に混ざらないようにするため)
+  embedded?: boolean;
+  formHref?: string; // 検査結果等報告書(様式第6号の3)のページ。埋め込み時にボタンを出す
+  autoPrint?: boolean; // 専用ページを ?print=1 で開いたとき、描画後に印刷ダイアログを自動で開く
 }) {
   const [rows, setRows] = useState<GroupResultInput[] | null>(demoRows ?? null);
   const [err, setErr] = useState<string | null>(null);
+
+  // 自動印刷: グラフの描画を待ってから印刷ダイアログを開く(1回だけ)
+  useEffect(() => {
+    if (!autoPrint || rows === null) return;
+    const t = setTimeout(() => window.print(), 700);
+    return () => clearTimeout(t);
+  }, [autoPrint, rows]);
 
   useEffect(() => {
     if (demoRows) return; // デモは取得もログ記録も行わない
@@ -594,14 +609,38 @@ export function GroupReportView({
         @page { size: A4; margin: 12mm; }
       `}</style>
 
-      <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
-        <Btn tone="ghost" onClick={() => history.back()} style={{ padding: "8px 14px", fontSize: 13 }}>
-          戻る
-        </Btn>
-        <Btn onClick={() => window.print()} style={{ padding: "8px 16px", fontSize: 13 }}>
-          印刷 / PDFとして保存
-        </Btn>
-      </div>
+      {embedded ? (
+        // ダッシュボード埋め込み: 帳票へのボタンを右にまとめる
+        <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          <a
+            href={`/group-report/${companyId}/${fiscalYear}?print=1`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ fontSize: 13, fontWeight: 700, color: brand.tealDark, border: `1px solid ${brand.teal}`, borderRadius: 10, padding: "8px 14px", textDecoration: "none" }}
+          >
+            📄 集団分析報告書PDF
+          </a>
+          {formHref && (
+            <a
+              href={formHref}
+              target="_blank"
+              rel="noreferrer"
+              style={{ fontSize: 13, fontWeight: 700, color: brand.tealDark, border: `1px solid ${brand.teal}`, borderRadius: 10, padding: "8px 14px", textDecoration: "none" }}
+            >
+              📝 検査結果等報告書(様式第6号の3)
+            </a>
+          )}
+        </div>
+      ) : (
+        <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
+          <Btn tone="ghost" onClick={() => history.back()} style={{ padding: "8px 14px", fontSize: 13 }}>
+            戻る
+          </Btn>
+          <Btn onClick={() => window.print()} style={{ padding: "8px 16px", fontSize: 13 }}>
+            印刷 / PDFとして保存
+          </Btn>
+        </div>
+      )}
 
       <div className="report-sheet" style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 12, padding: 28 }}>
         {/* ヘッダ: 受検した企業名を大きく表示し、ロゴと「ストレスチェックWeb」を右に置く */}

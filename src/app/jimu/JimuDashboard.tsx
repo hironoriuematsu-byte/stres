@@ -13,7 +13,11 @@ import { KenkoLink } from "@/components/KenkoLink";
 const panelLoading = () => <Card>読み込み中…</Card>;
 const ResultsPanel = dynamic(() => import("@/components/ResultsPanel").then((m) => m.ResultsPanel), { loading: panelLoading, ssr: false });
 const InterviewPanel = dynamic(() => import("@/components/InterviewPanel").then((m) => m.InterviewPanel), { loading: panelLoading, ssr: false });
-const GroupAnalysis = dynamic(() => import("@/components/GroupAnalysis").then((m) => m.GroupAnalysis), { loading: panelLoading, ssr: false });
+// 集団分析タブには報告書そのもの(部署別集計・判定図・健康リスク)を直接表示する
+const GroupReportView = dynamic(
+  () => import("@/app/group-report/[companyId]/[year]/GroupReportView").then((m) => m.GroupReportView),
+  { loading: panelLoading, ssr: false }
+);
 const UserAdminPanel = dynamic(() => import("@/components/UserAdminPanel").then((m) => m.UserAdminPanel), { loading: panelLoading, ssr: false });
 const CampaignPanel = dynamic(() => import("@/components/CampaignPanel").then((m) => m.CampaignPanel), { loading: panelLoading, ssr: false });
 const DeptAdminPanel = dynamic(() => import("@/components/DeptAdminPanel").then((m) => m.DeptAdminPanel), { loading: panelLoading, ssr: false });
@@ -139,7 +143,7 @@ export function JimuDashboard({
       {tab === "結果一覧" && <ResultsPanel companyId={companyId} companyName={companyName} fiscalYear={year} />}
       {tab === "面接指導申出" && <InterviewPanel companyId={companyId} companyName={companyName} />}
       {tab === "集団分析" && (
-        <GroupAnalysis companyId={companyId} fiscalYear={year} reportHref={`/group-report/${companyId}/${year}`} formHref={`/stress-report/${companyId}/${year}`} />
+        <GroupReportView companyId={companyId} companyName={companyName} fiscalYear={year} embedded formHref={`/stress-report/${companyId}/${year}`} />
       )}
       {tab === "配布URL・QR" && (
         <CampaignPanel companyId={companyId} companyName={companyName} fiscalYear={year} manage={false} />

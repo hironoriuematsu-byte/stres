@@ -8,8 +8,10 @@ import { GroupReportView } from "./GroupReportView";
 // 集団分析報告書(印刷・PDF)。閲覧は実施者(office)と自社の実施事務従事者(jimu)のみ。
 export default async function GroupReportPage({
   params,
+  searchParams,
 }: {
   params: { companyId: string; year: string };
+  searchParams?: { print?: string }; // ?print=1 でダッシュボードから開いたとき、描画後に印刷ダイアログを自動で開く
 }) {
   const { user, profile } = await getSessionProfile();
   if (!user) redirect(`/login?next=/group-report/${params.companyId}/${params.year}`);
@@ -46,5 +48,12 @@ export default async function GroupReportPage({
     );
   }
 
-  return <GroupReportView companyId={params.companyId} companyName={company.name} fiscalYear={year} />;
+  return (
+    <GroupReportView
+      companyId={params.companyId}
+      companyName={company.name}
+      fiscalYear={year}
+      autoPrint={searchParams?.print === "1"}
+    />
+  );
 }
