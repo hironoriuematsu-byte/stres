@@ -73,7 +73,7 @@ export function GroupAnalysis({
               textDecoration: "none",
             }}
           >
-            📄 集団分析報告書(印刷・PDF)
+            📄 集団分析報告書
           </a>
         )}
         {formHref && (
@@ -91,7 +91,7 @@ export function GroupAnalysis({
               textDecoration: "none",
             }}
           >
-            📝 検査結果等報告書の記載項目(様式第6号の3)
+            📝 検査結果等報告書(様式第6号の3)
           </a>
         )}
         </div>
