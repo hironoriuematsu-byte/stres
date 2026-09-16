@@ -248,8 +248,9 @@ export function UserAdminPanel({
             </div>
           </>
         )}
-        <div style={{ alignSelf: "end" }}>
-          <Btn type="submit" disabled={busy || (!jimuMode && !form.company_code)} style={{ width: "100%" }}>
+        {/* ボタンは列いっぱいに伸ばさず、入力欄の半分程度の幅にとどめる */}
+        <div style={{ alignSelf: "end", justifySelf: "start" }}>
+          <Btn type="submit" disabled={busy || (!jimuMode && !form.company_code)} style={{ minWidth: 200, padding: "12px 32px" }}>
             {busy ? "送信中…" : "招待を送る"}
           </Btn>
         </div>
