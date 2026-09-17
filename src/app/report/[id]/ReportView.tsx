@@ -148,9 +148,8 @@ export function ReportView({
       >
         {/* ヘッダ: 受検した企業名を大きく表示し、ロゴと「ストレスチェックWeb」を右に置く */}
         <PrintHeader
-          title="ストレスチェック個人結果票"
+          title={`${result.fiscal_year}年度ストレスチェック個人結果票`}
           companyName={companyName}
-          meta={`${result.fiscal_year}年度`}
           note={[
             // スマホ幅でも折り返さないよう、調査票・実施者・実施事務局をそれぞれ1行にする
             questionnaireLabel(!!ext80),

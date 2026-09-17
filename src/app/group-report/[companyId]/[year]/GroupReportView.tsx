@@ -692,9 +692,8 @@ export function GroupReportView({
       <div className="report-sheet" style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 12, padding: 28 }}>
         {/* ヘッダ: 受検した企業名を大きく表示し、ロゴと「ストレスチェックWeb」を右に置く */}
         <PrintHeader
-          title="ストレスチェック集団分析報告書"
+          title={`${fiscalYear}年度ストレスチェック集団分析報告書`}
           companyName={companyName}
-          meta={`${fiscalYear}年度`}
           note={[
             // スマホ幅でも折り返さないよう、調査票・実施者・実施事務局・作成日をそれぞれ1行にする
             questionnaireLabel(is80),

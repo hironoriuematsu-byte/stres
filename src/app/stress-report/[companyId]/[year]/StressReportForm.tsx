@@ -177,9 +177,8 @@ export function StressReportForm({
 
       <div className="report-sheet" style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 12, padding: "20px 24px" }}>
         <PrintHeader
-          title="心理的な負担の程度を把握するための検査結果等報告書 記載項目（様式第６号の３ 転記用）"
+          title={`${fiscalYear}年度心理的な負担の程度を把握するための検査結果等報告書 記載項目（様式第６号の３ 転記用）`}
           companyName={companyName}
-          meta={`${fiscalYear}年度のストレスチェック`}
           note={`実施者: ${IMPLEMENTER.full} / 実施事務局: ${IMPLEMENTER.officeName}`}
           questionnaire={questionnaire}
         />
