@@ -43,11 +43,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             color: "#8A9694",
           }}
         >
-          <a href="/privacy" style={{ color: "#5B6B6A", textDecoration: "underline" }}>
-            個人情報の取扱いについて
-          </a>
-          <span style={{ margin: "0 10px" }}>|</span>
-          Copyright © Mestate LLC All Rights Reserved.
+          {/* リンクと Copyright を別々のかたまりにし、狭い画面では Copyright が2行目に落ちるようにする */}
+          <span className="site-footer-item">
+            <a href="/privacy" style={{ color: "#5B6B6A", textDecoration: "underline" }}>
+              個人情報の取扱いについて
+            </a>
+            <span className="site-footer-sep" style={{ margin: "0 10px" }}>
+              |
+            </span>
+          </span>
+          <span className="site-footer-item">Copyright © Mestate LLC All Rights Reserved.</span>
         </footer>
       </body>
     </html>

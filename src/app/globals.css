@@ -133,3 +133,10 @@ a {
 @media print {
   .report-info { grid-template-columns: 1fr 1fr; }
 }
+
+/* フッター: スマホ幅では「個人情報の取扱いについて」と Copyright を別の行にし、区切りの縦線を隠す */
+.site-footer-item { display: inline-block; white-space: nowrap; }
+@media (max-width: 560px) {
+  .site-footer-item { display: block; }
+  .site-footer-sep { display: none; }
+}
