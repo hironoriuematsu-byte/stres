@@ -696,8 +696,9 @@ export function GroupReportView({
           companyName={companyName}
           meta={`${fiscalYear}年度`}
           note={[
-            // 1行が長いと印刷時に途中で折り返して作成日が3行目に落ちるため、3行に分けて記載する
-            `${questionnaireLabel(is80)} / 実施者: ${IMPLEMENTER.full}`,
+            // スマホ幅でも折り返さないよう、調査票・実施者・実施事務局・作成日をそれぞれ1行にする
+            questionnaireLabel(is80),
+            `実施者: ${IMPLEMENTER.full}`,
             `実施事務局: ${IMPLEMENTER.officeName}`,
             `作成日: ${new Date().toLocaleDateString("ja-JP")}`,
           ].join("\n")}

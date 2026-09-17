@@ -152,8 +152,9 @@ export function ReportView({
           companyName={companyName}
           meta={`${result.fiscal_year}年度`}
           note={[
-            // 1行にすると途中で折り返すため、実施事務局は次の行に分けて記載する
-            `${questionnaireLabel(!!ext80)} / 実施者: ${IMPLEMENTER.full}`,
+            // スマホ幅でも折り返さないよう、調査票・実施者・実施事務局をそれぞれ1行にする
+            questionnaireLabel(!!ext80),
+            `実施者: ${IMPLEMENTER.full}`,
             `実施事務局: ${IMPLEMENTER.officeName}`,
           ].join("\n")}
           questionnaire={ext80 ? "80" : "57"}
