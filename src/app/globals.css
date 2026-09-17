@@ -64,3 +64,51 @@ a {
 @keyframes loading-spin {
   to { transform: rotate(360deg); }
 }
+
+/* 帳票(個人結果票・集団分析報告書・検査結果等報告書)の印刷ヘッダ
+   PC・印刷: 左に帳票名と企業名、右にロゴの2段組み
+   スマホ幅: ロゴ行を上に置き、その下に帳票名・企業名を横いっぱいに表示する
+   (左右2段組みのままだと企業名が縦1文字ずつに押しつぶされるため) */
+.print-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.print-header-main {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+.print-header-company {
+  font-size: 24px;
+}
+.print-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+@media (max-width: 560px) {
+  .print-header-logo {
+    order: -1;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .print-header-main {
+    flex-basis: 100%;
+  }
+  .print-header-company {
+    font-size: 20px;
+  }
+}
+@media print {
+  .print-header { flex-wrap: nowrap; }
+  .print-header-logo { order: 0; width: auto; justify-content: flex-start; }
+  .print-header-main { flex-basis: auto; }
+  .print-header-company { font-size: 24px; }
+}
+/* 帳票の枠内の余白: スマホ幅では狭めて本文の横幅を確保する(印刷時は report-sheet の余白を外す指定が各帳票にある) */
+@media (max-width: 560px) {
+  .report-sheet { padding: 16px 14px !important; }
+}

@@ -19,23 +19,22 @@ export function PrintHeader({
   note?: string; // 調査票・実施者などの補足(下段)。改行(\n)を入れるとその位置で行を分ける
   questionnaire?: "57" | "80"; // 企業が採用した調査票の版。ロゴ横の「〜 準拠」表記を切り替える(未指定は57項目)
 }) {
+  // 段組みは globals.css の .print-header 系で定義(スマホ幅ではロゴ行を上に置いて縦積みにし、
+  // 印刷時は左右2段組みに戻す)。ここでは色・余白などの見た目だけを指定する
   return (
     <div
+      className="print-header"
       style={{
         borderBottom: `3px solid ${brand.teal}`,
         paddingBottom: 10,
         marginBottom: 14,
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: 12,
       }}
     >
-      <div style={{ minWidth: 0 }}>
+      <div className="print-header-main">
         <div style={{ fontSize: 13, color: "#5B6B6A", fontWeight: 700 }}>{title}</div>
         <h1
+          className="print-header-company"
           style={{
-            fontSize: 24,
             fontWeight: 700,
             color: brand.ink,
             margin: "2px 0 0",
@@ -56,7 +55,7 @@ export function PrintHeader({
           </p>
         )}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+      <div className="print-header-logo">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="mestate うえまつ産業医事務所" style={{ height: 56, width: "auto" }} />
         <div style={{ lineHeight: 1.2, textAlign: "center" }}>
