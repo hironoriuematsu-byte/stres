@@ -872,7 +872,7 @@ export function GroupReportView({
                 <tbody>
                   <tr style={{ background: "#F1F3F3" }}>
                     <td style={{ padding: "4px 10px", fontWeight: 700, border: `1px solid ${brand.line}`, color: "#5B6B6A" }}>⓪</td>
-                    <td style={{ padding: "4px 10px", fontWeight: 700, color: "#5B6B6A", border: `1px solid ${brand.line}` }}>
+                    <td style={{ padding: "4px 10px", fontWeight: 700, color: "#5B6B6A", border: `1px solid ${brand.line}`, whiteSpace: "nowrap" }}>
                       全国平均(男女計)
                     </td>
                     <td style={{ padding: "4px 10px", border: `1px solid ${brand.line}`, color: "#5B6B6A" }}>100</td>
@@ -882,7 +882,8 @@ export function GroupReportView({
                   {numbered.map(({ g, num }) => (
                     <tr key={g.dept} style={{ background: g.dept === "全体" ? "#F4FAF9" : "#fff" }}>
                       <td style={{ padding: "4px 10px", fontWeight: 700, border: `1px solid ${brand.line}` }}>{num}</td>
-                      <td style={{ padding: "4px 10px", fontWeight: 700, color: brand.ink, border: `1px solid ${brand.line}` }}>{g.dept}</td>
+                      {/* 部署名は折り返さない(狭い画面では表が横にスクロールする) */}
+                      <td style={{ padding: "4px 10px", fontWeight: 700, color: brand.ink, border: `1px solid ${brand.line}`, whiteSpace: "nowrap" }}>{g.dept}</td>
                       <td style={{ padding: "4px 10px", border: `1px solid ${brand.line}`, background: RISK_BG[riskTone(g.healthRisk.a)] }}>
                         {rRisk(g.healthRisk.a) ?? "—"}
                       </td>
@@ -952,7 +953,7 @@ export function GroupReportView({
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
                   <thead>
                     <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-                      <th style={{ textAlign: "left", padding: "5px 8px" }}>尺度</th>
+                      <th style={{ textAlign: "left", padding: "5px 8px", minWidth: 110 }}>尺度</th>
                       <th style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap", color: "#5B6B6A" }}>
                         全国平均
                       </th>
@@ -1029,7 +1030,8 @@ export function GroupReportView({
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
                   <thead>
                     <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-                      <th style={{ textAlign: "left", padding: "5px 8px" }}>尺度</th>
+                      {/* 尺度名の列は最低幅を確保し、長い尺度名でも1〜2行に収める(狭い画面では表が横にスクロールする) */}
+                      <th style={{ textAlign: "left", padding: "5px 8px", minWidth: 130 }}>尺度</th>
                       <th style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap", color: "#5B6B6A" }}>全国平均</th>
                       {block.map((g) => (
                         <th key={g.dept} style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap" }}>
@@ -1048,7 +1050,7 @@ export function GroupReportView({
                         </tr>
                         {EXT80_SCALES.filter((sc) => sc.group === grp).map((sc) => (
                           <tr key={sc.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
-                            <td style={{ padding: "5px 8px", color: brand.ink }}>{sc.label}</td>
+                            <td style={{ padding: "5px 8px", color: brand.ink, minWidth: 130 }}>{sc.label}</td>
                             <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
                               {sc.norm.all.toFixed(2)}
                             </td>
