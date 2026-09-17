@@ -516,12 +516,18 @@ function JudgeScatter({
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <p style={{ fontSize: 10, color: "#8A9694", textAlign: "center", margin: "0 0 4px" }}>
-        <span style={{ color: "#5B6B6A", fontWeight: 700 }}>⓪ = 全国平均(男女計)の位置</span> / 点の色は{riskLabel}(全国平均=100):
-        <span style={{ color: RISK_COLOR.teal, fontWeight: 700 }}> ●100未満 </span>/
-        <span style={{ color: RISK_COLOR.yellow, fontWeight: 700 }}> ●100以上 </span>/
-        <span style={{ color: RISK_COLOR.orange, fontWeight: 700 }}> ●120以上 </span>/
-        <span style={{ color: RISK_COLOR.red, fontWeight: 700 }}> ●150以上 </span>
+      {/* 凡例: 説明文と色の一覧を別の行にし、色の一覧は途中で折り返さず1行にまとめる */}
+      <p style={{ fontSize: 10, color: "#8A9694", textAlign: "center", margin: "0 0 2px" }}>
+        <span style={{ color: "#5B6B6A", fontWeight: 700 }}>⓪ = 全国平均(男女計)の位置</span> / 点の色は{riskLabel}(全国平均=100)
+      </p>
+      <p style={{ fontSize: 10, color: "#8A9694", textAlign: "center", margin: "0 0 4px", whiteSpace: "nowrap" }}>
+        <span style={{ color: RISK_COLOR.teal, fontWeight: 700 }}>●100未満</span>
+        <span style={{ margin: "0 6px" }}>/</span>
+        <span style={{ color: RISK_COLOR.yellow, fontWeight: 700 }}>●100以上</span>
+        <span style={{ margin: "0 6px" }}>/</span>
+        <span style={{ color: RISK_COLOR.orange, fontWeight: 700 }}>●120以上</span>
+        <span style={{ margin: "0 6px" }}>/</span>
+        <span style={{ color: RISK_COLOR.red, fontWeight: 700 }}>●150以上</span>
       </p>
     </div>
   );
