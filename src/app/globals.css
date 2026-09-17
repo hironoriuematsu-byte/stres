@@ -112,3 +112,24 @@ a {
 @media (max-width: 560px) {
   .report-sheet { padding: 16px 14px !important; }
 }
+
+/* 個人結果票の受検者情報(会社名・氏名・社員番号 / 実施年度・実施日・部署)
+   PC・印刷: 2組を横に並べる。スマホ幅: 1組ずつ縦に並べ、値が折り返さないようにする */
+.report-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 16px;
+  row-gap: 2px;
+}
+.report-info-item {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  align-items: baseline;
+  padding: 4px 8px;
+}
+@media (max-width: 560px) {
+  .report-info { grid-template-columns: 1fr; }
+}
+@media print {
+  .report-info { grid-template-columns: 1fr 1fr; }
+}

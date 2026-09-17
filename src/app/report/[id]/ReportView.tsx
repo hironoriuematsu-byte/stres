@@ -160,30 +160,24 @@ export function ReportView({
           questionnaire={ext80 ? "80" : "57"}
         />
 
-        <table style={{ width: "100%", fontSize: 13, marginBottom: 16, borderCollapse: "collapse" }}>
-          <tbody>
-            <tr>
-              <td style={{ padding: "4px 8px", color: "#5B6B6A", width: 90 }}>会社名</td>
-              <td style={{ padding: "4px 8px", fontWeight: 700, color: brand.ink }}>{companyName}</td>
-              <td style={{ padding: "4px 8px", color: "#5B6B6A", width: 90 }}>実施年度</td>
-              <td style={{ padding: "4px 8px", fontWeight: 700, color: brand.ink }}>{result.fiscal_year}年度</td>
-            </tr>
-            <tr>
-              <td style={{ padding: "4px 8px", color: "#5B6B6A" }}>氏名</td>
-              <td style={{ padding: "4px 8px", fontWeight: 700, color: brand.ink }}>{subjectName}</td>
-              <td style={{ padding: "4px 8px", color: "#5B6B6A" }}>実施日</td>
-              <td style={{ padding: "4px 8px", fontWeight: 700, color: brand.ink }}>
-                {new Date(result.created_at).toLocaleDateString("ja-JP")}
-              </td>
-            </tr>
-            <tr>
-              <td style={{ padding: "4px 8px", color: "#5B6B6A" }}>社員番号</td>
-              <td style={{ padding: "4px 8px", fontWeight: 700, color: brand.ink }}>{subjectEmpId}</td>
-              <td style={{ padding: "4px 8px", color: "#5B6B6A" }}>部署</td>
-              <td style={{ padding: "4px 8px", fontWeight: 700, color: brand.ink }}>{result.dept}</td>
-            </tr>
-          </tbody>
-        </table>
+        {/* 受検者情報: PC・印刷では2組×3行、スマホ幅では1組ずつ縦に並べる(globals.css の .report-info) */}
+        <dl className="report-info" style={{ fontSize: 13, margin: "0 0 16px" }}>
+          {(
+            [
+              ["会社名", companyName],
+              ["実施年度", `${result.fiscal_year}年度`],
+              ["氏名", subjectName],
+              ["実施日", new Date(result.created_at).toLocaleDateString("ja-JP")],
+              ["社員番号", subjectEmpId],
+              ["部署", result.dept],
+            ] as const
+          ).map(([k, v]) => (
+            <div key={k} className="report-info-item">
+              <dt style={{ color: "#5B6B6A", margin: 0 }}>{k}</dt>
+              <dd style={{ fontWeight: 700, color: brand.ink, margin: 0 }}>{v}</dd>
+            </div>
+          ))}
+        </dl>
 
         {/* 総合判定 */}
         <div
