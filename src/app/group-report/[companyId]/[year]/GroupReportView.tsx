@@ -782,11 +782,37 @@ export function GroupReportView({
             {/* 部署別基本表 */}
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "14px 0 6px" }}>部署別集計</h2>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
                 <thead>
                   <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-                    {["部署", "受検者数", "高ストレス者数", "高ストレス率", "A平均", "B平均", "C平均", "量的負担", "コントロール", "上司支援", "同僚支援", "リスクA", "リスクB", "総合健康リスク"].map((h) => (
-                      <th key={h} style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>
+                    {/* 列が多いので、長い見出しは2行に折り返して列幅を詰め、横スクロールなしで1枚に収める */}
+                    {[
+                      "部署",
+                      "受検\n者数",
+                      "高ストレス\n者数",
+                      "高ストレス\n率",
+                      "A平均",
+                      "B平均",
+                      "C平均",
+                      "量的\n負担",
+                      "コント\nロール",
+                      "上司\n支援",
+                      "同僚\n支援",
+                      "リスク\nA",
+                      "リスク\nB",
+                      "総合健康\nリスク",
+                    ].map((h, i) => (
+                      <th
+                        key={h}
+                        style={{
+                          textAlign: i === 0 ? "left" : "center",
+                          verticalAlign: "bottom",
+                          padding: "4px 4px",
+                          whiteSpace: "pre-line",
+                          lineHeight: 1.3,
+                          fontSize: 11,
+                        }}
+                      >
                         {h}
                       </th>
                     ))}
@@ -795,26 +821,27 @@ export function GroupReportView({
                 <tbody>
                   {groups.map((g) => (
                     <tr key={g.dept} style={{ borderBottom: `1px solid ${brand.line}`, background: g.dept === "全体" ? "#F4FAF9" : "#fff" }}>
-                      <td style={{ padding: "6px 8px", fontWeight: 700, color: brand.ink, whiteSpace: "nowrap" }}>{g.dept}</td>
-                      <td style={{ padding: "6px 8px" }}>{g.n}</td>
-                      <td style={{ padding: "6px 8px" }}>{g.highN}</td>
-                      <td style={{ padding: "6px 8px" }}>{g.highRate}%</td>
-                      <td style={{ padding: "6px 8px" }}>{g.avgA}</td>
-                      <td style={{ padding: "6px 8px" }}>{g.avgB}</td>
-                      <td style={{ padding: "6px 8px" }}>{g.avgC}</td>
-                      <td style={{ padding: "6px 8px" }}>{g.quant ?? "—"}</td>
-                      <td style={{ padding: "6px 8px" }}>{g.control ?? "—"}</td>
-                      <td style={{ padding: "6px 8px" }}>{g.boss ?? "—"}</td>
-                      <td style={{ padding: "6px 8px" }}>{g.coworker ?? "—"}</td>
-                      <td style={{ padding: "6px 8px", background: RISK_BG[riskTone(g.healthRisk.a)] }}>
+                      <td style={{ padding: "5px 4px", fontWeight: 700, color: brand.ink, whiteSpace: "nowrap" }}>{g.dept}</td>
+                      <td style={{ padding: "5px 4px", textAlign: "center" }}>{g.n}</td>
+                      <td style={{ padding: "5px 4px", textAlign: "center" }}>{g.highN}</td>
+                      <td style={{ padding: "5px 4px", textAlign: "center" }}>{g.highRate}%</td>
+                      <td style={{ padding: "5px 4px", textAlign: "center" }}>{g.avgA}</td>
+                      <td style={{ padding: "5px 4px", textAlign: "center" }}>{g.avgB}</td>
+                      <td style={{ padding: "5px 4px", textAlign: "center" }}>{g.avgC}</td>
+                      <td style={{ padding: "5px 4px", textAlign: "center" }}>{g.quant ?? "—"}</td>
+                      <td style={{ padding: "5px 4px", textAlign: "center" }}>{g.control ?? "—"}</td>
+                      <td style={{ padding: "5px 4px", textAlign: "center" }}>{g.boss ?? "—"}</td>
+                      <td style={{ padding: "5px 4px", textAlign: "center" }}>{g.coworker ?? "—"}</td>
+                      <td style={{ padding: "5px 4px", textAlign: "center", background: RISK_BG[riskTone(g.healthRisk.a)] }}>
                         {rRisk(g.healthRisk.a) ?? "—"}
                       </td>
-                      <td style={{ padding: "6px 8px", background: RISK_BG[riskTone(g.healthRisk.b)] }}>
+                      <td style={{ padding: "5px 4px", textAlign: "center", background: RISK_BG[riskTone(g.healthRisk.b)] }}>
                         {rRisk(g.healthRisk.b) ?? "—"}
                       </td>
                       <td
                         style={{
-                          padding: "6px 8px",
+                          padding: "5px 4px",
+                          textAlign: "center",
                           fontWeight: 800,
                           color: RISK_COLOR[riskTone(g.healthRisk.total)],
                           background: RISK_BG[riskTone(g.healthRisk.total)],
