@@ -658,6 +658,8 @@ export function GroupReportView({
           .report-sheet { border: none !important; box-shadow: none !important; padding: 0 !important; }
           .print-break-before { break-before: page; page-break-before: always; }
           .print-keep { break-inside: avoid; page-break-inside: avoid; }
+          /* 見出しの直後で改ページしない(見出しだけがページ末尾に残るのを防ぐ) */
+          .report-sheet h2, .report-sheet h3 { break-after: avoid; page-break-after: avoid; }
         }
         @page { size: A4; margin: 12mm; }
       `}</style>
@@ -945,8 +947,10 @@ export function GroupReportView({
               </p>
             )}
 
-            {/* 尺度別平均評価点 */}
-            <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 6px" }}>尺度別 平均評価点(素点換算・5段階)</h2>
+            {/* 尺度別平均評価点: 印刷では見出しだけがページ末尾に残らないよう、次のページから始める */}
+            <h2 className="print-break-before" style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 6px" }}>
+              尺度別 平均評価点(素点換算・5段階)
+            </h2>
             {/* 部署が多いときは6部署ずつの表に分けて縦に並べる(印刷で列が切れないように) */}
             {groupBlocks.map((block, bi) => (
               <div key={bi} style={{ overflowX: "auto", marginTop: bi === 0 ? 0 : 10, pageBreakInside: "avoid" }}>
@@ -1023,7 +1027,7 @@ export function GroupReportView({
 
         {groups.some((g) => g.ext80Count > 0) && (
           <>
-            <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 6px" }}>
+            <h2 className="print-break-before" style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 6px" }}>
               職場環境の資源など(80項目版の追加尺度)
             </h2>
             {groupBlocks.map((block, bi) => (
