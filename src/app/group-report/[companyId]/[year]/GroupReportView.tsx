@@ -858,6 +858,27 @@ export function GroupReportView({
                 </tbody>
               </table>
             </div>
+            {/* 各列の意味(ストレスチェックに詳しくない事業者の方向けの短い説明) */}
+            <div className="print-keep" style={{ fontSize: 10.5, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.8 }}>
+              <p style={{ margin: 0 }}>
+                <strong>各列の見方:</strong>{" "}
+                <strong>A平均</strong>＝仕事のストレス要因(仕事の量・質、対人関係など)の合計点の平均で、
+                <strong>高いほど負担が大きい</strong>。
+                <strong>B平均</strong>＝心身のストレス反応(疲労感、不安感、抑うつ感など)の合計点の平均で、
+                <strong>高いほど不調のサイン</strong>。
+                <strong>C平均</strong>＝周囲のサポート(上司・同僚・家族)の合計点の平均で、
+                <strong>低いほど支えが少ない</strong>。
+                <strong>量的負担・コントロール・上司支援・同僚支援</strong>＝判定図に使う4つの尺度の平均点(3〜12点)。
+                量的負担は高いほど、他の3つは低いほど悪い方向。
+              </p>
+              <p style={{ margin: "4px 0 0" }}>
+                <strong>リスクA</strong>＝「仕事の量が多く、裁量が少ない」ことによる健康リスク、
+                <strong>リスクB</strong>＝「上司や同僚の支援が少ない」ことによる健康リスク、
+                <strong>総合健康リスク</strong>＝両方を合わせた指標。いずれも<strong>全国平均を100</strong>とし、
+                数値が大きいほど心身の健康問題が起こりやすい職場であることを示します。
+                目安として <strong>120以上</strong>は要注意、<strong>150以上</strong>は早急な職場環境改善の検討をおすすめします。
+              </p>
+            </div>
 
             {/* 判定図プロット: 印刷では次のページの先頭から始め、図が途中で切れないようにする */}
             <div className="print-break-before">
