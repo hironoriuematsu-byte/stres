@@ -823,6 +823,25 @@ export function GroupReportView({
                   </tr>
                 </thead>
                 <tbody>
+                  {/* 比較の目安として全国平均の行を先頭に置く。
+                      判定図の4尺度は厚労省マニュアルの男女計の全国平均、健康リスクは定義上100。
+                      A・B・C平均は合計点の全国平均が公表されていないため「—」、高ストレス率は判定基準の設計上の目安(約10%) */}
+                  <tr style={{ borderBottom: `1px solid ${brand.line}`, background: "#F1F3F3", color: "#5B6B6A" }}>
+                    <td style={{ padding: "5px 4px", fontWeight: 700, whiteSpace: "nowrap" }}>全国平均</td>
+                    <td style={{ padding: "5px 4px", textAlign: "center" }}></td>
+                    <td style={{ padding: "5px 4px", textAlign: "center" }}></td>
+                    <td style={{ padding: "5px 4px", textAlign: "center", whiteSpace: "nowrap" }}>約10%*</td>
+                    <td style={{ padding: "5px 4px", textAlign: "center" }}>—</td>
+                    <td style={{ padding: "5px 4px", textAlign: "center" }}>—</td>
+                    <td style={{ padding: "5px 4px", textAlign: "center" }}>—</td>
+                    <td style={{ padding: "5px 4px", textAlign: "center" }}>{NORMS_COMBINED.quant}</td>
+                    <td style={{ padding: "5px 4px", textAlign: "center" }}>{NORMS_COMBINED.control}</td>
+                    <td style={{ padding: "5px 4px", textAlign: "center" }}>{NORMS_COMBINED.boss}</td>
+                    <td style={{ padding: "5px 4px", textAlign: "center" }}>{NORMS_COMBINED.coworker}</td>
+                    <td style={{ padding: "5px 4px", textAlign: "center" }}>100</td>
+                    <td style={{ padding: "5px 4px", textAlign: "center" }}>100</td>
+                    <td style={{ padding: "5px 4px", textAlign: "center", fontWeight: 800 }}>100</td>
+                  </tr>
                   {groups.map((g) => (
                     <tr key={g.dept} style={{ borderBottom: `1px solid ${brand.line}`, background: g.dept === "全体" ? "#F4FAF9" : "#fff" }}>
                       <td style={{ padding: "5px 4px", fontWeight: 700, color: brand.ink, whiteSpace: "nowrap" }}>{g.dept}</td>
@@ -877,6 +896,13 @@ export function GroupReportView({
                 <strong>総合健康リスク</strong>＝両方を合わせた指標。いずれも<strong>全国平均を100</strong>とし、
                 数値が大きいほど心身の健康問題が起こりやすい職場であることを示します。
                 目安として <strong>120以上</strong>は要注意、<strong>150以上</strong>は早急な職場環境改善の検討をおすすめします。
+              </p>
+              <p style={{ margin: "4px 0 0" }}>
+                <strong>「全国平均」の行:</strong>{" "}
+                量的負担・コントロール・上司支援・同僚支援は厚生労働省マニュアルの判定図(男女計)に示された全国平均値、
+                健康リスクは定義上100です。A・B・C平均は合計点の全国平均が公表されていないため表示していません。
+                *高ストレス率の「約10%」は、判定基準が受検者のおおむね上位10%を高ストレス者とするよう設計されていることによる目安で、
+                実測の全国平均ではありません。
               </p>
             </div>
 
