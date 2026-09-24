@@ -21,6 +21,9 @@ export function PrintHeader({
 }) {
   // 段組みは globals.css の .print-header 系で定義(スマホ幅ではロゴ行を上に置いて縦積みにし、
   // 印刷時は左右2段組みに戻す)。ここでは色・余白などの見た目だけを指定する
+  // 企業名は長いほど文字を小さくして、A4の印刷幅(ロゴの左側 約430px)でも1行に収める
+  const nameLen = [...companyName].length;
+  const nameSize = nameLen <= 12 ? 24 : nameLen <= 18 ? 20 : nameLen <= 24 ? 17 : 15;
   return (
     <div
       className="print-header"
@@ -35,6 +38,7 @@ export function PrintHeader({
         <h1
           className="print-header-company"
           style={{
+            fontSize: nameSize,
             fontWeight: 700,
             color: brand.ink,
             margin: "2px 0 0",

@@ -80,9 +80,7 @@ a {
   flex: 1 1 300px;
   min-width: 0;
 }
-.print-header-company {
-  font-size: 24px;
-}
+/* 企業名の文字サイズは PrintHeader 側で名前の長さに応じて決める(長い名前は小さくして1行に収める) */
 .print-header-logo {
   display: flex;
   align-items: center;
@@ -99,14 +97,15 @@ a {
     flex-basis: 100%;
   }
   .print-header-company {
-    font-size: 20px;
+    font-size: 20px !important;
   }
 }
 @media print {
   .print-header { flex-wrap: nowrap; }
   .print-header-logo { order: 0; width: auto; justify-content: flex-start; }
   .print-header-main { flex-basis: auto; }
-  .print-header-company { font-size: 24px; }
+  /* 印刷時にグラフの上に残ったツールチップ(マウスの位置の吹き出し)は出さない */
+  .recharts-tooltip-wrapper { display: none !important; }
 }
 /* 帳票の枠内の余白: スマホ幅では狭めて本文の横幅を確保する(印刷時は report-sheet の余白を外す指定が各帳票にある) */
 @media (max-width: 560px) {
