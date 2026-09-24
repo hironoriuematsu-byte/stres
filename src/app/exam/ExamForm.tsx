@@ -47,6 +47,10 @@ export function ExamForm({
   const [name, setName] = useState(profile.name);
   const [empId, setEmpId] = useState(profile.empId);
   const [dept, setDept] = useState(profile.dept);
+  // 氏名は空白(半角・全角)だけの入力や「未設定」を有効とみなさない。
+  // 以前は空白だけでも進めてしまい、氏名が空のまま受検できた事例があったため
+  const cleanName = name.replace(/[\s　]+/g, " ").trim();
+  const nameOk = cleanName.length > 0 && cleanName !== "未設定";
   // 選択肢にない部署は「その他(直接入力)」で入力する
   const [deptOther, setDeptOther] = useState(
     departments.length > 0 && profile.dept !== "" && !departments.includes(profile.dept)
@@ -111,6 +115,12 @@ export function ExamForm({
       return;
     }
 
+    // 氏名が無い状態では保存しない(データベース側でも同じ条件で登録を拒否する: 0022)
+    if (!nameOk) {
+      setSaveError("氏名が入力されていません。最初の画面に戻って氏名を入力してください。");
+      return;
+    }
+
     setSaving(true);
     setSaveError(null);
     const supabase = createClient();
@@ -119,7 +129,7 @@ export function ExamForm({
     // (失敗しても受検自体は続行する)
     await supabase
       .from("profiles")
-      .update({ name, emp_id: empId || null, dept })
+      .update({ name: cleanName, emp_id: empId.trim() || null, dept: dept.trim() })
       .eq("user_id", profile.userId);
 
     const { data: inserted, error } = await supabase
@@ -193,7 +203,12 @@ export function ExamForm({
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             氏名
           </label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 山田 太郎" style={input} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 山田 太郎" style={input} required />
+          {!nameOk && (
+            <p style={{ fontSize: 12, color: "#B02A2A", margin: "4px 0 0" }}>
+              氏名を入力してください(氏名が無いと受検できません)。
+            </p>
+          )}
         </div>
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
@@ -260,7 +275,7 @@ export function ExamForm({
           <Btn tone="ghost" onClick={() => { startNavigationProgress(); router.push(demo ? "/demo" : "/my"); }}>
             戻る
           </Btn>
-          <Btn onClick={() => setStep(1)} disabled={!name || !dept || !gender}>
+          <Btn onClick={() => setStep(1)} disabled={!nameOk || !dept.trim() || !gender}>
             回答をはじめる
           </Btn>
         </div>
