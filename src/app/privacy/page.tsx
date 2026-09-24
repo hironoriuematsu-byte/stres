@@ -4,7 +4,7 @@ import { brand } from "@/lib/brand";
 import { IMPLEMENTER } from "@/lib/org";
 
 export const metadata = {
-  title: "個人情報の取扱いについて | ストレスチェックWeb",
+  title: "個人情報の取扱いについて",
 };
 
 // 個人情報保護法第32条・施行令第10条に基づき、実施者が安全管理措置の概要

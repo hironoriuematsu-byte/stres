@@ -3,7 +3,7 @@ import { DemoNotice } from "@/app/demo/DemoNotice";
 import { DEMO_COMPANY } from "@/lib/demo-data";
 
 export const metadata = {
-  title: "受検の流れ(デモ) | ストレスチェックWeb",
+  title: "受検の流れ(デモ)",
 };
 
 // 紹介用デモ: 実際の受検画面をそのまま体験できる(回答は保存されない)

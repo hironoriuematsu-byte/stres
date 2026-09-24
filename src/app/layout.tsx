@@ -9,7 +9,10 @@ import { brand } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ストレスチェックWeb",
+  title: {
+    default: "うえまつ産業医事務所 ストレスチェックWeb",
+    template: "%s | うえまつ産業医事務所 ストレスチェックWeb",
+  },
   description: "職業性ストレス簡易調査票 準拠 ストレスチェックシステム",
 };
 

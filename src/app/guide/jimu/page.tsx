@@ -5,7 +5,7 @@ import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 
 export const metadata = {
-  title: "使い方ガイド | ストレスチェックWeb",
+  title: "使い方ガイド",
 };
 
 // 実施事務従事者向けのマニュアルを、ログイン後の画面から読めるようにする
