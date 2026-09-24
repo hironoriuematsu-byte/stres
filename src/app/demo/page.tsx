@@ -26,7 +26,8 @@ export default function DemoTopPage({ searchParams }: { searchParams: { q?: stri
         <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.9, margin: 0 }}>
           実際にお渡しする<strong>個人結果票</strong>と<strong>集団分析報告書</strong>を、架空の企業「{DEMO_COMPANY}」
           ({DEMO_FISCAL_YEAR}年度・{people.length}名・{depts.length}部署)のデータでご覧いただけます。
-          厚生労働省「職業性ストレス簡易調査票({q === "80" ? "80項目" : "57項目"})」に準拠した判定・集計をそのまま使用しています。
+          {q === "80" ? "「新職業性ストレス簡易調査票 短縮版(80項目)」" : "厚生労働省「職業性ストレス簡易調査票(57項目)」"}
+          に準拠した判定・集計をそのまま使用しています。
         </p>
         <div
           style={{
