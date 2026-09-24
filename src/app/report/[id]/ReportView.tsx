@@ -19,6 +19,7 @@ import { logAccess } from "@/lib/log";
 import { questionnaireLabel } from "@/lib/questionnaire-label";
 import { IMPLEMENTER } from "@/lib/org";
 import { PrintHeader } from "@/components/PrintHeader";
+import { RadarTick } from "@/components/RadarTick";
 import {
   EXT80_GROUP_LABEL,
   Ext80ScaleResult,
@@ -215,9 +216,10 @@ export function ReportView({
                   </h3>
                   <div style={{ width: "100%", height: 250 }}>
                     <ResponsiveContainer>
-                      <RadarChart data={radarFor(cat)} outerRadius="68%">
+                      {/* 長い軸ラベルは2行にし、半径を少し小さくして端で文字が切れないようにする */}
+                      <RadarChart data={radarFor(cat)} outerRadius="62%" margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                         <PolarGrid stroke={brand.line} />
-                        <PolarAngleAxis dataKey="scale" tick={{ fontSize: 9.5, fill: "#44534F" }} />
+                        <PolarAngleAxis dataKey="scale" tick={<RadarTick fontSize={9.5} fill="#44534F" />} />
                         <PolarRadiusAxis domain={[0, 5]} tickCount={6} tick={{ fontSize: 8 }} />
                         <Radar
                           dataKey="評価"

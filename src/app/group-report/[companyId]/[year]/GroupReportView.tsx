@@ -30,6 +30,7 @@ import { aggregateByDept, DeptAggregate, GroupResultInput, MIN_GROUP } from "@/l
 import { NORMS_COMBINED, riskTone } from "@/lib/health-risk";
 import { IMPLEMENTER } from "@/lib/org";
 import { PrintHeader } from "@/components/PrintHeader";
+import { RadarTick } from "@/components/RadarTick";
 import { EXT80_GROUP_LABEL, EXT80_SCALES } from "@/lib/questionnaire80";
 import { logAccess } from "@/lib/log";
 import { yAxisWidthFor } from "@/lib/chart";
@@ -117,9 +118,10 @@ function GroupRadarBlock({ group, total }: { group: DeptAggregate; total: DeptAg
             </p>
             <div style={{ width: "100%", height: 230 }}>
               <ResponsiveContainer>
-                <RadarChart data={radarDataFor(cat, group, total)} outerRadius="68%">
+                {/* 長い軸ラベルは2行にし、半径を少し小さくして端で文字が切れないようにする */}
+                <RadarChart data={radarDataFor(cat, group, total)} outerRadius="62%" margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                   <PolarGrid stroke={brand.line} />
-                  <PolarAngleAxis dataKey="scale" tick={{ fontSize: 9.5 }} />
+                  <PolarAngleAxis dataKey="scale" tick={<RadarTick fontSize={9.5} />} />
                   <PolarRadiusAxis domain={[1, 5]} tickCount={5} tick={{ fontSize: 8.5 }} angle={90} />
                   <Radar
                     name="基準線(3)"
