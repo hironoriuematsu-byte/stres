@@ -984,9 +984,9 @@ export function GroupReportView({
                         {SCALES.filter((s) => s.category === cat).map((s) => (
                           <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
                             <td style={{ padding: "5px 8px", color: brand.ink, whiteSpace: "nowrap" }}>{s.label}</td>
-                            {/* 4段階の単一項目尺度は全国平均が無いため数値を出さない(2.5は参考基準として下の注記で説明) */}
+                            {/* 4段階の単一項目尺度の 2.5 は全国平均ではなく参考基準。※印を付け、下の注記で説明する */}
                             <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
-                              {s.male.length === 4 ? "—" : "3.0"}
+                              {s.male.length === 4 ? "2.5※" : "3.0"}
                             </td>
                             {block.map((g) => (
                               <td key={g.dept} style={{ padding: "5px 8px", background: gradeCellColor(s.key, g.meanGrades[s.key]) }}>
@@ -1005,8 +1005,8 @@ export function GroupReportView({
               <p style={{ margin: 0 }}>
                 ※ 平均評価点は、厚生労働省の素点換算表(男女別)による各人の評価点(1〜5の5段階。単一項目の尺度は1〜4)の集団平均です。
                 「全国平均」列は比較の基準で、5段階尺度は評価点の期待値<strong>3.0(全国平均水準)</strong>、
-                単一項目の4段階尺度(自覚的な身体的負担度・職場環境・技能の活用度・仕事の適性度・働きがい。全国平均欄が「—」の尺度)は
-                全国調査に基づく平均値がないため数値を示していません。目安としては目盛り中央の<strong>2.5を参考基準</strong>とみなしてください(参考程度の値です)。
+                単一項目の4段階尺度(自覚的な身体的負担度・職場環境・技能の活用度・仕事の適性度・働きがい)の<strong>2.5※は参考基準</strong>で、
+                全国調査に基づく平均値ではありません(目盛り中央の値を目安として示しています)。
                 点数の読み方は尺度によって向きが異なり、<strong>負担・心身の反応の尺度は点が高いほど</strong>、
                 <strong>コントロール・サポート・満足度の尺度は点が低いほど</strong>悪い方向です。
               </p>
