@@ -140,3 +140,12 @@ a {
   .site-footer-item { display: block; }
   .site-footer-sep { display: none; }
 }
+
+/* 印刷・PDF: 表の網掛け(要注意項目の色)やバッジの背景色を印刷でも残す
+   (ブラウザは既定で背景色を印刷しないため、帳票の色分けが消えていた) */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
