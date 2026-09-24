@@ -102,7 +102,8 @@ function GroupRadarBlock({ group, total }: { group: DeptAggregate; total: DeptAg
           (集計対象 {group.detailCount} 名)
         </span>
       </h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 4 }}>
+      {/* A4の印刷幅(約700px)でも3列に並ぶよう、1列の最小幅を220pxにする(スマホ幅では1列になる) */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 4 }}>
         {(
           [
             ["stressor", CATEGORY_LABEL.stressor],
@@ -649,7 +650,10 @@ export function GroupReportView({
   );
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto" }}>
+    // 印刷用の専用ページでは、画面上の幅をA4の印刷幅(余白12mmで約700px)に合わせておく。
+    // グラフは画面上の幅で描画されたまま印刷されるため、画面と印刷の幅をそろえないと
+    // 印刷時に列数が変わったりグラフが切れたりする(ダッシュボード埋め込み時は従来どおり)
+    <div style={{ maxWidth: embedded ? 900 : 760, margin: "0 auto" }}>
       <style>{`
         @media print {
           header, footer, .no-print { display: none !important; }
