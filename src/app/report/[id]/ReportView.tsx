@@ -212,9 +212,19 @@ export function ReportView({
               {(["stressor", "reaction", "support"] as const).map((cat) => (
                 <div key={cat}>
                   <h3 style={{ fontSize: 12, color: brand.ink, textAlign: "center", margin: "8px 0 0" }}>
-                    {CATEGORY_LABEL[cat]}
+                    {/* C は長いので「(サポート・満足度)」を2行目に中央揃えで出す */}
+                    {cat === "support" ? (
+                      <>
+                        C. ストレス反応に影響を与える他の因子
+                        <br />
+                        (サポート・満足度)
+                      </>
+                    ) : (
+                      CATEGORY_LABEL[cat]
+                    )}
                   </h3>
-                  <div style={{ width: "100%", height: 250 }}>
+                  {/* 2行になった軸ラベル(家族・友人 など)が下端で切れないよう高さに余裕を持たせる */}
+                  <div style={{ width: "100%", height: 270 }}>
                     <ResponsiveContainer>
                       {/* 長い軸ラベルは2行にし、半径を少し小さくして端で文字が切れないようにする */}
                       <RadarChart data={radarFor(cat)} outerRadius="62%" margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>

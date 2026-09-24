@@ -116,7 +116,8 @@ function GroupRadarBlock({ group, total }: { group: DeptAggregate; total: DeptAg
             <p style={{ fontSize: 11, color: brand.tealDark, textAlign: "center", margin: "4px 0 0", fontWeight: 700 }}>
               {label}
             </p>
-            <div style={{ width: "100%", height: 230 }}>
+            {/* 2行になった軸ラベルが下端で切れないよう高さに余裕を持たせる */}
+            <div style={{ width: "100%", height: 250 }}>
               <ResponsiveContainer>
                 {/* 長い軸ラベルは2行にし、半径を少し小さくして端で文字が切れないようにする */}
                 <RadarChart data={radarDataFor(cat, group, total)} outerRadius="62%" margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
