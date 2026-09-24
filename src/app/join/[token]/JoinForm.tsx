@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
+import { isValidPersonName } from "@/lib/name";
 
 const input = {
   width: "100%",
@@ -15,6 +16,8 @@ const input = {
 };
 
 export function JoinForm({ token }: { token: string }) {
+  // 氏名は登録時に必須にする(以前は受検時に入力する作りで、未設定のまま残る利用者がいたため)
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -24,6 +27,10 @@ export function JoinForm({ token }: { token: string }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValidPersonName(name)) {
+      setErr("氏名を入力してください(空白だけの入力はできません)。");
+      return;
+    }
     if (password !== confirm) {
       setErr("確認用パスワードが一致しません。");
       return;
@@ -34,7 +41,7 @@ export function JoinForm({ token }: { token: string }) {
       const res = await fetch("/api/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, email, password }),
+        body: JSON.stringify({ token, name, email, password }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -84,6 +91,23 @@ export function JoinForm({ token }: { token: string }) {
     <Card>
       <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 12px" }}>アカウント登録</h3>
       <form onSubmit={submit}>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
+            氏名
+          </label>
+          <input
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="例: 山田 太郎"
+            autoComplete="name"
+            style={input}
+          />
+          <p style={{ fontSize: 12, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.7 }}>
+            結果票と実施者・実施事務従事者の画面に表示されます。会社に届け出ている氏名を入力してください。
+          </p>
+        </div>
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             メールアドレス

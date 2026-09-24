@@ -1,8 +1,8 @@
-// 招待CSV(氏名, メール, 社員番号, 部署, 企業コード)のパーサ。
+// 招待CSVのパーサ。
 // ダブルクォートで囲まれたフィールド・CRLF・BOMに対応した最小実装。
 
 export function parseCsv(text: string): string[][] {
-  const src = text.replace(/^\uFEFF/, "");
+  const src = text.replace(/^﻿/, "");
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -44,17 +44,31 @@ export function parseCsv(text: string): string[][] {
 export type InviteRow = {
   email: string;
   company_code: string;
+  name?: string; // 氏名(任意)。あれば招待時にプロフィールへ登録する
 };
 
-// 招待CSVは「メール, 企業コード」の2列。
-// ヘッダー行(メール列に@を含まない行)は読み飛ばす。
-// 氏名・社員番号・部署は本人が受検時に入力するため、招待時には扱わない。
+// 1行の中からメールアドレスの列を見つけ、その左の列を氏名として扱う。
+// 「氏名, メール」「メール」「氏名, メール, 企業コード」「メール, 企業コード」のいずれも読める
+function splitRow(r: string[]): { name?: string; email: string; rest: string[] } | null {
+  const idx = r.findIndex((c) => c.includes("@"));
+  if (idx < 0) return null; // ヘッダー行など
+  const name = idx > 0 ? r[idx - 1].trim() : "";
+  return { name: name || undefined, email: r[idx].trim(), rest: r.slice(idx + 1).map((c) => c.trim()) };
+}
+
+// 実施者用の招待CSV: 「氏名, メール, 企業コード」または「メール, 企業コード」。
+// ヘッダー行(メール列に@を含まない行)は読み飛ばす。社員番号・部署は本人が受検時に入力する。
 export function parseInviteCsv(text: string): InviteRow[] {
-  const rows = parseCsv(text);
-  return rows
-    .filter((r) => r.length >= 2 && r[0].includes("@"))
-    .map((r) => ({
-      email: r[0].trim(),
-      company_code: r[1].trim(),
-    }));
+  return parseCsv(text)
+    .map(splitRow)
+    .filter((x): x is NonNullable<typeof x> => x !== null && x.rest.length >= 1 && x.rest[0] !== "")
+    .map((x) => ({ email: x.email, company_code: x.rest[0], name: x.name }));
+}
+
+// 実施事務従事者用の招待CSV(自社固定): 「氏名, メール」または「メール」
+export function parseJimuInviteCsv(text: string): { email: string; name?: string }[] {
+  return parseCsv(text)
+    .map(splitRow)
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+    .map((x) => ({ email: x.email, name: x.name }));
 }

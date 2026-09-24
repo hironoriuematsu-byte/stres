@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { startNavigationProgress } from "@/lib/navigate";
+import { cleanPersonName, isValidPersonName } from "@/lib/name";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card, QuestionRow, ScoreBar } from "@/components/ui";
@@ -47,10 +48,10 @@ export function ExamForm({
   const [name, setName] = useState(profile.name);
   const [empId, setEmpId] = useState(profile.empId);
   const [dept, setDept] = useState(profile.dept);
-  // 氏名は空白(半角・全角)だけの入力や「未設定」を有効とみなさない。
+  // 氏名は空白(半角・全角)だけの入力や「未設定」を有効とみなさない(lib/name.ts)。
   // 以前は空白だけでも進めてしまい、氏名が空のまま受検できた事例があったため
-  const cleanName = name.replace(/[\s　]+/g, " ").trim();
-  const nameOk = cleanName.length > 0 && cleanName !== "未設定";
+  const cleanName = cleanPersonName(name);
+  const nameOk = isValidPersonName(name);
   // 選択肢にない部署は「その他(直接入力)」で入力する
   const [deptOther, setDeptOther] = useState(
     departments.length > 0 && profile.dept !== "" && !departments.includes(profile.dept)

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildCsv, resultsCsv, RESULT_CSV_HEADERS } from "@/lib/csv";
-import { parseCsv, parseInviteCsv } from "@/lib/parse-csv";
+import { parseCsv, parseInviteCsv, parseJimuInviteCsv } from "@/lib/parse-csv";
 
 describe("CSV出力(受け入れテスト6: Excelで文字化けしない)", () => {
   it("BOM付きUTF-8で始まる", () => {
@@ -94,5 +94,20 @@ describe("招待CSVパーサ(メール, 企業コード)", () => {
     const invites = parseInviteCsv("メール,企業コード\nt@example.com,X1");
     expect(invites).toHaveLength(1);
     expect(invites[0].company_code).toBe("X1");
+  });
+
+  it("氏名, メール, 企業コード の3列も読める(氏名はメール列の左)", () => {
+    const invites = parseInviteCsv("氏名,メール,企業コード\n山田 太郎,yamada@example.com,KYT001\n,sato@example.com,KYT001");
+    expect(invites).toHaveLength(2);
+    expect(invites[0]).toEqual({ name: "山田 太郎", email: "yamada@example.com", company_code: "KYT001" });
+    expect(invites[1].name).toBeUndefined();
+  });
+
+  it("実施事務従事者用: メールのみ / 氏名, メール の両方を読める", () => {
+    const a = parseJimuInviteCsv("メールアドレス\nyamada@example.com\nsato@example.com");
+    expect(a.map((r) => r.email)).toEqual(["yamada@example.com", "sato@example.com"]);
+    expect(a[0].name).toBeUndefined();
+    const b = parseJimuInviteCsv("氏名,メールアドレス\n山田 太郎,yamada@example.com");
+    expect(b).toEqual([{ name: "山田 太郎", email: "yamada@example.com" }]);
   });
 });

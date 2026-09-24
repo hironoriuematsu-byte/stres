@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { startNavigationProgress } from "@/lib/navigate";
+import { cleanPersonName, isValidPersonName } from "@/lib/name";
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
@@ -15,6 +16,21 @@ export default function UpdatePasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // 招待で作られたアカウントは氏名が「未設定」のため、初回のパスワード設定と同時に氏名も登録してもらう
+  const [needName, setNeedName] = useState(false);
+  const [name, setName] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // ログイン中の利用者の氏名が未登録なら、氏名の入力欄を出す
+  const checkName = async (supabase: ReturnType<typeof createClient>) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    setUserId(user.id);
+    const { data: prof } = await supabase.from("profiles").select("name").eq("user_id", user.id).maybeSingle();
+    if (!isValidPersonName(prof?.name)) setNeedName(true);
+  };
 
   // 招待/再設定リンクの形式差を吸収してセッションを確立する。
   // 1) すでにセッションがある(PKCE/token_hashをコールバックで処理済み)
@@ -26,6 +42,7 @@ export default function UpdatePasswordPage() {
         data: { session },
       } = await supabase.auth.getSession();
       if (session) {
+        await checkName(supabase);
         setReady("ok");
         return;
       }
@@ -36,16 +53,22 @@ export default function UpdatePasswordPage() {
         const { error } = await supabase.auth.setSession({ access_token, refresh_token });
         if (!error) {
           window.history.replaceState(null, "", window.location.pathname);
+          await checkName(supabase);
           setReady("ok");
           return;
         }
       }
       setReady("none");
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (needName && !isValidPersonName(name)) {
+      setErr("氏名を入力してください(空白だけの入力はできません)。");
+      return;
+    }
     if (password !== confirm) {
       setErr("確認用パスワードが一致しません。");
       return;
@@ -53,6 +76,18 @@ export default function UpdatePasswordPage() {
     setLoading(true);
     setErr(null);
     const supabase = createClient();
+    // 氏名が未登録なら先に登録する(パスワード設定だけ済んで氏名が残らないことを防ぐ)
+    if (needName && userId) {
+      const { error: nameErr } = await supabase
+        .from("profiles")
+        .update({ name: cleanPersonName(name) })
+        .eq("user_id", userId);
+      if (nameErr) {
+        setLoading(false);
+        setErr("氏名を登録できませんでした: " + nameErr.message);
+        return;
+      }
+    }
     const { error } = await supabase.auth.updateUser({ password });
     setLoading(false);
     if (error) {
@@ -97,11 +132,32 @@ export default function UpdatePasswordPage() {
 
   return (
     <Card style={{ maxWidth: 440, margin: "0 auto" }}>
-      <h2 style={{ fontSize: 20, color: brand.ink, margin: "0 0 6px" }}>パスワードの設定</h2>
+      <h2 style={{ fontSize: 20, color: brand.ink, margin: "0 0 6px" }}>{needName ? "氏名とパスワードの設定" : "パスワードの設定"}</h2>
       <p style={{ fontSize: 13, color: "#5B6B6A", margin: "0 0 14px", lineHeight: 1.7 }}>
-        新しいパスワード(8文字以上)を設定してください。設定後、そのままご利用いただけます。
+        {needName
+          ? "氏名と新しいパスワード(8文字以上)を設定してください。設定後、そのままご利用いただけます。"
+          : "新しいパスワード(8文字以上)を設定してください。設定後、そのままご利用いただけます。"}
       </p>
       <form onSubmit={submit}>
+        {needName && (
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
+              氏名
+            </label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="例: 山田 太郎"
+              autoComplete="name"
+              style={input}
+            />
+            <p style={{ fontSize: 12, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.7 }}>
+              結果票や実施者の画面に表示されます。会社に届け出ている氏名を入力してください。
+            </p>
+          </div>
+        )}
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             新しいパスワード

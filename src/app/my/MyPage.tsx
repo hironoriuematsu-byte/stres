@@ -156,6 +156,26 @@ export function MyPage({
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", display: "grid", gap: 16 }}>
+      {/* 氏名が未登録の方への案内(受検時にも入力を求めるが、先に登録できるようにする) */}
+      {!name && (
+        <div
+          style={{
+            fontSize: 13,
+            color: "#8A6B2E",
+            background: "#FBF3E3",
+            border: "1px solid #EFD9A8",
+            borderRadius: 10,
+            padding: "10px 14px",
+            lineHeight: 1.7,
+          }}
+        >
+          氏名が未登録です。受検時に入力できますが、
+          <Link href="/account" style={{ color: brand.tealDark, fontWeight: 700 }}>
+            アカウント設定
+          </Link>
+          から先に登録しておくこともできます。
+        </div>
+      )}
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div>

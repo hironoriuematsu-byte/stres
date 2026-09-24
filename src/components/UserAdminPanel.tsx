@@ -6,12 +6,14 @@ import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { Company, ROLE_LABEL, Role } from "@/lib/types";
 import { CompanySelect } from "@/components/CompanySelect";
-import { parseCsv, parseInviteCsv } from "@/lib/parse-csv";
+import { parseInviteCsv, parseJimuInviteCsv } from "@/lib/parse-csv";
+import { isValidPersonName } from "@/lib/name";
 
 type InvitePayload = {
   email: string;
   company_code: string;
   role: "employee" | "jimu" | "company";
+  name?: string; // 氏名(任意)。指定すると招待時にプロフィールへ登録する
 };
 
 type Member = {
@@ -48,6 +50,7 @@ export function UserAdminPanel({
   const jimuMode = Boolean(fixedCompany);
   const defaultCompany = companies?.find((c) => c.id === defaultCompanyId);
   const [form, setForm] = useState({
+    name: "",
     email: "",
     // 画面上部で企業を選んでいればそれを使い、未選択なら企業を選ばない
     // (誤って別の企業へ招待しないため)
@@ -171,25 +174,29 @@ export function UserAdminPanel({
 
   const submitSingle = (e: React.FormEvent) => {
     e.preventDefault();
-    send([{ ...form }]);
+    // 氏名は任意だが、入力した場合は空白だけの値を送らない
+    send([{ ...form, name: isValidPersonName(form.name) ? form.name : undefined }]);
   };
 
   const onCsv = async (file: File) => {
     const text = await file.text();
     let rows: InvitePayload[];
     if (jimuMode) {
-      // jimu: メールアドレスのみの1列CSV(企業は自社固定)
-      rows = parseCsv(text)
-        .filter((r) => r[0]?.includes("@"))
-        .map((r) => ({ email: r[0].trim(), company_code: fixedCompany!.code, role: "employee" as const }));
+      // jimu: 「氏名, メール」または「メール」の1〜2列CSV(企業は自社固定)
+      rows = parseJimuInviteCsv(text).map((r) => ({
+        email: r.email,
+        name: r.name,
+        company_code: fixedCompany!.code,
+        role: "employee" as const,
+      }));
     } else {
       rows = parseInviteCsv(text).map((r) => ({ ...r, role: "employee" as const }));
     }
     if (rows.length === 0) {
       setLog([
         jimuMode
-          ? "CSVから有効な行が読み取れませんでした(メールアドレスの1列)"
-          : "CSVから有効な行が読み取れませんでした(メール, 企業コード の2列)",
+          ? "CSVから有効な行が読み取れませんでした(氏名, メールアドレス の2列。メールアドレスのみでも可)"
+          : "CSVから有効な行が読み取れませんでした(氏名, メール, 企業コード の3列。氏名は省略可)",
       ]);
       return;
     }
@@ -202,11 +209,16 @@ export function UserAdminPanel({
         {jimuMode ? `従業員の招待(${fixedCompany!.name})` : "ユーザー管理(招待)"}
       </h3>
       <p style={{ fontSize: 13, color: "#5B6B6A", margin: "0 0 14px", lineHeight: 1.7 }}>
-        招待メールが本人に送信され、本人がパスワードを設定するとログインできるようになります。氏名・社員番号・部署は本人が受検時に入力します。
+        招待メールが本人に送信され、本人がパスワードを設定するとログインできるようになります。
+        氏名はここで入力できます(空欄の場合は本人が初回のパスワード設定時に入力します)。社員番号・部署は本人が受検時に入力します。
         {jimuMode && "招待できるのは自社の従業員のみです。"}
       </p>
 
       <form onSubmit={submitSingle} style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>氏名(任意)</label>
+          <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="例: 山田 太郎" style={input} />
+        </div>
         <div>
           <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>メールアドレス</label>
           <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={input} />
@@ -266,7 +278,9 @@ export function UserAdminPanel({
 
       <div style={{ marginTop: 18, borderTop: `1px solid ${brand.line}`, paddingTop: 14 }}>
         <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 6 }}>
-          {jimuMode ? "従業員の一括登録(CSV: メールアドレスの1列)" : "従業員の一括登録(CSV: メール, 企業コード)"}
+          {jimuMode
+            ? "従業員の一括登録(CSV: 氏名, メールアドレス の2列。メールアドレスのみでも可)"
+            : "従業員の一括登録(CSV: 氏名, メール, 企業コード の3列。氏名は省略可)"}
         </label>
         <input
           type="file"
@@ -336,7 +350,10 @@ export function UserAdminPanel({
                 <tbody>
                   {members.map((m) => (
                     <tr key={m.user_id} style={{ borderBottom: `1px solid ${brand.line}` }}>
-                      <td style={{ padding: "8px 10px", fontWeight: 700, color: brand.ink, whiteSpace: "nowrap" }}>{m.name}</td>
+                      <td style={{ padding: "8px 10px", fontWeight: 700, color: isValidPersonName(m.name) ? brand.ink : "#8A9694", whiteSpace: "nowrap" }}>
+                        {/* 未設定 = 招待済みだが本人がまだ初回ログイン(氏名登録)をしていない */}
+                        {isValidPersonName(m.name) ? m.name : "未設定(初回ログイン待ち)"}
+                      </td>
                       <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{m.email}</td>
                       <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{m.emp_id ?? ""}</td>
                       <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{m.dept ?? ""}</td>

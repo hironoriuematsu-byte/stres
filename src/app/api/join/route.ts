@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { cleanPersonName, isValidPersonName } from "@/lib/name";
 
 export const runtime = "nodejs";
 
 // 配布URL(/join/<token>)からの従業員自己登録。
 // 1) トークンを検証して企業を特定
 // 2) メール+パスワードでサインアップ(確認メール送信 = 個人認証)
-// 3) プロフィール(role=employee, 該当企業)を作成
+// 3) プロフィール(role=employee, 該当企業, 氏名)を作成
+//    氏名は登録時に必須(以前は受検時に入力する作りで、未設定のまま残る利用者がいたため)
 export async function POST(req: Request) {
-  let token: string | undefined, email: string | undefined, password: string | undefined;
+  let token: string | undefined, name: string | undefined, email: string | undefined, password: string | undefined;
   try {
     const body = await req.json();
     token = body.token;
+    name = body.name;
     email = body.email;
     password = body.password;
   } catch {
@@ -20,6 +23,10 @@ export async function POST(req: Request) {
   if (!token || !email || !password || password.length < 8) {
     return NextResponse.json({ error: "入力内容が不正です" }, { status: 400 });
   }
+  if (!isValidPersonName(name)) {
+    return NextResponse.json({ error: "氏名を入力してください(空白だけの入力はできません)" }, { status: 400 });
+  }
+  const cleanName = cleanPersonName(name);
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) {
@@ -54,6 +61,7 @@ export async function POST(req: Request) {
     password,
     options: {
       emailRedirectTo: `${origin}/auth/callback?next=/exam`,
+      data: { full_name: cleanName },
     },
   });
 
@@ -67,11 +75,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ alreadyRegistered: true });
   }
 
-  // プロフィール作成(氏名・社員番号・部署は本人が受検時に入力)
+  // プロフィール作成(社員番号・部署は本人が受検時に入力)
   const { error: profErr } = await admin.from("profiles").upsert({
     user_id: data.user!.id,
     role: "employee",
-    name: "未設定",
+    name: cleanName,
     emp_id: null,
     dept: null,
     company_id: campaign.company_id,

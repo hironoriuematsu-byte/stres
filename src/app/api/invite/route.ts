@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { cleanPersonName, isValidPersonName, NAME_PLACEHOLDER } from "@/lib/name";
 
 export const runtime = "nodejs";
 
@@ -8,6 +9,7 @@ type InviteInput = {
   email: string;
   company_code: string;
   role?: "employee" | "jimu" | "company";
+  name?: string; // 氏名(任意)。指定があれば招待時にプロフィールへ登録する
 };
 
 // 実施者が発行できるロール。
@@ -99,8 +101,12 @@ export async function POST(req: Request) {
         throw new Error("実施事務従事者は自社の従業員のみ招待できます");
       }
 
+      // 氏名の指定があれば登録し、無ければ「未設定」にして本人が初回のパスワード設定時に入力する
+      const name = isValidPersonName(inv.name) ? cleanPersonName(inv.name) : NAME_PLACEHOLDER;
+
       const { data: invited, error: invErr } = await admin.auth.admin.inviteUserByEmail(inv.email, {
         redirectTo: `${origin}/auth/callback?next=/account/update-password`,
+        data: name !== NAME_PLACEHOLDER ? { full_name: name } : undefined,
       });
       if (invErr) {
         // 既に登録済みのメールアドレスには招待メールを送れない。
@@ -113,11 +119,11 @@ export async function POST(req: Request) {
         throw new Error(invErr.message);
       }
 
-      // 氏名・社員番号・部署は本人が受検時に入力する(管理者側では設定しない)
+      // 社員番号・部署は本人が受検時に入力する(管理者側では設定しない)
       const { error: profErr } = await admin.from("profiles").upsert({
         user_id: invited.user.id,
         role,
-        name: "未設定",
+        name,
         emp_id: null,
         dept: null,
         company_id: company.id,
