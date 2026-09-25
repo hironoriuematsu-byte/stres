@@ -76,10 +76,17 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
               {tab === null ? "メニュー" : company ? company.name : "企業横断管理（企業を選択してください）"}
             </h2>
           </div>
-          {tab !== null && (
+          {/* 健康管理Webへの導線は実施者には常に出す(以前は「健康管理Web併用の企業を選んでいるとき」だけ
+              表示していたため、併用していない企業を選ぶと消えて戸惑いがあった)。
+              企業の選択と年度はタブを開いているときだけ表示する */}
+          {tab === null ? (
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <KenkoLink enabled />
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <CompanySelect companies={companies} value={companyId} onChange={setCompanyId} />
-              <KenkoLink enabled={company?.hm_enabled} />
+              <KenkoLink enabled />
               <select
                 value={year}
                 onChange={(e) => setYear(Number(e.target.value))}
