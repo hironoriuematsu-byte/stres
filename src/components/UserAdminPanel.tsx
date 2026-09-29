@@ -7,6 +7,7 @@ import { brand } from "@/lib/brand";
 import { Company, ROLE_LABEL, Role } from "@/lib/types";
 import { CompanySelect } from "@/components/CompanySelect";
 import { parseInviteCsv, parseJimuInviteCsv } from "@/lib/parse-csv";
+import { readTextFile } from "@/lib/read-text";
 import { isValidPersonName } from "@/lib/name";
 
 type InvitePayload = {
@@ -179,7 +180,7 @@ export function UserAdminPanel({
   };
 
   const onCsv = async (file: File) => {
-    const text = await file.text();
+    const text = await readTextFile(file);
     let rows: InvitePayload[];
     if (jimuMode) {
       // jimu: 「氏名, メール」または「メール」の1〜2列CSV(企業は自社固定)

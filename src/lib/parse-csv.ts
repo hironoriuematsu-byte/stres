@@ -65,6 +65,24 @@ export function parseInviteCsv(text: string): InviteRow[] {
     .map((x) => ({ email: x.email, company_code: x.rest[0], name: x.name }));
 }
 
+// 部署の一括登録: CSV(1列目が部署名)または1行1部署のテキスト。
+// 「部署名」などの見出し行と重複は除き、入力順を保つ
+const DEPT_HEADERS = new Set(["部署", "部署名", "部門", "部門名", "department", "dept", "name"]);
+
+export function parseDeptList(text: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const row of parseCsv(text)) {
+    const v = (row.find((c) => c.trim() !== "") ?? "").trim().replace(/\s+/g, " ");
+    if (!v) continue;
+    if (out.length === 0 && DEPT_HEADERS.has(v.toLowerCase())) continue;
+    if (seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+  }
+  return out;
+}
+
 // 実施事務従事者用の招待CSV(自社固定): 「氏名, メール」または「メール」
 export function parseJimuInviteCsv(text: string): { email: string; name?: string }[] {
   return parseCsv(text)

@@ -6,6 +6,8 @@ import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { logAccess } from "@/lib/log";
 import { LoadingCard } from "@/components/LoadingCard";
+import { parseDeptList } from "@/lib/parse-csv";
+import { readTextFile } from "@/lib/read-text";
 
 type Dept = { id: string; name: string; sort_order: number };
 
@@ -32,6 +34,10 @@ export function DeptAdminPanel({
   const [err, setErr] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  // 一括登録(CSVファイルまたは貼り付け)
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkFile, setBulkFile] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -71,6 +77,46 @@ export function DeptAdminPanel({
     logAccess(supabase, "dept_master_added", `${companyName}/${v}`, companyId);
     setNotice(`「${v}」を追加しました。`);
     setName("");
+    load();
+  };
+
+  // 一括登録の候補(既に登録済みの部署は除く)
+  const bulkNames = parseDeptList(bulkText);
+  const existing = new Set((rows ?? []).map((r) => r.name));
+  const bulkNew = bulkNames.filter((n) => !existing.has(n));
+  const bulkDup = bulkNames.length - bulkNew.length;
+
+  const onBulkFile = async (file: File) => {
+    setErr(null);
+    const text = await readTextFile(file);
+    setBulkText(text);
+    setBulkFile(file.name);
+  };
+
+  const addBulk = async () => {
+    if (bulkNew.length === 0) return;
+    setBusy(true);
+    setErr(null);
+    const base = rows?.length ?? 0;
+    // 同名(既登録)は飛ばして残りを登録する
+    const { error } = await supabase
+      .from("departments")
+      .upsert(
+        bulkNew.map((n, i) => ({ company_id: companyId, name: n, sort_order: base + i + 1 })),
+        { onConflict: "company_id,name", ignoreDuplicates: true }
+      );
+    setBusy(false);
+    if (error) {
+      setErr("一括登録に失敗しました: " + error.message);
+      return;
+    }
+    logAccess(supabase, "dept_master_added", `${companyName}/一括${bulkNew.length}件`, companyId);
+    setNotice(
+      `${bulkNew.length}件の部署を登録しました。` + (bulkDup > 0 ? `(登録済みの${bulkDup}件は飛ばしました)` : "")
+    );
+    setBulkText("");
+    setBulkFile(null);
+    setBulkOpen(false);
     load();
   };
 
@@ -130,7 +176,81 @@ export function DeptAdminPanel({
         <Btn type="submit" disabled={busy || !name.trim()}>
           {busy ? "追加中…" : "部署を追加"}
         </Btn>
+        <Btn tone="ghost" type="button" onClick={() => setBulkOpen((v) => !v)}>
+          {bulkOpen ? "一括登録を閉じる" : "CSV・一覧から一括登録"}
+        </Btn>
       </form>
+
+      {bulkOpen && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 14,
+            border: `1px solid ${brand.line}`,
+            borderRadius: 10,
+            background: "#F7FBFA",
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink, marginBottom: 6 }}>部署の一括登録</div>
+          <p style={{ fontSize: 12.5, color: "#5B6B6A", margin: "0 0 10px", lineHeight: 1.7 }}>
+            CSVファイル(1列目が部署名。見出し行があっても可。Excelで保存したファイルもそのまま読めます)を選ぶか、
+            下の欄に部署名を1行に1つずつ貼り付けてください。登録済みの部署名は自動的に飛ばします。
+          </p>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+            <label
+              style={{
+                display: "inline-block",
+                background: "#fff",
+                border: `1px solid ${brand.teal}`,
+                color: brand.tealDark,
+                borderRadius: 8,
+                padding: "7px 14px",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              CSVファイルを選ぶ
+              <input
+                type="file"
+                accept=".csv,.txt,text/csv,text/plain"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) onBulkFile(f);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {bulkFile && <span style={{ fontSize: 12.5, color: "#5B6B6A" }}>読み込み: {bulkFile}</span>}
+          </div>
+          <textarea
+            value={bulkText}
+            onChange={(e) => {
+              setBulkText(e.target.value);
+              setBulkFile(null);
+            }}
+            placeholder={"製造部\n営業部\n総務部"}
+            rows={6}
+            style={{ ...input, width: "100%", fontFamily: "inherit", lineHeight: 1.6 }}
+          />
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
+            <Btn onClick={addBulk} disabled={busy || bulkNew.length === 0}>
+              {busy ? "登録中…" : `${bulkNew.length}件を登録する`}
+            </Btn>
+            <span style={{ fontSize: 12.5, color: "#5B6B6A" }}>
+              {bulkNames.length === 0
+                ? "部署名がまだ読み取れていません"
+                : `読み取り ${bulkNames.length}件` + (bulkDup > 0 ? `(うち登録済み ${bulkDup}件は飛ばします)` : "")}
+            </span>
+          </div>
+          {bulkNew.length > 0 && (
+            <div style={{ marginTop: 8, fontSize: 12.5, color: brand.ink, lineHeight: 1.8 }}>
+              登録する部署: {bulkNew.join("、")}
+            </div>
+          )}
+        </div>
+      )}
 
       {err && <div style={{ fontSize: 13, color: "#B02A2A", marginTop: 10 }}>{err}</div>}
       {notice && (
