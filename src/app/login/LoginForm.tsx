@@ -22,6 +22,8 @@ export function LoginForm() {
   const params = useSearchParams();
   const next = params.get("next") || "/";
   const timedOut = params.get("reason") === "timeout";
+  // メール内リンク(招待・パスワード再設定)が無効・期限切れ・使用済みだったとき
+  const badLink = params.get("error") === "link";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -112,6 +114,22 @@ export function LoginForm() {
           }}
         >
           一定時間操作がなかったため、安全のため自動的にログアウトしました。再度ログインしてください。
+        </div>
+      )}
+      {badLink && (
+        <div
+          style={{
+            fontSize: 13,
+            color: "#8A6B2E",
+            background: "#FBF3E3",
+            border: "1px solid #EFD9A8",
+            borderRadius: 10,
+            padding: "10px 12px",
+            marginBottom: 12,
+            lineHeight: 1.7,
+          }}
+        >
+          メールのリンクが無効か、期限切れ(1時間)または使用済みです。パスワードをまだ設定していない方は、下の「パスワードを忘れた方」から再設定メールを申し込み、届いたメールのボタンを1時間以内に押してください。
         </div>
       )}
       <form onSubmit={submit}>
