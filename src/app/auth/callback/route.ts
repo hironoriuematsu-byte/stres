@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/server";
+import { clientIpHeaders, createClient } from "@/lib/supabase/server";
 
 // 遷移先はサイト内のパスに限定する(外部サイトへの転送を防ぐ)
 function safeNext(value: string | null): string {
@@ -68,7 +68,7 @@ export async function GET(request: Request) {
 
   // PKCEフロー(メールを要求したブラウザと同じブラウザで開いたときだけ成功する)
   if (code) {
-    const supabase = createClient();
+    const supabase = createClient({ headers: clientIpHeaders(request) });
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=link`, 303);
   }
 
-  const supabase = createClient();
+  const supabase = createClient({ headers: clientIpHeaders(request) });
   const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as EmailOtpType });
   if (error) {
     return NextResponse.redirect(`${origin}/login?error=link`, 303);

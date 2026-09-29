@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cleanPersonName, isValidPersonName } from "@/lib/name";
+import { clientIpHeaders } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
@@ -51,9 +52,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "このURLは無効か、配布が終了しています" }, { status: 400 });
   }
 
-  // anonキーでサインアップ(標準の確認メールが送信される)
+  // anonキーでサインアップ(標準の確認メールが送信される)。
+  // 本人のIPを添えて、サインアップのレート制限(IPごと)がVercelのIPにまとめて掛からないようにする
   const anon = createSupabaseClient(url, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     auth: { autoRefreshToken: false, persistSession: false },
+    global: { headers: clientIpHeaders(req) },
   });
   const origin = req.headers.get("origin") ?? new URL(req.url).origin;
   const { data, error } = await anon.auth.signUp({

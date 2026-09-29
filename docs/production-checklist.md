@@ -340,3 +340,20 @@ Pro 化すると、同じ組織にある開発用プロジェクトにも comput
 開くと「リンクが無効」になっていた。token_hash 方式はどの端末で開いても有効。
 Authentication → URL Configuration の **Site URL が https://stres.mestate.jp** になっていることが前提。
 テンプレートを貼り替えたら、テスト用アドレスで「パスワードを忘れた方」→ メールのリンクを別端末で開いて設定できることを確認する。
+
+### 9-3. 従業員が一斉に登録・受検する前の Supabase 設定確認【2026-09-29 追加】
+
+Supabase の Authentication → Rate Limits(制限値は「IPアドレスごと」または「プロジェクト全体」)。
+同じ会社の従業員は同じIPアドレスから来るため、初期値のままだと一斉登録で止まることがある。
+
+| 項目 | 初期値 | 推奨 | 理由 |
+|---|---|---|---|
+| Rate limit for sending emails | 30通/時 | 実施企業の人数に合わせて引き上げ(例: 200通/時) | 一斉招待・確認メールが途中で止まる |
+| Rate limit for sign ups and sign ins | 30回/5分/IP | 100回/5分 程度 | 同じ事業所から同時に登録・ログインする |
+| Rate limit for token verifications | 30回/5分/IP | 100回/5分 程度 | メールのリンクを同じ時間帯に開く |
+
+Authentication → Providers → Email:
+- **Confirm email** が ON(自己登録は確認メールで本人確認する前提)
+- **Email OTP Expiration** は 3600秒(1時間)。短くしすぎるとメールを後で開く人が期限切れになる
+- **Minimum password length** は 8 以上(アプリ側も8文字以上で統一)。文字種の要件(Password Requirements)を付けると、
+  エラー文が英語のまま表示されるため付けない
