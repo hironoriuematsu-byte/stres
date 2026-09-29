@@ -331,3 +331,12 @@ Pro 化すると、同じ組織にある開発用プロジェクトにも comput
 
 > ボタンのリンク先は、招待やパスワード再設定を行った画面のドメインが使われます(アプリ側で指定)。
 > 実施者が `stres.mestate.jp` で操作していれば、テンプレートを直さなくてもボタンは新ドメインに飛びます。旧URLが残るのは本文末尾の固定文だけです。
+
+### 9-2. メールのリンクを token_hash 方式にする【2026-09-29 更新】
+
+`docs/email-templates/` の4テンプレートは、ボタンのリンクを `{{ .ConfirmationURL }}` から
+`{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=…&next=…` に変更した。
+`{{ .ConfirmationURL }}` はメールを要求したブラウザでしか開けず(PKCE)、スマホのメールアプリで
+開くと「リンクが無効」になっていた。token_hash 方式はどの端末で開いても有効。
+Authentication → URL Configuration の **Site URL が https://stres.mestate.jp** になっていることが前提。
+テンプレートを貼り替えたら、テスト用アドレスで「パスワードを忘れた方」→ メールのリンクを別端末で開いて設定できることを確認する。
