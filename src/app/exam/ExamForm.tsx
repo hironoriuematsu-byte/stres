@@ -7,6 +7,7 @@ import { cleanPersonName, isValidPersonName } from "@/lib/name";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card, QuestionRow, ScoreBar } from "@/components/ui";
+import { DeptSelect } from "@/components/DeptSelect";
 import { brand } from "@/lib/brand";
 import { SECTION_A, SECTION_B, SECTION_C, SECTION_D, Answers, Scores, calcScores, emptyAnswers } from "@/lib/questionnaire";
 import { getFiscalYear } from "@/lib/fiscal";
@@ -52,10 +53,6 @@ export function ExamForm({
   // 以前は空白だけでも進めてしまい、氏名が空のまま受検できた事例があったため
   const cleanName = cleanPersonName(name);
   const nameOk = isValidPersonName(name);
-  // 選択肢にない部署は「その他(直接入力)」で入力する
-  const [deptOther, setDeptOther] = useState(
-    departments.length > 0 && profile.dept !== "" && !departments.includes(profile.dept)
-  );
   const [gender, setGender] = useState<"male" | "female" | "">("");
   const [resultId, setResultId] = useState<string | null>(null);
   const [ans, setAns] = useState<Answers>(emptyAnswers());
@@ -222,37 +219,8 @@ export function ExamForm({
             部署
           </label>
           {departments.length > 0 ? (
-            <>
-              <select
-                value={deptOther ? "__other__" : departments.includes(dept) ? dept : ""}
-                onChange={(e) => {
-                  if (e.target.value === "__other__") {
-                    setDeptOther(true);
-                    setDept("");
-                  } else {
-                    setDeptOther(false);
-                    setDept(e.target.value);
-                  }
-                }}
-                style={input}
-              >
-                <option value="">選択してください</option>
-                {departments.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-                <option value="__other__">その他(直接入力)</option>
-              </select>
-              {deptOther && (
-                <input
-                  value={dept}
-                  onChange={(e) => setDept(e.target.value)}
-                  placeholder="部署名を入力してください"
-                  style={{ ...input, marginTop: 8 }}
-                />
-              )}
-            </>
+            // 部署が多い企業でも探しやすいよう、文字を入力すると候補が絞り込まれる選択欄にする
+            <DeptSelect options={departments} value={dept} onChange={setDept} />
           ) : (
             <input value={dept} onChange={(e) => setDept(e.target.value)} placeholder="例: 製造部" style={input} />
           )}

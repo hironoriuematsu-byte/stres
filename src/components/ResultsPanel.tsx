@@ -8,6 +8,7 @@ import { Profile, ResultRow } from "@/lib/types";
 import { downloadCsv, resultsCsv } from "@/lib/csv";
 import { logAccess } from "@/lib/log";
 import { LoadingCard } from "@/components/LoadingCard";
+import { DeptSelect } from "@/components/DeptSelect";
 import { getFiscalYear } from "@/lib/fiscal";
 
 // office / jimu 共通: 結果一覧(高ストレスフィルタ・CSV出力・詳細閲覧ログ)
@@ -32,7 +33,6 @@ export function ResultsPanel({
   const [deptEdit, setDeptEdit] = useState("");
   const [deptBusy, setDeptBusy] = useState(false);
   const [deptOptions, setDeptOptions] = useState<string[]>([]);
-  const [deptOther, setDeptOther] = useState(false);
   // 報告書(様式第6号の2)の「在籍労働者数」。任意入力
   const [headcount, setHeadcount] = useState("");
 
@@ -125,7 +125,6 @@ export function ResultsPanel({
     const next = openDetail === r.id ? null : r.id;
     setOpenDetail(next);
     setDeptEdit(r.dept);
-    setDeptOther(deptOptions.length === 0 || !deptOptions.includes(r.dept));
     if (next) logAccess(supabase, "view_result_detail", r.id, companyId);
   };
 
@@ -299,34 +298,15 @@ export function ResultsPanel({
                       >
                         <span style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>部署名の修正:</span>
                         {deptOptions.length > 0 && (
-                          <select
-                            value={deptOther ? "__other__" : deptOptions.includes(deptEdit) ? deptEdit : ""}
-                            onChange={(e) => {
-                              if (e.target.value === "__other__") {
-                                setDeptOther(true);
-                              } else {
-                                setDeptOther(false);
-                                setDeptEdit(e.target.value);
-                              }
-                            }}
-                            style={{
-                              padding: "5px 10px",
-                              fontSize: 13,
-                              border: `1px solid ${brand.line}`,
-                              borderRadius: 8,
-                              minWidth: 160,
-                            }}
-                          >
-                            <option value="">選択してください</option>
-                            {deptOptions.map((d) => (
-                              <option key={d} value={d}>
-                                {d}
-                              </option>
-                            ))}
-                            <option value="__other__">その他(直接入力)</option>
-                          </select>
+                          <DeptSelect
+                            options={deptOptions}
+                            value={deptEdit}
+                            onChange={setDeptEdit}
+                            compact
+                            style={{ width: 240 }}
+                          />
                         )}
-                        {(deptOptions.length === 0 || deptOther) && (
+                        {deptOptions.length === 0 && (
                           <input
                             value={deptEdit}
                             onChange={(e) => setDeptEdit(e.target.value)}
