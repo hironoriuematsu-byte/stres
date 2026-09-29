@@ -163,7 +163,8 @@ export function AccessLogsPanel() {
                 <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                   {new Date(r.created_at).toLocaleString("ja-JP")}
                 </td>
-                <td style={{ padding: "8px 10px", fontWeight: 700, color: brand.ink }}>
+                {/* 氏名は折り返さず1行で出す(表全体は横スクロール可) */}
+                <td style={{ padding: "8px 10px", fontWeight: 700, color: brand.ink, whiteSpace: "nowrap" }}>
                   {people[r.user_id]?.name ?? r.user_id.slice(0, 8)}
                 </td>
                 <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
