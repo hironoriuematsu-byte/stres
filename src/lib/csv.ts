@@ -3,7 +3,12 @@
 import { IMPLEMENTER } from "@/lib/org";
 
 function escapeField(v: string | number | boolean | null | undefined): string {
-  const s = v == null ? "" : String(v);
+  let s = v == null ? "" : String(v);
+  // 数式として解釈される先頭文字(= + - @ タブ)で始まる文字列は、Excelで数式が
+  // 実行されないよう先頭に ' を付ける(受検者が入力した氏名・部署などが出力されるため)
+  if (typeof v === "string" && /^[=+\-@\t\r]/.test(s)) {
+    s = "'" + s;
+  }
   if (/[",\r\n]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`;
   }

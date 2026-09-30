@@ -201,7 +201,7 @@ export function ExamForm({
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             氏名
           </label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 山田 太郎" style={input} required />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例: 山田 太郎" style={input} required maxLength={60} />
           {!nameOk && (
             <p style={{ fontSize: 12, color: "#B02A2A", margin: "4px 0 0" }}>
               氏名を入力してください(氏名が無いと受検できません)。
@@ -212,7 +212,7 @@ export function ExamForm({
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             社員番号(任意)
           </label>
-          <input value={empId} onChange={(e) => setEmpId(e.target.value)} placeholder="例: 10234" style={input} />
+          <input value={empId} onChange={(e) => setEmpId(e.target.value)} placeholder="例: 10234" style={input} maxLength={30} />
         </div>
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
@@ -222,7 +222,7 @@ export function ExamForm({
             // 部署が多い企業でも探しやすいよう、文字を入力すると候補が絞り込まれる選択欄にする
             <DeptSelect options={departments} value={dept} onChange={setDept} />
           ) : (
-            <input value={dept} onChange={(e) => setDept(e.target.value)} placeholder="例: 製造部" style={input} />
+            <input value={dept} onChange={(e) => setDept(e.target.value)} placeholder="例: 製造部" style={input} maxLength={60} />
           )}
         </div>
         <div>

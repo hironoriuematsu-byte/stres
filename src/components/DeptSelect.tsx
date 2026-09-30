@@ -132,6 +132,7 @@ export function DeptSelect({
           onKeyDown={onKeyDown}
           placeholder={placeholder}
           autoComplete="off"
+          maxLength={60}
           role="combobox"
           aria-expanded={open}
           aria-autocomplete="list"

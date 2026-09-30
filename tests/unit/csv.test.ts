@@ -111,3 +111,12 @@ describe("招待CSVパーサ(メール, 企業コード)", () => {
     expect(b).toEqual([{ name: "山田 太郎", email: "yamada@example.com" }]);
   });
 });
+
+describe("CSV出力(数式の実行防止)", () => {
+  it("= + - @ で始まる文字列は先頭に ' を付ける(数値はそのまま)", () => {
+    const csv = buildCsv(["a", "b", "c", "d"], [["=1+1", "+x", "-y", "@z"], [5, -5, "普通", "山田 太郎"]]);
+    const lines = csv.replace("﻿", "").split("\r\n");
+    expect(lines[1]).toBe("'=1+1,'+x,'-y,'@z");
+    expect(lines[2]).toBe("5,-5,普通,山田 太郎");
+  });
+});
