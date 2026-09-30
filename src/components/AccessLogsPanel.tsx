@@ -43,6 +43,14 @@ const ACTION_LABEL: Record<string, string> = {
   hm_view_stress_history: "受検歴の閲覧(健康管理Web)",
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// 補足欄が結果IDを指していればそのIDを返す("report:ID" は結果票ページ、IDだけは一覧の詳細)
+function resultIdOf(target: string | null): string | null {
+  if (!target) return null;
+  const t = target.startsWith("report:") ? target.slice(7) : target;
+  return UUID_RE.test(t) ? t : null;
+}
+
 // 閲覧(view_*)か操作(データの作成・変更・出力)かの分類
 type LogKind = "all" | "view" | "operation";
 const kindOf = (action: string): Exclude<LogKind, "all"> =>
@@ -52,6 +60,8 @@ export function AccessLogsPanel() {
   const [rows, setRows] = useState<LogRow[] | null>(null);
   const [people, setPeople] = useState<Record<string, Profile>>({});
   const [companies, setCompanies] = useState<Record<string, string>>({});
+  // 個人結果の閲覧ログは結果IDで記録されているため、誰の何年度の結果かを表示用に引く
+  const [resultInfo, setResultInfo] = useState<Record<string, { user_id: string; fiscal_year: number }>>({});
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [kind, setKind] = useState<LogKind>("all");
@@ -73,7 +83,23 @@ export function AccessLogsPanel() {
     const cmap: Record<string, string> = {};
     ((cs as { id: string; name: string }[]) ?? []).forEach((c) => (cmap[c.id] = c.name));
     setCompanies(cmap);
-    setRows((logs as LogRow[]) ?? []);
+    const logRows = (logs as LogRow[]) ?? [];
+    // 補足欄に結果ID(そのまま、または report:ID)が入っている行の結果をまとめて引く
+    const ids = Array.from(
+      new Set(logRows.map((r) => resultIdOf(r.target)).filter((x): x is string => x !== null))
+    );
+    const rmap: Record<string, { user_id: string; fiscal_year: number }> = {};
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data: rs } = await supabase
+        .from("results")
+        .select("id, user_id, fiscal_year")
+        .in("id", ids.slice(i, i + 200));
+      ((rs as { id: string; user_id: string; fiscal_year: number }[]) ?? []).forEach(
+        (r) => (rmap[r.id] = { user_id: r.user_id, fiscal_year: r.fiscal_year })
+      );
+    }
+    setResultInfo(rmap);
+    setRows(logRows);
   };
 
   useEffect(() => {
@@ -95,7 +121,15 @@ export function AccessLogsPanel() {
   const targetLabel = (r: LogRow): string => {
     const t = r.target ?? "";
     if (!t) return "";
-    if (t.startsWith("report:")) return `個人結果票 (${t.slice(7, 15)}…)`;
+    // 個人結果の閲覧: 結果IDを「誰の何年度の結果か」に置き換える
+    const rid = resultIdOf(t);
+    if (rid) {
+      const info = resultInfo[rid];
+      const isReport = t.startsWith("report:");
+      if (!info) return isReport ? "結果票(削除済みの結果)" : "詳細(削除済みの結果)";
+      const who = people[info.user_id]?.name ?? "(氏名不明)";
+      return `${who}さん ${info.fiscal_year}年度${isReport ? " 結果票(印刷用)" : " 詳細"}`;
+    }
     const company = companyOf(r);
     if (company !== "—") {
       if (t === company) return "";
