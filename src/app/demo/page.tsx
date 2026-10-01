@@ -166,7 +166,7 @@ export default function DemoTopPage({ searchParams }: { searchParams: { q?: stri
         <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8, margin: 0 }}>
           導入のご相談・お見積りは、
           <a
-            href="https://mestate.jp/"
+            href="https://mestate.jp/contact.html"
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: brand.tealDark, fontWeight: 700, textDecoration: "underline" }}
@@ -176,8 +176,8 @@ export default function DemoTopPage({ searchParams }: { searchParams: { q?: stri
           までお問い合わせください。
         </p>
         <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <a href="https://mestate.jp/" target="_blank" rel="noopener noreferrer">
-            <Btn tone="orange">うえまつ産業医事務所のサイトを見る</Btn>
+          <a href="https://mestate.jp/contact.html" target="_blank" rel="noopener noreferrer">
+            <Btn tone="orange">お問い合わせページへ</Btn>
           </a>
           <Link href="/">
             <Btn tone="ghost">トップページへ</Btn>
