@@ -142,7 +142,7 @@ export function JimuDashboard({
             if (k !== "使い方ガイド") setTab(k);
           }}
         />}
-      {tab === "結果一覧" && <ResultsPanel companyId={companyId} companyName={companyName} fiscalYear={year} />}
+      {tab === "結果一覧" && <ResultsPanel companyId={companyId} companyName={companyName} fiscalYear={year} formHref={`/stress-report/${companyId}/${year}`} />}
       {tab === "面接指導申出" && <InterviewPanel companyId={companyId} companyName={companyName} />}
       {tab === "集団分析" && (
         <GroupReportView companyId={companyId} companyName={companyName} fiscalYear={year} embedded formHref={`/stress-report/${companyId}/${year}`} />

@@ -18,11 +18,13 @@ export function ResultsPanel({
   companyName,
   fiscalYear,
   questionnaire = "57",
+  formHref,
 }: {
   companyId: string;
   companyName: string;
   fiscalYear: number;
   questionnaire?: "57" | "80";
+  formHref?: string; // 検査結果等報告書(様式第6号の3)のページ。集団分析タブと同じボタンを結果一覧にも出す
 }) {
   const [rows, setRows] = useState<ResultRow[] | null>(null);
   const [people, setPeople] = useState<Record<string, Profile>>({});
@@ -186,7 +188,7 @@ export function ResultsPanel({
             受検 {rows.length} 名 / 高ストレス {highCount} 名({rows.length ? Math.round((highCount / rows.length) * 100) : 0}%)
           </p>
         </div>
-        {/* 操作列は画面右に寄せ、右端をCSV出力にする: 高ストレス者の絞り込み → 在籍労働者数(CSVのサマリ用) → CSV出力 */}
+        {/* 操作列は画面右に寄せる: 高ストレス者の絞り込み → 在籍労働者数(CSV・報告書共通) → CSV出力 → 労基署報告書(様式第6号の3) */}
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", marginLeft: "auto" }}>
           <Btn tone="ghost" onClick={() => setOnlyHigh(!onlyHigh)} style={{ padding: "8px 14px", fontSize: 13 }}>
             {onlyHigh ? "全員を表示" : "高ストレス者のみ"}
@@ -199,6 +201,16 @@ export function ResultsPanel({
           <Btn tone="ghost" onClick={exportCsv} style={{ padding: "8px 14px", fontSize: 13 }}>
             ストレスチェック個人結果一覧CSV
           </Btn>
+          {formHref && (
+            <a
+              href={formHref}
+              target="_blank"
+              rel="noreferrer"
+              style={{ fontSize: 13, fontWeight: 700, color: brand.tealDark, border: `1px solid ${brand.teal}`, borderRadius: 10, padding: "8px 14px", textDecoration: "none" }}
+            >
+              📝 検査結果等報告書(様式第6号の3)
+            </a>
+          )}
         </div>
       </div>
       {err && <div style={{ fontSize: 13, color: "#B02A2A", marginTop: 10 }}>{err}</div>}
