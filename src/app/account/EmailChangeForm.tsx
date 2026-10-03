@@ -14,6 +14,29 @@ const input = {
   borderRadius: 10,
 };
 
+// Supabase からの英語のエラーを、利用者が次に何をすればよいか分かる日本語にする
+function translateError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("already") && (m.includes("registered") || m.includes("exists"))) {
+    return (
+      "新しいメールアドレスは、すでに別のアカウントで登録されているため使えません。" +
+      "そのアドレスで登録した覚えがある場合は、いったんログアウトして、そのアドレスとパスワードでログインしてください" +
+      "(パスワードが不明なときはログイン画面の「パスワードを忘れた方」から再設定できます)。" +
+      "2つのアカウントを1つにまとめたい場合は、会社のストレスチェック担当者または実施者(産業医事務所)にご連絡ください。"
+    );
+  }
+  if (m.includes("rate limit") || m.includes("too many")) {
+    return "短時間に確認メールを送りすぎたため、しばらく送信できません。数分おいてからもう一度お試しください。";
+  }
+  if (m.includes("invalid") && m.includes("email")) {
+    return "メールアドレスの形式が正しくありません。入力内容をご確認ください。";
+  }
+  if (m.includes("not authenticated") || m.includes("jwt") || m.includes("session")) {
+    return "ログインの有効期限が切れています。ログインし直してから、もう一度お試しください。";
+  }
+  return "変更手続きを開始できませんでした: " + message;
+}
+
 export function EmailChangeForm({ currentEmail }: { currentEmail: string }) {
   const [newEmail, setNewEmail] = useState("");
   const [confirmEmail, setConfirmEmail] = useState("");
@@ -40,7 +63,7 @@ export function EmailChangeForm({ currentEmail }: { currentEmail: string }) {
     );
     setBusy(false);
     if (error) {
-      setErr("変更手続きを開始できませんでした: " + error.message);
+      setErr(translateError(error.message));
       return;
     }
     setSent(true);
