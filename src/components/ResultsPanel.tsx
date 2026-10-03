@@ -271,10 +271,11 @@ export function ResultsPanel({
                     {r.score_b}
                   </td>
                   <td style={{ padding: "9px 10px" }}>{r.score_c}</td>
-                  <td style={{ padding: "9px 10px" }}>
+                  {/* 判定・同意は折り返さず1行に収める(部署名が長い行でも2行にならないようにする) */}
+                  <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
                     {r.high_stress ? <Badge tone="red">高ストレス</Badge> : <Badge tone="gray">—</Badge>}
                   </td>
-                  <td style={{ padding: "9px 10px" }}>
+                  <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
                     {r.consent ? <Badge>同意あり</Badge> : <Badge tone="gray">同意なし</Badge>}
                   </td>
                 </tr>

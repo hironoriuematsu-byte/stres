@@ -25,6 +25,9 @@ export function Badge({
         padding: "3px 10px",
         borderRadius: 999,
         letterSpacing: "0.04em",
+        // バッジの文字は途中で折り返さない(一覧の「高ストレス」「同意あり」が2行になるのを防ぐ)
+        whiteSpace: "nowrap",
+        display: "inline-block",
       }}
     >
       {children}
