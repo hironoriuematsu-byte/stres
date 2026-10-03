@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
+import { EmailTypoHint } from "@/components/EmailTypoHint";
 
 const input = {
   width: "100%",
@@ -103,6 +104,9 @@ export function EmailChangeForm({ currentEmail }: { currentEmail: string }) {
             onChange={(e) => setNewEmail(e.target.value)}
             style={{ ...input, marginBottom: 12 }}
           />
+          <div style={{ marginTop: -8, marginBottom: 12 }}>
+            <EmailTypoHint email={newEmail} onFix={setNewEmail} />
+          </div>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             新しいメールアドレス(確認のためもう一度)
           </label>

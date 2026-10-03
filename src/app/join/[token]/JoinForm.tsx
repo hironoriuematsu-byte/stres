@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { isValidPersonName } from "@/lib/name";
+import { EmailTypoHint } from "@/components/EmailTypoHint";
 
 const input = {
   width: "100%",
@@ -64,6 +65,10 @@ export function JoinForm({ token }: { token: string }) {
         <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.8, margin: 0 }}>
           {email} 宛に本人確認メールを送信しました。メール内のリンクをクリックすると登録が完了し、そのまま受検に進めます。メールが見当たらない場合は迷惑メールフォルダもご確認ください。
         </p>
+        <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8, margin: "10px 0 0" }}>
+          携帯電話会社のメール(docomo・au・softbank など)をお使いの場合、迷惑メール設定で届かないことがあります。
+          「mestate.jp」からのメールを受信できるよう設定してから、ログイン画面の「パスワードを忘れた方」でメールを再送してください。
+        </p>
       </Card>
     );
   }
@@ -113,6 +118,7 @@ export function JoinForm({ token }: { token: string }) {
             メールアドレス
           </label>
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={input} />
+          <EmailTypoHint email={email} onFix={setEmail} />
           <p style={{ fontSize: 12, color: "#8A6B2E", background: "#FBF3E3", border: "1px solid #EFD9A8", borderRadius: 8, padding: "8px 10px", margin: "6px 0 0", lineHeight: 1.7 }}>
             登録したメールアドレスはログインに必要です。忘れないようにメモ等に残してください。
           </p>

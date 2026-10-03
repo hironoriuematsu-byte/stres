@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cleanPersonName, isValidPersonName } from "@/lib/name";
 import { clientIpHeaders } from "@/lib/supabase/server";
+import { checkEmailDomain } from "@/lib/email-domain-check";
 
 export const runtime = "nodejs";
 
@@ -28,6 +29,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "氏名を入力してください(空白だけの入力はできません)" }, { status: 400 });
   }
   const cleanName = cleanPersonName(name);
+
+  // 存在しないドメイン(入力ミス)には確認メールが届かないため、送信前に止める
+  const domainCheck = await checkEmailDomain(email);
+  if (!domainCheck.ok) {
+    return NextResponse.json({ error: domainCheck.message }, { status: 400 });
+  }
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) {

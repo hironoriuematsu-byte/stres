@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { cleanPersonName, isValidPersonName, NAME_PLACEHOLDER } from "@/lib/name";
+import { checkEmailDomain } from "@/lib/email-domain-check";
 
 export const runtime = "nodejs";
 
@@ -81,6 +82,9 @@ export async function POST(req: Request) {
       if (!inv.email || !inv.company_code) {
         throw new Error("メール・企業コードは必須です");
       }
+      // 存在しないドメイン(入力ミス)には招待メールが届かないため、送信前に止める
+      const domainCheck = await checkEmailDomain(inv.email);
+      if (!domainCheck.ok) throw new Error(domainCheck.message);
 
       const { data: company } = await admin
         .from("companies")

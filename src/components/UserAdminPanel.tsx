@@ -9,6 +9,7 @@ import { CompanySelect } from "@/components/CompanySelect";
 import { parseInviteCsv, parseJimuInviteCsv } from "@/lib/parse-csv";
 import { readTextFile } from "@/lib/read-text";
 import { isValidPersonName } from "@/lib/name";
+import { EmailTypoHint } from "@/components/EmailTypoHint";
 
 type InvitePayload = {
   email: string;
@@ -223,6 +224,7 @@ export function UserAdminPanel({
         <div>
           <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>メールアドレス</label>
           <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={input} />
+          <EmailTypoHint email={form.email} onFix={(v) => setForm({ ...form, email: v })} />
         </div>
         {!jimuMode && (
           <>
