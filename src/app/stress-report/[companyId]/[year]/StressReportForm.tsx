@@ -161,11 +161,12 @@ export function StressReportForm({
           header, footer, .no-print { display: none !important; }
           main { padding: 0 !important; }
           body { background: #fff !important; }
-          .report-sheet { border: none !important; box-shadow: none !important; padding: 0 !important; }
+          .report-sheet { border: none !important; box-shadow: none !important; padding: 12mm !important; }
           input, select, textarea { border: none !important; background: transparent !important; padding: 0 !important; font-weight: 700; }
           select { appearance: none; -webkit-appearance: none; }
         }
-        @page { size: A4; margin: 12mm; }
+        /* ページ余白を0にしてブラウザのヘッダー/フッター(URL・日付・題名)を印字させず、余白は帳票側(.report-sheet)で取る */
+        @page { size: A4; margin: 0; }
       `}</style>
 
       <div className="no-print" style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "12px 0" }}>

@@ -122,9 +122,10 @@ export function ReportView({
           header, footer, .no-print { display: none !important; }
           main { padding: 0 !important; }
           body { background: #fff !important; }
-          .report-sheet { border: none !important; box-shadow: none !important; padding: 0 !important; }
+          .report-sheet { border: none !important; box-shadow: none !important; padding: 14mm !important; }
         }
-        @page { size: A4; margin: 14mm; }
+        /* ページ余白を0にしてブラウザのヘッダー/フッター(URL・日付・題名)を印字させず、余白は帳票側(.report-sheet)で取る */
+        @page { size: A4; margin: 0; }
       `}</style>
 
       <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>

@@ -662,13 +662,14 @@ export function GroupReportView({
           header, footer, .no-print { display: none !important; }
           main { padding: 0 !important; }
           body { background: #fff !important; }
-          .report-sheet { border: none !important; box-shadow: none !important; padding: 0 !important; }
+          .report-sheet { border: none !important; box-shadow: none !important; padding: 12mm !important; }
           .print-break-before { break-before: page; page-break-before: always; }
           .print-keep { break-inside: avoid; page-break-inside: avoid; }
           /* 見出しの直後で改ページしない(見出しだけがページ末尾に残るのを防ぐ) */
           .report-sheet h2, .report-sheet h3 { break-after: avoid; page-break-after: avoid; }
         }
-        @page { size: A4; margin: 12mm; }
+        /* ページ余白を0にしてブラウザのヘッダー/フッター(URL・日付・題名)を印字させず、余白は帳票側(.report-sheet)で取る */
+        @page { size: A4; margin: 0; }
       `}</style>
 
       {embedded ? (
