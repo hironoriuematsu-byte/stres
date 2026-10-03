@@ -6,6 +6,7 @@ import { Btn } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER } from "@/lib/org";
 import { PrintHeader } from "@/components/PrintHeader";
+import { HeadcountField } from "@/components/HeadcountField";
 
 export type ReportInfo = {
   company_id: string;
@@ -269,7 +270,15 @@ export function StressReportForm({
 
         <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "20px 0 4px" }}>報告のたびに記入する項目</h2>
         <Row label="在籍労働者数" note="検査実施年月の末日現在の常時使用する労働者数">
-          <input type="number" style={{ ...inputStyle, width: 160 }} value={headcount} onChange={(e) => setHeadcount(e.target.value)} placeholder="例: 120" />
+          {/* 企業×年度ごとに保存され、結果一覧の在籍労働者数と共通 */}
+          <HeadcountField
+            companyId={companyId}
+            fiscalYear={fiscalYear}
+            value={headcount}
+            onChange={setHeadcount}
+            canEdit={canEdit}
+            inputStyle={{ ...inputStyle, width: 160 }}
+          />
           <span style={{ fontSize: 13, marginLeft: 6 }}>人</span>
         </Row>
         <Row label="報告日">

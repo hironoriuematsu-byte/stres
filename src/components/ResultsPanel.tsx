@@ -9,6 +9,7 @@ import { downloadCsv, resultsCsv } from "@/lib/csv";
 import { logAccess } from "@/lib/log";
 import { LoadingCard } from "@/components/LoadingCard";
 import { DeptSelect } from "@/components/DeptSelect";
+import { HeadcountField } from "@/components/HeadcountField";
 import { getFiscalYear } from "@/lib/fiscal";
 
 // office / jimu 共通: 結果一覧(高ストレスフィルタ・CSV出力・詳細閲覧ログ)
@@ -33,7 +34,7 @@ export function ResultsPanel({
   const [deptEdit, setDeptEdit] = useState("");
   const [deptBusy, setDeptBusy] = useState(false);
   const [deptOptions, setDeptOptions] = useState<string[]>([]);
-  // 報告書(様式第6号の2)の「在籍労働者数」。任意入力
+  // 報告書(様式第6号の3)の「在籍労働者数」。任意入力。値は HeadcountField が企業×年度ごとに保存する
   const [headcount, setHeadcount] = useState("");
 
   const supabase = createClient();
@@ -192,20 +193,8 @@ export function ResultsPanel({
           </Btn>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#5B6B6A" }}>
             在籍労働者数(任意)
-            <input
-              type="number"
-              min={0}
-              value={headcount}
-              onChange={(e) => setHeadcount(e.target.value)}
-              placeholder="例: 120"
-              style={{
-                width: 90,
-                padding: "7px 9px",
-                fontSize: 13,
-                border: `1px solid ${brand.line}`,
-                borderRadius: 8,
-              }}
-            />
+            {/* 企業×年度ごとに保存され、検査結果等報告書(様式第6号の3)と共通 */}
+            <HeadcountField companyId={companyId} fiscalYear={fiscalYear} value={headcount} onChange={setHeadcount} compact />
           </label>
           <Btn tone="ghost" onClick={exportCsv} style={{ padding: "8px 14px", fontSize: 13 }}>
             ストレスチェック個人結果一覧CSV
