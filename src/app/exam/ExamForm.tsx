@@ -8,6 +8,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card, QuestionRow, ScoreBar } from "@/components/ui";
 import { DeptSelect } from "@/components/DeptSelect";
+import { birthDateBounds, birthDateError } from "@/lib/birth-date";
+import { saveBirthDate } from "@/lib/birth-date-db";
 import { brand } from "@/lib/brand";
 import { SECTION_A, SECTION_B, SECTION_C, SECTION_D, Answers, Scores, calcScores, emptyAnswers } from "@/lib/questionnaire";
 import { getFiscalYear } from "@/lib/fiscal";
@@ -27,6 +29,8 @@ type ExamProfile = {
   name: string;
   empId: string;
   dept: string;
+  birthDate?: string; // 登録済みの生年月日(YYYY-MM-DD)
+  birthDateSupported?: boolean; // false のときは列が無い(SQL 0024 未実行)ため入力欄を出さない
   companyId: string;
   companyName: string;
 };
@@ -49,6 +53,10 @@ export function ExamForm({
   const [name, setName] = useState(profile.name);
   const [empId, setEmpId] = useState(profile.empId);
   const [dept, setDept] = useState(profile.dept);
+  // 生年月日は健康管理Webで健診結果・カルテと本人を突合するために使う。未登録の方には受検時に入れてもらう
+  const askBirth = !demo && profile.birthDateSupported !== false;
+  const [birthDate, setBirthDate] = useState(profile.birthDate ?? "");
+  const birthErr = askBirth ? birthDateError(birthDate) : null;
   // 氏名は空白(半角・全角)だけの入力や「未設定」を有効とみなさない(lib/name.ts)。
   // 以前は空白だけでも進めてしまい、氏名が空のまま受検できた事例があったため
   const cleanName = cleanPersonName(name);
@@ -129,6 +137,14 @@ export function ExamForm({
       .from("profiles")
       .update({ name: cleanName, emp_id: empId.trim() || null, dept: dept.trim() })
       .eq("user_id", profile.userId);
+    // 生年月日は別に保存する(列が無い環境でも上の更新に影響させない)
+    if (askBirth && birthDate && birthDate !== profile.birthDate) {
+      try {
+        await saveBirthDate(supabase, profile.userId, birthDate);
+      } catch {
+        /* 受検は続行する */
+      }
+    }
 
     const { data: inserted, error } = await supabase
       .from("results")
@@ -183,7 +199,7 @@ export function ExamForm({
         <Badge>STEP 1 / {totalSteps}</Badge>
         <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 4px" }}>受検者情報</h2>
         <p style={{ fontSize: 13, color: "#5B6B6A", marginBottom: 14 }}>
-          ストレスチェックを開始します。氏名・部署・性別を入力してください(社員番号は任意です)。
+          ストレスチェックを開始します。氏名{askBirth ? "・生年月日" : ""}・部署・性別を入力してください(社員番号は任意です)。
         </p>
         <div
           style={{
@@ -208,6 +224,26 @@ export function ExamForm({
             </p>
           )}
         </div>
+        {askBirth && (
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
+              生年月日
+            </label>
+            <input
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              min={birthDateBounds().min}
+              max={birthDateBounds().max}
+              autoComplete="bday"
+              style={input}
+              required
+            />
+            <p style={{ fontSize: 12, color: birthErr ? "#B02A2A" : "#8A9694", margin: "4px 0 0", lineHeight: 1.7 }}>
+              {birthErr ?? "健康診断の結果や面談の記録と本人を正しく結び付けるために使います(同姓同名の方の区別)。"}
+            </p>
+          </div>
+        )}
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             社員番号(任意)
@@ -244,7 +280,7 @@ export function ExamForm({
           <Btn tone="ghost" onClick={() => { startNavigationProgress(); router.push(demo ? "/demo" : "/my"); }}>
             戻る
           </Btn>
-          <Btn onClick={() => setStep(1)} disabled={!nameOk || !dept.trim() || !gender}>
+          <Btn onClick={() => setStep(1)} disabled={!nameOk || !!birthErr || !dept.trim() || !gender}>
             回答をはじめる
           </Btn>
         </div>

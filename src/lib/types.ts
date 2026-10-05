@@ -10,6 +10,7 @@ export type Profile = {
   no_personnel_authority: boolean;
   attested_at: string | null;
   hm_company_access?: boolean; // 健康管理Webでは事業者担当者として扱う(兼務)
+  birth_date?: string | null; // 生年月日(0024。健康管理Webとの突合用)
 };
 
 export type Company = {

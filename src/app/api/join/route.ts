@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cleanPersonName, isValidPersonName } from "@/lib/name";
 import { clientIpHeaders } from "@/lib/supabase/server";
 import { checkEmailDomain } from "@/lib/email-domain-check";
+import { birthDateError, isMissingBirthDateColumn } from "@/lib/birth-date";
 
 export const runtime = "nodejs";
 
@@ -13,12 +14,14 @@ export const runtime = "nodejs";
 //    氏名は登録時に必須(以前は受検時に入力する作りで、未設定のまま残る利用者がいたため)
 export async function POST(req: Request) {
   let token: string | undefined, name: string | undefined, email: string | undefined, password: string | undefined;
+  let birthDate: string | undefined;
   try {
     const body = await req.json();
     token = body.token;
     name = body.name;
     email = body.email;
     password = body.password;
+    birthDate = typeof body.birthDate === "string" ? body.birthDate : undefined;
   } catch {
     /* fallthrough */
   }
@@ -29,6 +32,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "氏名を入力してください(空白だけの入力はできません)" }, { status: 400 });
   }
   const cleanName = cleanPersonName(name);
+  // 生年月日(健康管理Webとの突合用)。古い画面からの送信(未指定)は許容する
+  if (birthDate != null) {
+    const birthErr = birthDateError(birthDate);
+    if (birthErr) return NextResponse.json({ error: birthErr }, { status: 400 });
+  }
 
   // 存在しないドメイン(入力ミス)には確認メールが届かないため、送信前に止める
   const domainCheck = await checkEmailDomain(email);
@@ -86,14 +94,21 @@ export async function POST(req: Request) {
   }
 
   // プロフィール作成(社員番号・部署は本人が受検時に入力)
-  const { error: profErr } = await admin.from("profiles").upsert({
+  const baseProfile: Record<string, unknown> = {
     user_id: data.user!.id,
     role: "employee",
     name: cleanName,
     emp_id: null,
     dept: null,
     company_id: campaign.company_id,
-  });
+  };
+  let { error: profErr } = await admin
+    .from("profiles")
+    .upsert(birthDate ? { ...baseProfile, birth_date: birthDate } : baseProfile);
+  // SQL 0024 が未実行で birth_date 列が無い場合は、生年月日なしで登録する
+  if (profErr && birthDate && isMissingBirthDateColumn(profErr.message)) {
+    ({ error: profErr } = await admin.from("profiles").upsert(baseProfile));
+  }
   if (profErr) {
     return NextResponse.json({ error: `登録エラー: ${profErr.message}` }, { status: 500 });
   }

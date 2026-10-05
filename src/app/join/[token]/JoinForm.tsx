@@ -6,6 +6,7 @@ import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { isValidPersonName } from "@/lib/name";
 import { EmailTypoHint } from "@/components/EmailTypoHint";
+import { birthDateBounds, birthDateError } from "@/lib/birth-date";
 
 const input = {
   width: "100%",
@@ -20,6 +21,8 @@ export function JoinForm({ token }: { token: string }) {
   // 氏名は登録時に必須にする(以前は受検時に入力する作りで、未設定のまま残る利用者がいたため)
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  // 生年月日は健康管理Webで健診結果・カルテと本人を突合するために使う(同姓同名の区別)
+  const [birthDate, setBirthDate] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [state, setState] = useState<"form" | "sent" | "exists">("form");
@@ -32,6 +35,11 @@ export function JoinForm({ token }: { token: string }) {
       setErr("氏名を入力してください(空白だけの入力はできません)。");
       return;
     }
+    const birthErr = birthDateError(birthDate);
+    if (birthErr) {
+      setErr(birthErr);
+      return;
+    }
     if (password !== confirm) {
       setErr("確認用パスワードが一致しません。");
       return;
@@ -42,7 +50,7 @@ export function JoinForm({ token }: { token: string }) {
       const res = await fetch("/api/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, name, email, password }),
+        body: JSON.stringify({ token, name, email, password, birthDate }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -111,6 +119,24 @@ export function JoinForm({ token }: { token: string }) {
           />
           <p style={{ fontSize: 12, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.7 }}>
             結果票と実施者・実施事務従事者の画面に表示されます。会社に届け出ている氏名を入力してください。
+          </p>
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
+            生年月日
+          </label>
+          <input
+            type="date"
+            required
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            min={birthDateBounds().min}
+            max={birthDateBounds().max}
+            autoComplete="bday"
+            style={input}
+          />
+          <p style={{ fontSize: 12, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.7 }}>
+            健康診断の結果や面談の記録と本人を正しく結び付けるために使います(同姓同名の方の区別)。
           </p>
         </div>
         <div style={{ marginBottom: 14 }}>

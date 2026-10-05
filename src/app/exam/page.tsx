@@ -6,6 +6,7 @@ import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { getFiscalYear } from "@/lib/fiscal";
 import { ExamForm } from "./ExamForm";
+import { fetchBirthDate } from "@/lib/birth-date-db";
 
 export default async function ExamPage() {
   const { user, profile } = await getSessionProfile();
@@ -26,7 +27,7 @@ export default async function ExamPage() {
 
   const supabase = createClient();
   const fiscalYear = getFiscalYear();
-  const [{ data: company }, { data: existing }, { data: depts }] = await Promise.all([
+  const [{ data: company }, { data: existing }, { data: depts }, birth] = await Promise.all([
     supabase.from("companies").select("name, questionnaire").eq("id", profile.company_id!).single(),
     // 年度内1回の原則: 当年度の受検が既にあればフォームを表示しない
     supabase
@@ -42,6 +43,8 @@ export default async function ExamPage() {
       .eq("company_id", profile.company_id!)
       .order("sort_order")
       .order("name"),
+    // 生年月日(健康管理Webとの突合用。SQL 0024 未実行なら supported=false)
+    fetchBirthDate(supabase, profile.user_id),
   ]);
 
   if (existing) {
@@ -73,6 +76,8 @@ export default async function ExamPage() {
         name: profile.name === "未設定" ? "" : profile.name,
         empId: profile.emp_id ?? "",
         dept: profile.dept ?? "",
+        birthDate: birth.value ?? "",
+        birthDateSupported: birth.supported,
         companyId: profile.company_id!,
         companyName: company?.name ?? "",
       }}
