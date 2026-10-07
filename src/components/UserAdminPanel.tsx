@@ -69,6 +69,40 @@ export function UserAdminPanel({
   const memberCompany = companies?.find((c) => c.id === memberCompanyId);
   const [memberBusy, setMemberBusy] = useState(false);
   const [memberErr, setMemberErr] = useState<string | null>(null);
+  // 企業をまたいだ検索(メールアドレス・氏名の一部)。「この人はどの企業のメンバーか」を調べる用途
+  type Found = Member & { company_id: string | null; company_name: string; last_sign_in_at: string | null; confirmed: boolean };
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchBusy, setSearchBusy] = useState(false);
+  const [searchErr, setSearchErr] = useState<string | null>(null);
+  const [found, setFound] = useState<Found[] | null>(null);
+
+  const searchMembers = async () => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setSearchErr("2文字以上で検索してください。");
+      return;
+    }
+    setSearchBusy(true);
+    setSearchErr(null);
+    try {
+      const res = await fetch("/api/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: q }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setSearchErr(body.error ?? res.statusText);
+        setFound([]);
+      } else {
+        setFound(body.found as Found[]);
+      }
+    } catch (e) {
+      setSearchErr(String(e));
+      setFound([]);
+    }
+    setSearchBusy(false);
+  };
 
   const loadMembers = async (companyId: string) => {
     if (!companyId) return;
@@ -306,6 +340,77 @@ export function UserAdminPanel({
             {memberCompany?.hm_enabled &&
               "「事業者担当者を兼ねる」にチェックすると、同じアカウントのまま健康管理Webを自社担当としてご利用いただけます(ストレスチェックでの権限は変わりません)。「閲覧のみ」にチェックすると、健康管理Webで登録・編集・取込ができなくなります(閲覧は可能)。"}
           </p>
+          {/* メールアドレス・氏名で探す(企業をまたいで検索し、所属企業を表示する) */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              searchMembers();
+            }}
+            style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}
+          >
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="メールアドレスまたは氏名で探す（全企業）"
+              style={{ ...input, width: 320 }}
+            />
+            <Btn tone="ghost" type="submit" disabled={searchBusy} style={{ padding: "8px 14px", fontSize: 13 }}>
+              {searchBusy ? "検索中…" : "検索"}
+            </Btn>
+            {searchErr && <span style={{ fontSize: 12.5, color: "#B02A2A" }}>{searchErr}</span>}
+          </form>
+          {found !== null && (
+            <div style={{ overflowX: "auto", marginBottom: 14 }}>
+              {found.length === 0 ? (
+                <p style={{ fontSize: 13, color: "#5B6B6A", margin: 0 }}>該当するアカウントはありません。</p>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
+                      {["メールアドレス", "氏名", "企業", "ロール", "最終ログイン", ""].map((h) => (
+                        <th key={h} style={{ textAlign: "left", padding: "8px 10px", whiteSpace: "nowrap" }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {found.map((f) => (
+                      <tr key={f.user_id} style={{ borderBottom: `1px solid ${brand.line}` }}>
+                        <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{f.email}</td>
+                        <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{f.name || "（プロフィール未登録）"}</td>
+                        <td style={{ padding: "8px 10px" }}>{f.company_name || (f.role === "office" ? "（産業医事務所）" : "—")}</td>
+                        <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                          {f.role in ROLE_LABEL ? ROLE_LABEL[f.role as Role] : f.role || "—"}
+                          {f.hm_company_access && <span style={{ marginLeft: 6, fontSize: 11, color: "#8A6B2E" }}>健康管理Web 事業者担当者</span>}
+                        </td>
+                        <td style={{ padding: "8px 10px", whiteSpace: "nowrap", color: "#5B6B6A" }}>
+                          {f.last_sign_in_at ? new Date(f.last_sign_in_at).toLocaleString("ja-JP") : f.confirmed ? "未ログイン" : "メール未確認"}
+                        </td>
+                        <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                          {f.company_id && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMemberCompanyId(f.company_id!);
+                                setMembers(null);
+                                setMemberErr(null);
+                                loadMembers(f.company_id!);
+                              }}
+                              style={{ background: "none", border: "none", color: brand.tealDark, textDecoration: "underline", cursor: "pointer", fontSize: 12.5, padding: 0 }}
+                            >
+                              この企業のメンバーを表示
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
             <CompanySelect
               companies={companies ?? []}
