@@ -91,11 +91,12 @@ export function InterviewPanel({
                 <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
                   {new Date(r.created_at).toLocaleDateString("ja-JP")}
                 </td>
-                <td style={{ padding: "9px 10px", fontWeight: 700, color: brand.ink }}>
+                {/* 氏名は折り返さず1行に収める(部署・相談内容の列を折り返す) */}
+                <td style={{ padding: "9px 10px", fontWeight: 700, color: brand.ink, whiteSpace: "nowrap" }}>
                   {people[r.user_id]?.name ?? "(不明)"}
                 </td>
-                <td style={{ padding: "9px 10px" }}>{people[r.user_id]?.dept ?? ""}</td>
-                <td style={{ padding: "9px 10px", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis" }}>
+                <td style={{ padding: "9px 10px", maxWidth: 220 }}>{people[r.user_id]?.dept ?? ""}</td>
+                <td style={{ padding: "9px 10px", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis" }}>
                   {[r.message, r.preferred].filter(Boolean).join(" / ") || "—"}
                 </td>
                 <td style={{ padding: "9px 10px" }}>
