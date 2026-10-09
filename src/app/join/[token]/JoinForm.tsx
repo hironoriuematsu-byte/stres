@@ -6,7 +6,8 @@ import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { isValidPersonName } from "@/lib/name";
 import { EmailTypoHint } from "@/components/EmailTypoHint";
-import { birthDateBounds, birthDateError } from "@/lib/birth-date";
+import { birthTextError, parseBirthDateInput } from "@/lib/birth-date";
+import { BirthDateInput } from "@/components/BirthDateInput";
 
 const input = {
   width: "100%",
@@ -22,7 +23,8 @@ export function JoinForm({ token }: { token: string }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   // 生年月日は健康管理Webで健診結果・カルテと本人を突合するために使う(同姓同名の区別)
-  const [birthDate, setBirthDate] = useState("");
+  const [birthText, setBirthText] = useState(""); // 直接入力(19850304 など)
+  const birthDate = parseBirthDateInput(birthText) ?? "";
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [state, setState] = useState<"form" | "sent" | "exists">("form");
@@ -35,7 +37,7 @@ export function JoinForm({ token }: { token: string }) {
       setErr("氏名を入力してください(空白だけの入力はできません)。");
       return;
     }
-    const birthErr = birthDateError(birthDate);
+    const birthErr = birthTextError(birthText);
     if (birthErr) {
       setErr(birthErr);
       return;
@@ -125,16 +127,7 @@ export function JoinForm({ token }: { token: string }) {
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             生年月日
           </label>
-          <input
-            type="date"
-            required
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            min={birthDateBounds().min}
-            max={birthDateBounds().max}
-            autoComplete="bday"
-            style={input}
-          />
+          <BirthDateInput text={birthText} onChange={setBirthText} style={input} />
           <p style={{ fontSize: 12, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.7 }}>
             健康診断の結果や面談の記録と本人を正しく結び付けるために使います(同姓同名の方の区別)。
           </p>

@@ -5,13 +5,15 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
-import { birthDateBounds, birthDateError } from "@/lib/birth-date";
+import { birthDateInputValue, birthTextError, parseBirthDateInput } from "@/lib/birth-date";
+import { BirthDateInput } from "@/components/BirthDateInput";
 import { saveBirthDate } from "@/lib/birth-date-db";
 
 // 生年月日の登録・変更(健康管理Webで健診結果・カルテと本人を突合するために使う)
 export function BirthDateForm({ userId, initial }: { userId: string; initial: string }) {
   const router = useRouter();
-  const [value, setValue] = useState(initial);
+  const [text, setText] = useState(birthDateInputValue(initial)); // 直接入力(19850304 など)
+  const value = parseBirthDateInput(text) ?? "";
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -20,7 +22,7 @@ export function BirthDateForm({ userId, initial }: { userId: string; initial: st
     e.preventDefault();
     setErr(null);
     setNotice(null);
-    const v = birthDateError(value);
+    const v = birthTextError(text);
     if (v) {
       setErr(v);
       return;
@@ -44,23 +46,20 @@ export function BirthDateForm({ userId, initial }: { userId: string; initial: st
         {!initial && <strong style={{ color: "#B02A2A" }}>まだ登録されていません。</strong>}
       </p>
       <form onSubmit={submit}>
-        <input
-          type="date"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          min={birthDateBounds().min}
-          max={birthDateBounds().max}
-          autoComplete="bday"
-          style={{
-            width: "100%",
-            boxSizing: "border-box",
-            padding: "10px 12px",
-            fontSize: 15,
-            border: `1px solid ${brand.line}`,
-            borderRadius: 10,
-            marginBottom: 12,
-          }}
-        />
+        <div style={{ marginBottom: 12 }}>
+          <BirthDateInput
+            text={text}
+            onChange={setText}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding: "10px 12px",
+              fontSize: 15,
+              border: `1px solid ${brand.line}`,
+              borderRadius: 10,
+            }}
+          />
+        </div>
         {err && <div style={{ fontSize: 13, color: "#B02A2A", marginBottom: 10 }}>{err}</div>}
         {notice && (
           <div style={{ fontSize: 13, color: brand.tealDark, background: "#E2F3F1", borderRadius: 10, padding: "8px 12px", marginBottom: 10 }}>

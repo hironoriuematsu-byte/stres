@@ -8,7 +8,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card, QuestionRow, ScoreBar } from "@/components/ui";
 import { DeptSelect } from "@/components/DeptSelect";
-import { birthDateBounds, birthDateError } from "@/lib/birth-date";
+import { birthDateInputValue, birthTextError, parseBirthDateInput } from "@/lib/birth-date";
+import { BirthDateInput } from "@/components/BirthDateInput";
 import { saveBirthDate } from "@/lib/birth-date-db";
 import { brand } from "@/lib/brand";
 import { SECTION_A, SECTION_B, SECTION_C, SECTION_D, Answers, Scores, calcScores, emptyAnswers } from "@/lib/questionnaire";
@@ -55,8 +56,10 @@ export function ExamForm({
   const [dept, setDept] = useState(profile.dept);
   // 生年月日は健康管理Webで健診結果・カルテと本人を突合するために使う。未登録の方には受検時に入れてもらう
   const askBirth = !demo && profile.birthDateSupported !== false;
-  const [birthDate, setBirthDate] = useState(profile.birthDate ?? "");
-  const birthErr = askBirth ? birthDateError(birthDate) : null;
+  // 生年月日は数字で直接入力する(登録済みなら 19850304 の形で表示)
+  const [birthText, setBirthText] = useState(birthDateInputValue(profile.birthDate));
+  const birthDate = parseBirthDateInput(birthText) ?? "";
+  const birthErr = askBirth ? birthTextError(birthText) : null;
   // 氏名は空白(半角・全角)だけの入力や「未設定」を有効とみなさない(lib/name.ts)。
   // 以前は空白だけでも進めてしまい、氏名が空のまま受検できた事例があったため
   const cleanName = cleanPersonName(name);
@@ -229,18 +232,11 @@ export function ExamForm({
             <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
               生年月日
             </label>
-            <input
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              min={birthDateBounds().min}
-              max={birthDateBounds().max}
-              autoComplete="bday"
-              style={input}
-              required
-            />
-            <p style={{ fontSize: 12, color: birthErr ? "#B02A2A" : "#8A9694", margin: "4px 0 0", lineHeight: 1.7 }}>
-              {birthErr ?? "健康診断の結果や面談の記録と本人を正しく結び付けるために使います(同姓同名の方の区別)。"}
+            <BirthDateInput text={birthText} onChange={setBirthText} style={input} />
+            <p style={{ fontSize: 12, color: birthErr && birthText.trim() ? "#B02A2A" : "#8A9694", margin: "4px 0 0", lineHeight: 1.7 }}>
+              {birthErr && birthText.trim() && parseBirthDateInput(birthText)
+                ? birthErr
+                : "健康診断の結果や面談の記録と本人を正しく結び付けるために使います(同姓同名の方の区別)。"}
             </p>
           </div>
         )}

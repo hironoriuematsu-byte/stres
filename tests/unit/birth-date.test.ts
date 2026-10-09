@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ageAt, birthDateError, formatBirthDate, isMissingBirthDateColumn } from "@/lib/birth-date";
+import { ageAt, birthDateError, birthDateInputValue, birthTextError, formatBirthDate, isMissingBirthDateColumn, parseBirthDateInput } from "@/lib/birth-date";
 
 const today = new Date(2026, 9, 5); // 2026-10-05
 
@@ -25,5 +25,21 @@ describe("birth-date", () => {
     expect(isMissingBirthDateColumn("column profiles.birth_date does not exist")).toBe(true);
     expect(isMissingBirthDateColumn("Could not find the 'birth_date' column of 'profiles' in the schema cache")).toBe(true);
     expect(isMissingBirthDateColumn("permission denied")).toBe(false);
+  });
+  it("直接入力(数字8けた・区切り・和暦・全角)を読み取る", () => {
+    expect(parseBirthDateInput("19850304")).toBe("1985-03-04");
+    expect(parseBirthDateInput("1985/3/4")).toBe("1985-03-04");
+    expect(parseBirthDateInput("1985-03-04")).toBe("1985-03-04");
+    expect(parseBirthDateInput("1985年3月4日")).toBe("1985-03-04");
+    expect(parseBirthDateInput("S60.3.4")).toBe("1985-03-04");
+    expect(parseBirthDateInput("昭和60年3月4日")).toBe("1985-03-04");
+    expect(parseBirthDateInput("H1.3.24")).toBe("1989-03-24");
+    expect(parseBirthDateInput("平成元年3月24日")).toBe("1989-03-24");
+    expect(parseBirthDateInput("１９８５０３０４")).toBe("1985-03-04");
+    expect(parseBirthDateInput("19850230")).toBeNull();
+    expect(parseBirthDateInput("850304")).toBeNull();
+    expect(birthDateInputValue("1985-03-04")).toBe("19850304");
+    expect(birthTextError("abc", today)).toMatch(/8けた/);
+    expect(birthTextError("19850304", today)).toBeNull();
   });
 });
