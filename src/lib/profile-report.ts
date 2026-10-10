@@ -239,8 +239,8 @@ export type ScaleResult = {
   radar: number; // レーダー用(外側ほど良好, 1..5)
 };
 
-const LABELS_NEG = ["低い/少ない", "やや低い/少ない", "普通", "やや高い/多い", "高い/多い"];
-const LABELS_POS = ["低い/少ない", "やや低い/少ない", "普通", "やや高い/多い", "高い/多い"];
+// 評価の表記(尺度の向きによらず、素点の高低で表す)
+const LABELS = ["低い", "やや低い", "普通", "やや高い", "高い"];
 
 export function computeProfile(answers: Answers, gender: Gender): ScaleResult[] {
   return SCALES.map((s) => {
@@ -255,7 +255,6 @@ export function computeProfile(answers: Answers, gender: Gender): ScaleResult[] 
       if (raw > ranges[ranges.length - 1][1]) grade = ranges.length;
     }
     const gradeMax = ranges.length;
-    const labels = s.direction === "negative" ? LABELS_NEG : LABELS_POS;
     // レーダー: 外側(値が大きい)ほど良好に統一
     const radar = s.direction === "positive" ? grade : gradeMax + 1 - grade;
     return {
@@ -267,7 +266,7 @@ export function computeProfile(answers: Answers, gender: Gender): ScaleResult[] 
       raw,
       grade,
       gradeMax,
-      gradeLabel: labels[grade - 1],
+      gradeLabel: LABELS[grade - 1],
       radar,
     };
   });

@@ -63,7 +63,7 @@ function ScaleTable({ rows }: { rows: ScaleResult[] }) {
             (換算後)
           </th>
           <th style={{ textAlign: "left", padding: "6px 8px" }}>評価</th>
-          <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>低い ← → 高い</th>
+          <th style={{ textAlign: "center", padding: "6px 8px", whiteSpace: "nowrap" }}>低い ← → 高い</th>
         </tr>
       </thead>
       <tbody>
@@ -71,8 +71,8 @@ function ScaleTable({ rows }: { rows: ScaleResult[] }) {
           <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
             <td style={{ padding: "6px 8px", fontWeight: 700, color: brand.ink }}>{s.label}</td>
             <td style={{ padding: "6px 8px" }}>{s.raw}点</td>
-            <td style={{ padding: "6px 8px" }}>{s.gradeLabel}</td>
-            <td style={{ padding: "6px 8px" }}>
+            <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>{s.gradeLabel}</td>
+            <td style={{ padding: "6px 8px", textAlign: "center" }}>
               <Dots s={s} />
             </td>
           </tr>
