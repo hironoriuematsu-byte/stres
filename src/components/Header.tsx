@@ -69,7 +69,7 @@ export function Header({
           </div>
         </Link>
         <div style={{ fontSize: 12, color: "#7A8886" }}>
-          職業性ストレス簡易調査票 準拠
+          職業性ストレス簡易調査票準拠
         </div>
       </div>
       {email && (

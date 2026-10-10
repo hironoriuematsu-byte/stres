@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     default: "うえまつ産業医事務所 ストレスチェックWeb",
     template: "%s | うえまつ産業医事務所 ストレスチェックWeb",
   },
-  description: "職業性ストレス簡易調査票 準拠 ストレスチェックシステム",
+  description: "職業性ストレス簡易調査票準拠のストレスチェックシステム",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
