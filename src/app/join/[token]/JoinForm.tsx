@@ -128,9 +128,6 @@ export function JoinForm({ token }: { token: string }) {
             生年月日
           </label>
           <BirthDateInput text={birthText} onChange={setBirthText} style={input} />
-          <p style={{ fontSize: 12, color: "#8A9694", margin: "6px 0 0", lineHeight: 1.7 }}>
-            健康診断の結果や面談の記録と本人を正しく結び付けるために使います(同姓同名の方の区別)。
-          </p>
         </div>
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>

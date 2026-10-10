@@ -235,11 +235,10 @@ export function ExamForm({
               生年月日
             </label>
             <BirthDateInput text={birthText} onChange={setBirthText} style={input} />
-            <p style={{ fontSize: 12, color: birthErr && birthText.trim() ? "#B02A2A" : "#8A9694", margin: "4px 0 0", lineHeight: 1.7 }}>
-              {birthErr && birthText.trim() && parseBirthDateInput(birthText)
-                ? birthErr
-                : "健康診断の結果や面談の記録と本人を正しく結び付けるために使います(同姓同名の方の区別)。"}
-            </p>
+            {/* 使う理由の説明は出さない(個人情報の取扱いページに記載)。範囲外の日付のときだけ注意を出す */}
+            {birthErr && birthText.trim() && parseBirthDateInput(birthText) && (
+              <p style={{ fontSize: 12, color: "#B02A2A", margin: "4px 0 0", lineHeight: 1.7 }}>{birthErr}</p>
+            )}
           </div>
         )}
         <div style={{ marginBottom: 14 }}>

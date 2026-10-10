@@ -41,10 +41,11 @@ export function BirthDateForm({ userId, initial }: { userId: string; initial: st
   return (
     <Card>
       <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 8px" }}>生年月日</h3>
-      <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.7, margin: "0 0 12px" }}>
-        健康診断の結果や面談の記録と本人を正しく結び付けるために使います(同姓同名の方の区別)。
-        {!initial && <strong style={{ color: "#B02A2A" }}>まだ登録されていません。</strong>}
-      </p>
+      {!initial && (
+        <p style={{ fontSize: 13, color: "#B02A2A", lineHeight: 1.7, margin: "0 0 12px" }}>
+          <strong>まだ登録されていません。</strong>
+        </p>
+      )}
       <form onSubmit={submit}>
         <div style={{ marginBottom: 12 }}>
           <BirthDateInput
