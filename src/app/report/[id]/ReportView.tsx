@@ -197,25 +197,40 @@ export function ReportView({
             <span style={{ fontSize: 14, fontWeight: 700, color: brand.ink }}>総合判定:</span>
             {result.high_stress ? <Badge tone="red">高ストレス(面接指導の対象)</Badge> : <Badge>高ストレスに該当せず</Badge>}
           </div>
-          {/* 先に本人の得点を示し、改行して判定基準を添える */}
-          {/* 「あなたの得点」の後で改行し、点数は1行に並べる(項目の途中では折り返さない) */}
-          <p style={{ fontSize: 13, color: brand.ink, margin: "8px 0 0", lineHeight: 1.7 }}>
-            あなたの得点
-            <br />
-            {[
-              `A:${result.score_a}/68点`,
-              `B:${result.score_b}/116点`,
-              `C:${result.score_c}/36点`,
-              `A+C:${result.score_a + result.score_c}点`,
-            ].map((t, i) => (
-              <span key={t} style={{ whiteSpace: "nowrap", marginRight: i < 3 ? "0.6em" : 0 }}>
-                {t}
-              </span>
+          {/* 本人の得点を「満点中◯点」で領域名と一緒に示し、続けて判定基準を同じ記号(A〜C)で書く */}
+          <p style={{ fontSize: 13, color: brand.ink, margin: "8px 0 2px", fontWeight: 700 }}>あなたの得点</p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "auto auto",
+              justifyContent: "start",
+              columnGap: 14,
+              rowGap: 2,
+              fontSize: 13,
+              color: brand.ink,
+              lineHeight: 1.6,
+            }}
+          >
+            {(
+              [
+                ["A", "ストレスの原因", 68, result.score_a],
+                ["B", "心身のストレス反応", 116, result.score_b],
+                ["C", "周囲のサポート", 36, result.score_c],
+                ["A+C", "AとCの合計", 104, result.score_a + result.score_c],
+              ] as [string, string, number, number][]
+            ).map(([key, label, max, score]) => (
+              <React.Fragment key={key}>
+                <span>
+                  <strong>{key}</strong> {label}
+                </span>
+                <span style={{ whiteSpace: "nowrap" }}>
+                  {max}点中 <strong>{score}点</strong>
+                </span>
+              </React.Fragment>
             ))}
-          </p>
-          <p style={{ fontSize: 12, color: "#5B6B6A", margin: "4px 0 0", lineHeight: 1.7 }}>
-            判定基準(合計点数法): ①心身のストレス反応(B領域)の合計が77点以上、または
-            ②B領域63点以上かつストレス要因(A領域)+サポート(C領域)の合計が76点以上。
+          </div>
+          <p style={{ fontSize: 12, color: "#5B6B6A", margin: "6px 0 0", lineHeight: 1.7 }}>
+            いずれも点数が高いほどストレスが高い状態です。判定基準(合計点数法): Bが77点以上、またはBが63点以上かつA+Cが76点以上の場合に「高ストレス」と判定します。
           </p>
         </div>
 
