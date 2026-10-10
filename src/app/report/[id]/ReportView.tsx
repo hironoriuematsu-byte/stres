@@ -255,7 +255,6 @@ export function ReportView({
             {/* 尺度別評価表。最初に●の色と位置の見方を示す */}
             <p style={{ fontSize: 12, color: "#5B6B6A", margin: "14px 0 0", lineHeight: 1.7 }}>
               <strong style={{ color: brand.ink }}>表の見方：</strong>
-              ●の位置は5段階(一部は4段階)の評価で、左ほど「低い/少ない」、右ほど「高い/多い」を表します。
               <span style={{ whiteSpace: "nowrap" }}>
                 <span style={{ color: brand.teal }}>●</span> 緑は良好〜普通、
               </span>
