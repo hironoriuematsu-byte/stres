@@ -20,6 +20,7 @@ import { questionnaireLabel } from "@/lib/questionnaire-label";
 import { ageAt, formatBirthDate } from "@/lib/birth-date";
 import { IMPLEMENTER } from "@/lib/org";
 import { PrintHeader } from "@/components/PrintHeader";
+import { PrintSheet } from "@/components/PrintSheet";
 import { RadarTick } from "@/components/RadarTick";
 import {
   EXT80_GROUP_LABEL,
@@ -318,9 +319,10 @@ export function ReportView({
           header, footer, .no-print { display: none !important; }
           main { padding: 0 !important; }
           body { background: #fff !important; }
-          .report-sheet { border: none !important; box-shadow: none !important; padding: 14mm !important; }
+          .report-sheet { border: none !important; box-shadow: none !important; padding: 0 14mm !important; }
         }
-        /* ページ余白を0にしてブラウザのヘッダー/フッター(URL・日付・題名)を印字させず、余白は帳票側(.report-sheet)で取る */
+        /* ページ余白を0にしてブラウザのヘッダー/フッター(URL・日付・題名)を印字させず、余白は帳票側で取る
+           (左右は .report-sheet の padding、上下は PrintSheet の thead/tfoot で各ページに付ける) */
         @page { size: A4; margin: 0; }
       `}</style>
 
@@ -335,8 +337,8 @@ export function ReportView({
         </Btn>
       </div>
 
-      <div
-        className="report-sheet"
+      <PrintSheet
+        margin="14mm"
         style={{
           background: "#fff",
           border: `1px solid ${brand.line}`,
@@ -440,7 +442,7 @@ export function ReportView({
           <br />
           実施者: {IMPLEMENTER.full}(所属: {IMPLEMENTER.officeName} {IMPLEMENTER.officeAddress})
         </p>
-      </div>
+      </PrintSheet>
 
       <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
         <Link href={backHref}>

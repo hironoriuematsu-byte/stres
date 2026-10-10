@@ -6,6 +6,7 @@ import { Btn } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER } from "@/lib/org";
 import { PrintHeader } from "@/components/PrintHeader";
+import { PrintSheet } from "@/components/PrintSheet";
 import { HeadcountField } from "@/components/HeadcountField";
 
 export type ReportInfo = {
@@ -161,7 +162,7 @@ export function StressReportForm({
           header, footer, .no-print { display: none !important; }
           main { padding: 0 !important; }
           body { background: #fff !important; }
-          .report-sheet { border: none !important; box-shadow: none !important; padding: 12mm !important; }
+          .report-sheet { border: none !important; box-shadow: none !important; padding: 0 12mm !important; }
           input, select, textarea { border: none !important; background: transparent !important; padding: 0 !important; font-weight: 700; }
           select { appearance: none; -webkit-appearance: none; }
         }
@@ -177,7 +178,7 @@ export function StressReportForm({
         <Btn onClick={() => window.print()}>🖨 印刷 / PDF保存</Btn>
       </div>
 
-      <div className="report-sheet" style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 12, padding: "20px 24px" }}>
+      <PrintSheet style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 12, padding: "20px 24px" }}>
         <PrintHeader
           title={`${fiscalYear}年度心理的な負担の程度を把握するための検査結果等報告書 記載項目（様式第６号の３ 転記用）`}
           companyName={companyName}
@@ -295,7 +296,7 @@ export function StressReportForm({
           大きめのアラビア数字を枠内に記入してください。電子申請（e-Gov）の場合は同じ項目を入力します。
           1年を通して順次検査を実施した場合は、期間内の実施状況をまとめて報告します。
         </p>
-      </div>
+      </PrintSheet>
     </div>
   );
 }

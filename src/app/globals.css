@@ -107,6 +107,18 @@ a {
   /* 印刷時にグラフの上に残ったツールチップ(マウスの位置の吹き出し)は出さない */
   .recharts-tooltip-wrapper { display: none !important; }
 }
+/* 帳票の枠(components/PrintSheet.tsx): 画面上は thead/tfoot を出さない。
+   印刷時は thead/tfoot が各ページで繰り返されるので、2ページ目以降にも上下の余白が付く */
+.print-sheet { width: 100%; border-collapse: collapse; border-spacing: 0; }
+.print-sheet > thead, .print-sheet > tfoot { display: none; }
+.print-sheet > thead > tr > td, .print-sheet > tbody > tr > td, .print-sheet > tfoot > tr > td { padding: 0; vertical-align: top; }
+@media print {
+  .print-sheet > thead { display: table-header-group; }
+  .print-sheet > tfoot { display: table-footer-group; }
+  /* 横スクロールの表は印刷では切らずにそのまま出す(スクロールバーも印字しない) */
+  .report-sheet [style*="overflow"] { overflow: visible !important; }
+}
+
 /* 帳票の枠内の余白: スマホ幅では狭めて本文の横幅を確保する(印刷時は report-sheet の余白を外す指定が各帳票にある) */
 @media (max-width: 560px) {
   .report-sheet { padding: 16px 14px !important; }

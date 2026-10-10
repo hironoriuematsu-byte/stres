@@ -30,6 +30,7 @@ import { aggregateByDept, DeptAggregate, GroupResultInput, MIN_GROUP } from "@/l
 import { NORMS_COMBINED, riskTone } from "@/lib/health-risk";
 import { IMPLEMENTER } from "@/lib/org";
 import { PrintHeader } from "@/components/PrintHeader";
+import { PrintSheet } from "@/components/PrintSheet";
 import { RadarTick } from "@/components/RadarTick";
 import { EXT80_GROUP_LABEL, EXT80_SCALES } from "@/lib/questionnaire80";
 import { logAccess } from "@/lib/log";
@@ -184,7 +185,7 @@ function gradeCellColor(key: string, v: number | null): string {
 
 // 1つの表に並べる部署数の上限。これを超えると表を分割して積み重ねる
 // (A4印刷でも列が切れないようにするため)
-const MAX_COLS = 6;
+const MAX_COLS = 5; // 6列だとA4の印刷幅(余白12mmで約690px)で右端の列が切れるため5列まで
 
 // 判定図プロット用の番号表記(①〜⑳、それ以降は (21) 形式)
 export function plotNum(i: number): string {
@@ -662,13 +663,14 @@ export function GroupReportView({
           header, footer, .no-print { display: none !important; }
           main { padding: 0 !important; }
           body { background: #fff !important; }
-          .report-sheet { border: none !important; box-shadow: none !important; padding: 12mm !important; }
+          .report-sheet { border: none !important; box-shadow: none !important; padding: 0 12mm !important; }
           .print-break-before { break-before: page; page-break-before: always; }
           .print-keep { break-inside: avoid; page-break-inside: avoid; }
           /* 見出しの直後で改ページしない(見出しだけがページ末尾に残るのを防ぐ) */
           .report-sheet h2, .report-sheet h3 { break-after: avoid; page-break-after: avoid; }
         }
-        /* ページ余白を0にしてブラウザのヘッダー/フッター(URL・日付・題名)を印字させず、余白は帳票側(.report-sheet)で取る */
+        /* ページ余白を0にしてブラウザのヘッダー/フッター(URL・日付・題名)を印字させず、余白は帳票側で取る
+           (左右は .report-sheet の padding、上下は PrintSheet の thead/tfoot で各ページに付ける) */
         @page { size: A4; margin: 0; }
       `}</style>
 
@@ -705,7 +707,7 @@ export function GroupReportView({
         </div>
       )}
 
-      <div className="report-sheet" style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 12, padding: 28 }}>
+      <PrintSheet style={{ background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 12, padding: 28 }}>
         {/* ヘッダ: 受検した企業名を大きく表示し、ロゴと「ストレスチェックWeb」を右に置く */}
         <PrintHeader
           title={`${fiscalYear}年度ストレスチェック集団分析報告書`}
@@ -910,8 +912,10 @@ export function GroupReportView({
               </p>
             </div>
 
-            {/* 判定図プロット: 印刷では次のページの先頭から始め、図が途中で切れないようにする */}
-            <div className="print-break-before">
+            {/* 判定図プロット: 見出し・説明・2つの図はひとまとまりで印刷する(図が途中で切れない。
+                以前は必ず改ページしていたが、前のページの残りが白紙になるため、入るならそのまま続ける) */}
+            <div>
+            <div className="print-keep">
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 0" }}>仕事のストレス判定図(部署プロット・健康リスク)</h2>
             <p style={{ fontSize: 11, color: "#8A9694", margin: "2px 0 0" }}>
               背景の色が濃い(赤系の)側ほど健康リスクが高い領域です:
@@ -922,7 +926,7 @@ export function GroupReportView({
               全体・各部署の点が⓪よりリスクの高い側にあるかどうかで、全国平均との比較ができます。
               健康リスクは全国平均=100で、健康問題の起きやすさが全国平均の何倍かを表します(例: 120なら1.2倍)。
             </p>
-            <div className="print-keep" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 8 }}>
               <JudgeScatter
                 title="量的負担 × コントロール判定図"
                 xLabel="仕事のコントロール"
@@ -945,6 +949,7 @@ export function GroupReportView({
                 ]}
                 riskCorner="bottom-left"
               />
+            </div>
             </div>
             {/* 番号と部署の対応表 */}
             <div style={{ overflowX: "auto", marginTop: 6 }}>
@@ -1196,7 +1201,7 @@ export function GroupReportView({
           <br />
           実施者: {IMPLEMENTER.full}(所属: {IMPLEMENTER.officeName} {IMPLEMENTER.officeAddress})
         </p>
-      </div>
+      </PrintSheet>
     </div>
   );
 }
