@@ -272,7 +272,18 @@ export function ReportView({
             </p>
             {(["stressor", "reaction", "support"] as const).map((cat) => (
               <div key={cat} style={{ marginTop: 14 }}>
-                <h2 style={{ fontSize: 14, color: brand.tealDark, margin: "0 0 6px" }}>{CATEGORY_LABEL[cat]}</h2>
+                <h2 style={{ fontSize: 14, color: brand.tealDark, margin: "0 0 6px" }}>
+                  {/* C は長いので、レーダーチャートの見出しと同じく「(サポート・満足度)」を2行目に出す */}
+                  {cat === "support" ? (
+                    <>
+                      C. ストレス反応に影響を与える他の因子
+                      <br />
+                      (サポート・満足度)
+                    </>
+                  ) : (
+                    CATEGORY_LABEL[cat]
+                  )}
+                </h2>
                 <ScaleTable rows={profile.filter((s) => s.category === cat)} />
               </div>
             ))}
