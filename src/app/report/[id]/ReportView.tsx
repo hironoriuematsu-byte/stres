@@ -53,7 +53,11 @@ function ScaleTable({ rows }: { rows: ScaleResult[] }) {
       <thead>
         <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
           <th style={{ textAlign: "left", padding: "6px 8px" }}>尺度</th>
-          <th style={{ textAlign: "left", padding: "6px 8px" }}>素点(換算後)</th>
+          <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>
+            素点
+            <br />
+            (換算後)
+          </th>
           <th style={{ textAlign: "left", padding: "6px 8px" }}>評価</th>
           <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>低い ← → 高い</th>
         </tr>
@@ -248,7 +252,18 @@ export function ReportView({
               ))}
             </div>
 
-            {/* 尺度別評価表 */}
+            {/* 尺度別評価表。最初に●の色と位置の見方を示す */}
+            <p style={{ fontSize: 12, color: "#5B6B6A", margin: "14px 0 0", lineHeight: 1.7 }}>
+              <strong style={{ color: brand.ink }}>表の見方：</strong>
+              ●の位置は5段階(一部は4段階)の評価で、左ほど「低い/少ない」、右ほど「高い/多い」を表します。
+              <span style={{ whiteSpace: "nowrap" }}>
+                <span style={{ color: brand.teal }}>●</span> 緑は良好〜普通、
+              </span>
+              <span style={{ whiteSpace: "nowrap" }}>
+                <span style={{ color: "#D64545" }}>●</span> 赤は注意が必要
+              </span>
+              な状態です。「負担」「イライラ感」などは高いほど、「コントロール度」「サポート」などは低いほど注意が必要です。
+            </p>
             {(["stressor", "reaction", "support"] as const).map((cat) => (
               <div key={cat} style={{ marginTop: 14 }}>
                 <h2 style={{ fontSize: 14, color: brand.tealDark, margin: "0 0 6px" }}>{CATEGORY_LABEL[cat]}</h2>
