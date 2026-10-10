@@ -94,6 +94,7 @@ export function ReportView({
   backHref,
   backLabel,
   demo = false,
+  embedded = false,
 }: {
   result: ResultRow & { answers: unknown; gender: Gender | null; answers_ext?: unknown; questionnaire?: string };
   subjectName: string;
@@ -102,6 +103,7 @@ export function ReportView({
   backHref: string;
   backLabel: string;
   demo?: boolean; // 紹介用デモ: アクセスログを記録しない
+  embedded?: boolean; // 受検直後の結果画面の下に続けて表示する(戻るボタンの代わりに見出しを付ける)
 }) {
   useEffect(() => {
     if (demo) return;
@@ -134,7 +136,7 @@ export function ReportView({
     : "未登録";
 
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto" }}>
+    <div style={{ maxWidth: 860, margin: embedded ? "24px auto 0" : "0 auto" }}>
       <style>{`
         @media print {
           header, footer, .no-print { display: none !important; }
@@ -146,12 +148,19 @@ export function ReportView({
         @page { size: A4; margin: 0; }
       `}</style>
 
-      <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
-        <Link href={backHref}>
-          <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
-            {backLabel}
-          </Btn>
-        </Link>
+      <div
+        className="no-print"
+        style={{ display: "flex", justifyContent: embedded ? "space-between" : "flex-end", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}
+      >
+        {embedded ? (
+          <h2 style={{ fontSize: 18, color: brand.ink, margin: 0 }}>詳しい結果票</h2>
+        ) : (
+          <Link href={backHref}>
+            <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
+              {backLabel}
+            </Btn>
+          </Link>
+        )}
         <Btn onClick={() => window.print()} style={{ padding: "8px 16px", fontSize: 13 }}>
           印刷 / PDFとして保存
         </Btn>
@@ -431,11 +440,13 @@ export function ReportView({
       </div>
 
       <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-        <Link href={backHref}>
-          <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
-            {backLabel}
-          </Btn>
-        </Link>
+        {!embedded && (
+          <Link href={backHref}>
+            <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
+              {backLabel}
+            </Btn>
+          </Link>
+        )}
         <Btn onClick={() => window.print()} style={{ padding: "8px 16px", fontSize: 13 }}>
           印刷 / PDFとして保存
         </Btn>

@@ -14,6 +14,7 @@ import { saveBirthDate } from "@/lib/birth-date-db";
 import { brand } from "@/lib/brand";
 import { SECTION_A, SECTION_B, SECTION_C, SECTION_D, Answers, Scores, calcScores, emptyAnswers } from "@/lib/questionnaire";
 import { getFiscalYear } from "@/lib/fiscal";
+import { ReportView } from "@/app/report/[id]/ReportView";
 import {
   EXT80_COUNT,
   Ext80Answers,
@@ -64,6 +65,7 @@ export function ExamForm({
   const nameOk = isValidPersonName(name);
   const [gender, setGender] = useState<"male" | "female" | "">("");
   const [resultId, setResultId] = useState<string | null>(null);
+  const [submittedAt, setSubmittedAt] = useState<string>(""); // 送信した日時(結果票の実施日に使う)
   const [ans, setAns] = useState<Answers>(emptyAnswers());
   // 80項目版で追加される23項目(設問58〜80)の回答
   const [ext, setExt] = useState<Ext80Answers>(emptyExt80());
@@ -117,6 +119,7 @@ export function ExamForm({
 
     // デモ: データベースには保存せず、判定結果のみ表示する
     if (demo) {
+      setSubmittedAt(new Date().toISOString());
       setResult(scores);
       setStep(6);
       return;
@@ -181,6 +184,7 @@ export function ExamForm({
       return;
     }
 
+    setSubmittedAt(new Date().toISOString());
     setResult(scores);
     setStep(6);
   };
@@ -487,7 +491,8 @@ export function ExamForm({
 
   // 結果
   if (step === 6 && result) {
-    return (
+    // 判定のまとめ(印刷はしない: 結果票の方に同じ内容が入る)
+    const summary = (
       <Card style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 18 }}>
           {result.highStress ? <Badge tone="red">高ストレス判定</Badge> : <Badge>判定: 高ストレスに該当せず</Badge>}
@@ -531,9 +536,6 @@ export function ExamForm({
         <div style={{ marginTop: 20, textAlign: "center", display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
           {demo ? (
             <>
-              <Link href={`/demo/report/${result.highStress ? "high" : "normal"}${is80 ? "?q=80" : ""}`}>
-                <Btn tone="ghost">結果票のサンプルを見る</Btn>
-              </Link>
               {/* 実際の受検と同じく、高ストレス判定のときだけ申出への導線を出す */}
               {result.highStress && (
                 <Link href="/demo/interview">
@@ -548,7 +550,7 @@ export function ExamForm({
             <>
               {resultId && (
                 <Link href={`/report/${resultId}`}>
-                  <Btn tone="ghost">結果票を見る(印刷・PDF)</Btn>
+                  <Btn tone="ghost">結果票を別画面で開く(印刷・PDF)</Btn>
                 </Link>
               )}
               {result.highStress && (
@@ -569,8 +571,46 @@ export function ExamForm({
           {demo
             ? "このデモの回答は保存されません。実際の受検では、この結果がご本人のマイページに保存されます。"
             : "共用のパソコンをお使いの場合は、終了時に必ず「ログアウトして終了」を押してください。"}
+          <br />
+          この下に、尺度別の評価やレーダーチャートを含む詳しい結果票が続きます。
         </p>
       </Card>
+    );
+
+    // 判定の下に個人結果票(尺度別の評価・レーダーチャート・助言)をそのまま続けて表示する。
+    // 別画面を開かなくても、下へスクロールすれば詳しい結果が読めるようにするため
+    const reportRow = {
+      id: resultId ?? "demo",
+      user_id: profile.userId,
+      company_id: profile.companyId,
+      dept: dept || "未記入",
+      fiscal_year: fiscalYear,
+      score_a: result.A,
+      score_b: result.B,
+      score_c: result.C,
+      score_d: result.D,
+      high_stress: result.highStress,
+      consent,
+      created_at: submittedAt || new Date().toISOString(),
+      answers: ans,
+      gender: gender || null,
+      answers_ext: is80 ? ext : null,
+      questionnaire,
+    };
+    return (
+      <>
+        <div className="no-print">{summary}</div>
+        <ReportView
+          result={reportRow}
+          subjectName={cleanName}
+          subjectBirthDate={askBirth && birthDate ? birthDate : null}
+          companyName={profile.companyName}
+          backHref={demo ? "/demo" : "/my"}
+          backLabel={demo ? "サンプル一覧へ" : "マイページへ"}
+          demo={demo}
+          embedded
+        />
+      </>
     );
   }
 
