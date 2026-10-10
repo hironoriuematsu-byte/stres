@@ -147,7 +147,8 @@ export function ReportView({
             素点換算表({result.gender === "male" ? "男性" : "女性"})による評価。チャートが外側に広いほど良好な状態、
             中心に向かって小さいほどストレス状況に注意が必要です。
           </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 4 }}>
+          {/* PC・印刷では3つを横に並べる(集団分析と同じく、A4の印刷幅約690pxでも3列になるよう1列の最小幅は220px)。スマホ幅では1列 */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 4 }}>
             {(["stressor", "reaction", "support"] as const).map((cat) => (
               <div key={cat}>
                 <h3 style={{ fontSize: 12, color: brand.ink, textAlign: "center", margin: "8px 0 0" }}>

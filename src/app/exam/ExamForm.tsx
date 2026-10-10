@@ -513,7 +513,8 @@ export function ExamForm({
     };
 
     return (
-      <Card style={{ maxWidth: 640, margin: "0 auto" }}>
+      // レーダーチャート3つが横に並ぶ幅(集団分析と同じ見え方)にする
+      <Card style={{ maxWidth: 780, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 18 }}>
           {result.highStress ? <Badge tone="red">高ストレス判定</Badge> : <Badge>判定: 高ストレスに該当せず</Badge>}
           <h2 style={{ fontSize: 22, color: brand.ink, margin: "12px 0 4px" }}>{name} さんの結果</h2>
