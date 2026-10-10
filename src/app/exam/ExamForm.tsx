@@ -490,8 +490,29 @@ export function ExamForm({
 
   // 結果
   if (step === 6 && result) {
-    // 判定のまとめ
-    const summary = (
+    // 判定の下に、ボタンより前にレーダーチャート・尺度別の評価・アドバイスを続けて表示する
+    // (別画面を開かなくても、下へスクロールすれば詳しい結果が読めるように)。
+    // ロゴや受検者情報の付いた印刷用の結果票は「結果票を別画面で開く」から
+    const reportRow = {
+      id: resultId ?? "demo",
+      user_id: profile.userId,
+      company_id: profile.companyId,
+      dept: dept || "未記入",
+      fiscal_year: fiscalYear,
+      score_a: result.A,
+      score_b: result.B,
+      score_c: result.C,
+      score_d: result.D,
+      high_stress: result.highStress,
+      consent,
+      created_at: submittedAt || new Date().toISOString(),
+      answers: ans,
+      gender: gender || null,
+      answers_ext: is80 ? ext : null,
+      questionnaire,
+    };
+
+    return (
       <Card style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 18 }}>
           {result.highStress ? <Badge tone="red">高ストレス判定</Badge> : <Badge>判定: 高ストレスに該当せず</Badge>}
@@ -532,13 +553,23 @@ export function ExamForm({
             高ストレス状態にあると判定されました。医師(産業医)による面接指導の対象です。マイページから面接指導の申出ができます。申出を理由とする不利益取り扱いは法律で禁止されています。
           </div>
         )}
-        <div style={{ marginTop: 20, textAlign: "center", display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+        <ReportView
+          result={reportRow}
+          subjectName={cleanName}
+          subjectBirthDate={askBirth && birthDate ? birthDate : null}
+          companyName={profile.companyName}
+          backHref={demo ? "/demo" : "/my"}
+          backLabel={demo ? "サンプル一覧へ" : "マイページへ"}
+          demo={demo}
+          embedded
+        />
+        <div style={{ marginTop: 24, textAlign: "center", display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
           {demo ? (
             <>
               {/* 実際の受検と同じく、高ストレス判定のときだけ申出への導線を出す */}
               {result.highStress && (
                 <Link href="/demo/interview">
-                  <Btn tone="orange">面接指導を申し出る</Btn>
+                  <Btn tone="orange">産業医面接指導を申し出る</Btn>
                 </Link>
               )}
               <Link href={`/demo${is80 ? "?q=80" : ""}`}>
@@ -554,7 +585,7 @@ export function ExamForm({
               )}
               {result.highStress && (
                 <Link href="/my?interview=1">
-                  <Btn tone="orange">面接指導を申し出る</Btn>
+                  <Btn tone="orange">産業医面接指導を申し出る</Btn>
                 </Link>
               )}
               <Link href="/my">
@@ -570,47 +601,8 @@ export function ExamForm({
           {demo
             ? "このデモの回答は保存されません。実際の受検では、この結果がご本人のマイページに保存されます。"
             : "共用のパソコンをお使いの場合は、終了時に必ず「ログアウトして終了」を押してください。"}
-          <br />
-          この下に、レーダーチャート・尺度別の評価・アドバイスが続きます。
         </p>
       </Card>
-    );
-
-    // 判定の下にレーダーチャート・尺度別の評価・アドバイスをそのまま続けて表示する
-    // (別画面を開かなくても、下へスクロールすれば詳しい結果が読めるように)。
-    // ロゴや受検者情報の付いた印刷用の結果票は「結果票を別画面で開く」から
-    const reportRow = {
-      id: resultId ?? "demo",
-      user_id: profile.userId,
-      company_id: profile.companyId,
-      dept: dept || "未記入",
-      fiscal_year: fiscalYear,
-      score_a: result.A,
-      score_b: result.B,
-      score_c: result.C,
-      score_d: result.D,
-      high_stress: result.highStress,
-      consent,
-      created_at: submittedAt || new Date().toISOString(),
-      answers: ans,
-      gender: gender || null,
-      answers_ext: is80 ? ext : null,
-      questionnaire,
-    };
-    return (
-      <>
-        {summary}
-        <ReportView
-          result={reportRow}
-          subjectName={cleanName}
-          subjectBirthDate={askBirth && birthDate ? birthDate : null}
-          companyName={profile.companyName}
-          backHref={demo ? "/demo" : "/my"}
-          backLabel={demo ? "サンプル一覧へ" : "マイページへ"}
-          demo={demo}
-          embedded
-        />
-      </>
     );
   }
 

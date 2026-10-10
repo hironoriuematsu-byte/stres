@@ -310,20 +310,7 @@ export function ReportView({
   );
 
   if (embedded) {
-    return (
-      <div
-        style={{
-          maxWidth: 640,
-          margin: "16px auto 0",
-          background: "#fff",
-          border: `1px solid ${brand.line}`,
-          borderRadius: 16,
-          padding: "20px 22px",
-        }}
-      >
-        {detailBody}
-      </div>
-    );
+    return <div style={{ marginTop: 20 }}>{detailBody}</div>;
   }
 
   return (

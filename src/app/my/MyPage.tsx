@@ -35,7 +35,7 @@ export function MyPage({
 
   const supabase = createClient();
   const params = useSearchParams();
-  // 結果票・受検結果画面の「面接指導を申し出る」から遷移した場合は、申出フォームを自動で開く
+  // 結果票・受検結果画面の「産業医面接指導を申し出る」から遷移した場合は、申出フォームを自動で開く
   const wantInterview = params.get("interview") === "1";
   const autoOpened = useRef(false);
 

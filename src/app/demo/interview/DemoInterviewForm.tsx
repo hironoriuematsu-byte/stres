@@ -59,7 +59,7 @@ export function DemoInterviewForm() {
       <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 6px" }}>産業医面接指導の申出(サンプル)</h2>
       <p style={{ fontSize: 13.5, color: "#5B6B6A", lineHeight: 1.9, margin: "0 0 14px" }}>
         高ストレスと判定された方は、マイページからこの申出フォームを開いて、医師(産業医)による面接指導を申し出ることができます。
-        受検直後の結果画面にある「面接指導を申し出る」からは、このフォームが開いた状態で表示されます。
+        受検直後の結果画面にある「産業医面接指導を申し出る」からは、このフォームが開いた状態で表示されます。
       </p>
 
       <div style={{ border: `1px solid ${brand.line}`, borderRadius: 10, padding: 14 }}>
