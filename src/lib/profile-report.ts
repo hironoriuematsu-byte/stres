@@ -23,6 +23,12 @@ export type ScaleDef = {
   compute: (a: Answers) => number;
   male: Range[]; // 評価点1..n の素点範囲
   female: Range[];
+  // 単一質問の尺度(4段階)の評価点1..4が、換算表の5つの欄(低い〜高い)のどこに当たるか。
+  // 厚労省の素点換算表では尺度・性別により空欄の位置が異なる(例: 身体的負担度は「低い」が空欄、
+  // 働きがいは「やや高い」が空欄、職場環境は女性のみ「やや低い」が空欄)。5段階の尺度は省略(欄1..5)
+  columns?: { male: number[]; female: number[] };
+  // 評価の言い方。"amount" は「少ない〜多い」(負担・ストレス・愁訴・サポート)、省略時は「低い〜高い」(〜度・〜感)
+  wording?: "amount";
 };
 
 const sum = (arr: (number | null)[], idxs: number[]) =>
@@ -32,6 +38,7 @@ export const SCALES: ScaleDef[] = [
   // ---- ストレスの原因と考えられる因子(A: 9尺度) ----
   {
     key: "quant",
+    wording: "amount",
     short: "負担(量)",
     label: "心理的な仕事の負担(量)",
     category: "stressor",
@@ -42,6 +49,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "qual",
+    wording: "amount",
     short: "負担(質)",
     label: "心理的な仕事の負担(質)",
     category: "stressor",
@@ -59,9 +67,11 @@ export const SCALES: ScaleDef[] = [
     compute: (a) => 5 - (a.A[6] ?? 0),
     male: [[1, 1], [2, 2], [3, 3], [4, 4]],
     female: [[1, 1], [2, 2], [3, 3], [4, 4]],
+    columns: { male: [2, 3, 4, 5], female: [2, 3, 4, 5] },
   },
   {
     key: "interpersonal",
+    wording: "amount",
     short: "対人関係",
     label: "職場の対人関係でのストレス",
     category: "stressor",
@@ -72,6 +82,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "environment",
+    wording: "amount",
     short: "職場環境",
     label: "職場環境によるストレス",
     category: "stressor",
@@ -79,6 +90,7 @@ export const SCALES: ScaleDef[] = [
     compute: (a) => 5 - (a.A[14] ?? 0),
     male: [[1, 1], [2, 2], [3, 3], [4, 4]],
     female: [[1, 1], [2, 2], [3, 3], [4, 4]],
+    columns: { male: [2, 3, 4, 5], female: [1, 3, 4, 5] },
   },
   {
     key: "control",
@@ -99,6 +111,7 @@ export const SCALES: ScaleDef[] = [
     compute: (a) => a.A[10] ?? 0,
     male: [[1, 1], [2, 2], [3, 3], [4, 4]],
     female: [[1, 1], [2, 2], [3, 3], [4, 4]],
+    columns: { male: [1, 2, 3, 4], female: [1, 2, 3, 4] },
   },
   {
     key: "aptitude",
@@ -109,6 +122,7 @@ export const SCALES: ScaleDef[] = [
     compute: (a) => 5 - (a.A[15] ?? 0),
     male: [[1, 1], [2, 2], [3, 3], [4, 4]],
     female: [[1, 1], [2, 2], [3, 3], [4, 4]],
+    columns: { male: [1, 2, 3, 5], female: [1, 2, 3, 5] },
   },
   {
     key: "meaning",
@@ -119,6 +133,7 @@ export const SCALES: ScaleDef[] = [
     compute: (a) => 5 - (a.A[16] ?? 0),
     male: [[1, 1], [2, 2], [3, 3], [4, 4]],
     female: [[1, 1], [2, 2], [3, 3], [4, 4]],
+    columns: { male: [1, 2, 3, 5], female: [1, 2, 3, 5] },
   },
 
   // ---- ストレスによっておこる心身の反応(B: 6尺度) ----
@@ -174,6 +189,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "somatic",
+    wording: "amount",
     short: "身体愁訴",
     label: "身体愁訴",
     category: "reaction",
@@ -186,6 +202,7 @@ export const SCALES: ScaleDef[] = [
   // ---- ストレス反応に影響を与える他の因子(C・D: 4尺度) ----
   {
     key: "boss",
+    wording: "amount",
     short: "上司サポート",
     label: "上司からのサポート",
     category: "support",
@@ -196,6 +213,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "coworker",
+    wording: "amount",
     short: "同僚サポート",
     label: "同僚からのサポート",
     category: "support",
@@ -206,6 +224,7 @@ export const SCALES: ScaleDef[] = [
   },
   {
     key: "family",
+    wording: "amount",
     short: "家族・友人",
     label: "家族・友人からのサポート",
     category: "support",
@@ -235,12 +254,15 @@ export type ScaleResult = {
   raw: number; // 換算後の素点
   grade: number; // 評価点 1..gradeMax
   gradeMax: number; // 5 または 4(単一項目尺度)
+  column: number; // 換算表の欄(1=低い … 5=高い)。4段階の尺度は欄の一部が空く
+  columns: number[]; // この尺度(性別)で使われる欄の一覧
   gradeLabel: string;
   radar: number; // レーダー用(外側ほど良好, 1..5)
 };
 
-// 評価の表記(尺度の向きによらず、素点の高低で表す)
-const LABELS = ["低い", "やや低い", "普通", "やや高い", "高い"];
+// 換算表の各欄の表記(尺度の向きによらず素点の高低で表し、言い方は尺度の性質に合わせる)
+const LABELS_LEVEL = ["低い", "やや低い", "普通", "やや高い", "高い"];
+const LABELS_AMOUNT = ["少ない", "やや少ない", "普通", "やや多い", "多い"];
 
 export function computeProfile(answers: Answers, gender: Gender): ScaleResult[] {
   return SCALES.map((s) => {
@@ -255,8 +277,11 @@ export function computeProfile(answers: Answers, gender: Gender): ScaleResult[] 
       if (raw > ranges[ranges.length - 1][1]) grade = ranges.length;
     }
     const gradeMax = ranges.length;
-    // レーダー: 外側(値が大きい)ほど良好に統一
-    const radar = s.direction === "positive" ? grade : gradeMax + 1 - grade;
+    // 換算表の欄の位置(4段階の尺度は空欄を飛ばす)
+    const columns = s.columns ? (gender === "male" ? s.columns.male : s.columns.female) : [1, 2, 3, 4, 5];
+    const column = columns[grade - 1];
+    // レーダー: 外側(値が大きい)ほど良好に統一。換算表の欄の位置(1..5)に基づく
+    const radar = s.direction === "positive" ? column : 6 - column;
     return {
       key: s.key,
       label: s.label,
@@ -266,7 +291,9 @@ export function computeProfile(answers: Answers, gender: Gender): ScaleResult[] 
       raw,
       grade,
       gradeMax,
-      gradeLabel: LABELS[grade - 1],
+      column,
+      columns,
+      gradeLabel: (s.wording === "amount" ? LABELS_AMOUNT : LABELS_LEVEL)[column - 1],
       radar,
     };
   });

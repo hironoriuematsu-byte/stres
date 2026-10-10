@@ -34,17 +34,17 @@ const CATEGORY_LABEL = {
 } as const;
 
 function Dots({ s }: { s: ScaleResult }) {
-  // 5(4)段階の位置表示。悪い評価は赤系で強調
-  // 5段階分の幅の中で中央に並べ、4段階の尺度は5段階の行の中央に来るようにする
-  const isBad = s.direction === "negative" ? s.grade >= s.gradeMax - 1 : s.grade <= 2;
+  // 素点換算表の5つの欄(低い〜高い)での位置表示。悪い評価は赤系で強調。
+  // 4段階の尺度は換算表どおり該当しない欄を空けて表示する
+  const isBad = s.direction === "negative" ? s.column >= 4 : s.column <= 2;
   return (
     <span style={{ display: "inline-flex", justifyContent: "center", width: "5em", whiteSpace: "nowrap" }}>
-      {Array.from({ length: s.gradeMax }, (_, i) => (
+      {[1, 2, 3, 4, 5].map((c) => (
         <span
-          key={i}
-          style={{ width: "1em", textAlign: "center", color: i + 1 === s.grade ? (isBad ? "#D64545" : brand.teal) : "#C9D6D4" }}
+          key={c}
+          style={{ width: "1em", textAlign: "center", color: c === s.column ? (isBad ? "#D64545" : brand.teal) : "#C9D6D4" }}
         >
-          {i + 1 === s.grade ? "●" : "○"}
+          {!s.columns.includes(c) ? "" : c === s.column ? "●" : "○"}
         </span>
       ))}
     </span>
@@ -57,20 +57,23 @@ function ScaleTable({ rows }: { rows: ScaleResult[] }) {
       <thead>
         <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
           <th style={{ textAlign: "left", padding: "6px 8px" }}>尺度</th>
-          <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>
+          {/* 右3列は内容の幅に抑え、尺度名の列を広く取る(スマホで尺度名が細かく折り返されないように) */}
+          <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap", width: "1%" }}>
             素点
             <br />
             (換算後)
           </th>
-          <th style={{ textAlign: "left", padding: "6px 8px" }}>評価</th>
-          <th style={{ textAlign: "center", padding: "6px 8px", whiteSpace: "nowrap" }}>低い ← → 高い</th>
+          <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap", width: "1%" }}>評価</th>
+          <th style={{ textAlign: "center", padding: "6px 8px", width: "1%" }}>
+            <span style={{ whiteSpace: "nowrap" }}>少ない/低い ←</span> <span style={{ whiteSpace: "nowrap" }}>→ 多い/高い</span>
+          </th>
         </tr>
       </thead>
       <tbody>
         {rows.map((s) => (
           <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
             <td style={{ padding: "6px 8px", fontWeight: 700, color: brand.ink }}>{s.label}</td>
-            <td style={{ padding: "6px 8px" }}>{s.raw}点</td>
+            <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>{s.raw}点</td>
             <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>{s.gradeLabel}</td>
             <td style={{ padding: "6px 8px", textAlign: "center" }}>
               <Dots s={s} />
@@ -294,8 +297,8 @@ export function ReportView({
             {/* 尺度別評価表。レーダーチャートと同じ形の見出しを付け、●の色の見方を示す */}
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "18px 0 4px" }}>尺度別の評価</h2>
             <p style={{ fontSize: 11.5, color: "#8A9694", margin: "0 0 4px", lineHeight: 1.7 }}>
-              各尺度の素点を素点換算表({result.gender === "male" ? "男性" : "女性"})で5段階(単一質問の尺度は4段階)に評価したものです。
-              <span style={{ color: brand.teal }}>●</span>緑は良好〜普通、<span style={{ color: "#D64545" }}>●</span>赤は注意が必要な状態です。「負担」「イライラ感」などは高いほど、「コントロール度」「サポート」などは低いほど注意が必要です。
+              各尺度の素点を素点換算表({result.gender === "male" ? "男性" : "女性"})で5段階に評価したものです(単一質問の尺度は4段階で、換算表に欄がない段階は空白にしています)。
+              <span style={{ color: brand.teal }}>●</span>緑は良好〜普通、<span style={{ color: "#D64545" }}>●</span>赤は注意が必要な状態です。「負担」「イライラ感」などは多い・高いほど、「コントロール度」「サポート」などは低い・少ないほど注意が必要です。
             </p>
             {(["stressor", "reaction", "support"] as const).map((cat) => (
               <div key={cat} style={{ marginTop: 14 }}>
@@ -316,7 +319,7 @@ export function ReportView({
               </div>
             ))}
             <p style={{ fontSize: 11, color: "#8A9694", margin: "8px 0 0", lineHeight: 1.6 }}>
-              ※ 評価は全国の労働者データに基づく素点換算表(男女別)による5段階(単一質問の尺度は4段階)です。
+              ※ 評価は全国の労働者データに基づく素点換算表(男女別)による5段階(単一質問の尺度は4段階。換算表に欄がない段階は空白)です。
               「心理的な仕事の負担」等の負担・反応系の尺度は評価が高いほど注意が必要、
               「コントロール度」「サポート」等の資源系の尺度は評価が高いほど良好であることを示します。
             </p>

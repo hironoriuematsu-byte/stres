@@ -63,13 +63,45 @@ describe("素点換算(厚労省 素点換算表)", () => {
     const p = computeProfile(ans, "male").find((s) => s.key === "meaning")!;
     expect(p.gradeMax).toBe(4);
     expect(p.grade).toBe(4);
-    expect(p.radar).toBe(4);
+    // 換算表では働きがいの「やや高い」欄が空欄で、評価点4は「高い」欄に当たる
+    expect(p.column).toBe(5);
+    expect(p.columns).toEqual([1, 2, 3, 5]);
+    expect(p.gradeLabel).toBe("高い");
+    expect(p.radar).toBe(5);
+  });
+
+  it("単一質問の尺度は換算表の空欄の位置に従って欄が決まる", () => {
+    const find = (p: ReturnType<typeof computeProfile>, key: string) => p.find((s) => s.key === key)!;
+    // 身体的負担度(5-No.7): 「低い」欄が空欄 → 評価点1は「やや低い」
+    const low = answers(4, 2, 2, 2); // A7=4 → 5-4=1
+    expect(find(computeProfile(low, "male"), "physical").column).toBe(2);
+    expect(find(computeProfile(low, "male"), "physical").gradeLabel).toBe("やや低い");
+    expect(find(computeProfile(low, "female"), "physical").columns).toEqual([2, 3, 4, 5]);
+    // 職場環境(5-No.15): 男性は「低い」欄、女性は「やや低い」欄が空欄
+    expect(find(computeProfile(low, "male"), "environment").column).toBe(2);
+    expect(find(computeProfile(low, "female"), "environment").column).toBe(1);
+    const mid = answers(3, 2, 2, 2); // A15=3 → 5-3=2
+    expect(find(computeProfile(mid, "female"), "environment").column).toBe(3);
+    expect(find(computeProfile(mid, "female"), "environment").gradeLabel).toBe("普通");
+    expect(find(computeProfile(mid, "male"), "environment").column).toBe(3);
+    // 技能の活用度(No.11): 「高い」欄が空欄 → 評価点4は「やや高い」
+    expect(find(computeProfile(low, "male"), "skill").column).toBe(4);
+    expect(find(computeProfile(low, "male"), "skill").gradeLabel).toBe("やや高い");
+    // 負担・サポートなどは「少ない〜多い」、〜度・〜感は「低い〜高い」で表す
+    expect(find(computeProfile(answers(1, 2, 2, 2), "male"), "quant").gradeLabel).toBe("多い");
+    expect(find(computeProfile(answers(2, 2, 4, 2), "male"), "boss").gradeLabel).toBe("少ない");
+    expect(find(computeProfile(answers(2, 4, 2, 2), "male"), "fatigue").gradeLabel).toBe("高い");
+    // 仕事の適性度(5-No.16): 「やや高い」欄が空欄 → 評価点4は「高い」
+    expect(find(computeProfile(answers(1, 2, 2, 2), "female"), "aptitude").column).toBe(5);
+    // 5段階の尺度は欄1..5をそのまま使う
+    expect(find(computeProfile(mid, "male"), "quant").columns).toEqual([1, 2, 3, 4, 5]);
   });
 
   it("全19尺度が計算される", () => {
     const p = computeProfile(answers(2, 2, 2, 2), "female");
     expect(p).toHaveLength(19); // 9 + 6 + 4
     expect(p.every((s) => s.grade >= 1 && s.grade <= s.gradeMax)).toBe(true);
+    expect(p.every((s) => s.columns.includes(s.column) && s.column >= 1 && s.column <= 5)).toBe(true);
   });
 });
 
