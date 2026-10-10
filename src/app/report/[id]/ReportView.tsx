@@ -202,7 +202,7 @@ export function ReportView({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "auto auto auto",
+              gridTemplateColumns: "auto auto auto auto",
               justifyContent: "start",
               columnGap: 8,
               rowGap: 2,
@@ -223,12 +223,14 @@ export function ReportView({
                 <span style={{ marginRight: 6 }}>
                   <strong>{key}</strong> {label}
                 </span>
-                {/* 得点を右寄せにして「点」の位置を縦にそろえ、満点を後ろに添える */}
+                {/* 得点・満点とも右寄せにして「点」「点中」の位置を縦にそろえる */}
                 <strong style={{ whiteSpace: "nowrap", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                   {score}点
                 </strong>
-                <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", color: "#5B6B6A" }}>
-                  / {max}点中
+                <span style={{ color: "#5B6B6A" }}>/</span>
+                {/* 満点も右寄せにして「点中」の位置をそろえる */}
+                <span style={{ whiteSpace: "nowrap", textAlign: "right", fontVariantNumeric: "tabular-nums", color: "#5B6B6A" }}>
+                  {max}点中
                 </span>
               </React.Fragment>
             ))}
