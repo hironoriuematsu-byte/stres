@@ -35,11 +35,15 @@ const CATEGORY_LABEL = {
 
 function Dots({ s }: { s: ScaleResult }) {
   // 5(4)段階の位置表示。悪い評価は赤系で強調
+  // 5段階分の幅の中で中央に並べ、4段階の尺度は5段階の行の中央に来るようにする
   const isBad = s.direction === "negative" ? s.grade >= s.gradeMax - 1 : s.grade <= 2;
   return (
-    <span style={{ letterSpacing: 3, whiteSpace: "nowrap" }}>
+    <span style={{ display: "inline-flex", justifyContent: "center", width: "5em", whiteSpace: "nowrap" }}>
       {Array.from({ length: s.gradeMax }, (_, i) => (
-        <span key={i} style={{ color: i + 1 === s.grade ? (isBad ? "#D64545" : brand.teal) : "#C9D6D4" }}>
+        <span
+          key={i}
+          style={{ width: "1em", textAlign: "center", color: i + 1 === s.grade ? (isBad ? "#D64545" : brand.teal) : "#C9D6D4" }}
+        >
           {i + 1 === s.grade ? "●" : "○"}
         </span>
       ))}
