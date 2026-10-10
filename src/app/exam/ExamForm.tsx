@@ -490,7 +490,7 @@ export function ExamForm({
 
   // 結果
   if (step === 6 && result) {
-    // 判定のまとめ(印刷はしない: 結果票の方に同じ内容が入る)
+    // 判定のまとめ
     const summary = (
       <Card style={{ maxWidth: 640, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: 18 }}>
@@ -571,13 +571,14 @@ export function ExamForm({
             ? "このデモの回答は保存されません。実際の受検では、この結果がご本人のマイページに保存されます。"
             : "共用のパソコンをお使いの場合は、終了時に必ず「ログアウトして終了」を押してください。"}
           <br />
-          この下に、尺度別の評価やレーダーチャートを含む詳しい結果票が続きます。
+          この下に、レーダーチャート・尺度別の評価・アドバイスが続きます。
         </p>
       </Card>
     );
 
-    // 判定の下に個人結果票(尺度別の評価・レーダーチャート・助言)をそのまま続けて表示する。
-    // 別画面を開かなくても、下へスクロールすれば詳しい結果が読めるようにするため
+    // 判定の下にレーダーチャート・尺度別の評価・アドバイスをそのまま続けて表示する
+    // (別画面を開かなくても、下へスクロールすれば詳しい結果が読めるように)。
+    // ロゴや受検者情報の付いた印刷用の結果票は「結果票を別画面で開く」から
     const reportRow = {
       id: resultId ?? "demo",
       user_id: profile.userId,
@@ -598,7 +599,7 @@ export function ExamForm({
     };
     return (
       <>
-        <div className="no-print">{summary}</div>
+        {summary}
         <ReportView
           result={reportRow}
           subjectName={cleanName}

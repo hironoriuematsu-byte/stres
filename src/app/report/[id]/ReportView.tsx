@@ -103,7 +103,7 @@ export function ReportView({
   backHref: string;
   backLabel: string;
   demo?: boolean; // 紹介用デモ: アクセスログを記録しない
-  embedded?: boolean; // 受検直後の結果画面の下に続けて表示する(戻るボタンの代わりに見出しを付ける)
+  embedded?: boolean; // 受検直後の結果画面の下に続けて表示する(帳票の体裁は付けず、レーダー・尺度別評価・アドバイスだけ)
 }) {
   useEffect(() => {
     if (demo) return;
@@ -135,8 +135,199 @@ export function ReportView({
     ? `${formatBirthDate(subjectBirthDate)}${birthAge != null ? ` (${birthAge}歳)` : ""}`
     : "未登録";
 
+  // レーダーチャート・尺度別の評価・アドバイス(・80項目版の追加尺度)。
+  // 受検直後の画面(embedded)では、ロゴ・受検者情報・総合判定などの帳票部分は出さずにこの部分だけを続けて表示する
+  const detailBody = (
+    <>
+      {detailed && profile && advice ? (
+        <>
+          {/* レーダーチャート(3分割) */}
+          <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "0 0 4px" }}>ストレスプロフィール(レーダーチャート)</h2>
+          <p style={{ fontSize: 11.5, color: "#8A9694", margin: "0 0 4px" }}>
+            素点換算表({result.gender === "male" ? "男性" : "女性"})による評価。チャートが外側に広いほど良好な状態、
+            中心に向かって小さいほどストレス状況に注意が必要です。
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 4 }}>
+            {(["stressor", "reaction", "support"] as const).map((cat) => (
+              <div key={cat}>
+                <h3 style={{ fontSize: 12, color: brand.ink, textAlign: "center", margin: "8px 0 0" }}>
+                  {/* C は長いので「(サポート・満足度)」を2行目に中央揃えで出す */}
+                  {cat === "support" ? (
+                    <>
+                      C. ストレス反応に影響を与える他の因子
+                      <br />
+                      (サポート・満足度)
+                    </>
+                  ) : (
+                    CATEGORY_LABEL[cat]
+                  )}
+                </h3>
+                {/* 2行になった軸ラベル(家族・友人 など)が下端で切れないよう高さに余裕を持たせる */}
+                <div style={{ width: "100%", height: 270 }}>
+                  <ResponsiveContainer>
+                    {/* 長い軸ラベルは2行にし、半径を少し小さくして端で文字が切れないようにする */}
+                    <RadarChart data={radarFor(cat)} outerRadius="62%" margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                      <PolarGrid stroke={brand.line} />
+                      <PolarAngleAxis dataKey="scale" tick={<RadarTick fontSize={9.5} fill="#44534F" />} />
+                      <PolarRadiusAxis domain={[0, 5]} tickCount={6} tick={{ fontSize: 8 }} />
+                      <Radar
+                        dataKey="評価"
+                        stroke={brand.teal}
+                        strokeWidth={2}
+                        fill={brand.teal}
+                        fillOpacity={0.3}
+                        dot={{ r: 3, fill: brand.tealDark, strokeWidth: 0 }}
+                        isAnimationActive={false}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 尺度別評価表。レーダーチャートと同じ形の見出しを付け、●の色の見方を示す */}
+          <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "18px 0 4px" }}>尺度別の評価</h2>
+          <p style={{ fontSize: 11.5, color: "#8A9694", margin: "0 0 4px", lineHeight: 1.7 }}>
+            各尺度の素点を素点換算表({result.gender === "male" ? "男性" : "女性"})で5段階に評価したものです(単一質問の尺度は4段階で、換算表に欄がない段階は空白にしています)。
+            <span style={{ color: brand.teal }}>●</span>緑は良好〜普通、<span style={{ color: "#D64545" }}>●</span>赤は注意が必要な状態です。「負担」「イライラ感」などは多い・高いほど、「コントロール度」「サポート」などは低い・少ないほど注意が必要です。
+          </p>
+          {(["stressor", "reaction", "support"] as const).map((cat) => (
+            <div key={cat} style={{ marginTop: 14 }}>
+              <h2 style={{ fontSize: 14, color: brand.tealDark, margin: "0 0 6px" }}>
+                {/* C は長いので、レーダーチャートの見出しと同じく「(サポート・満足度)」を2行目に出し、
+                    1行目の真ん中にそろえる(見出し全体は左寄せのまま) */}
+                {cat === "support" ? (
+                  <span style={{ display: "inline-block", textAlign: "center" }}>
+                    C. ストレス反応に影響を与える他の因子
+                    <br />
+                    (サポート・満足度)
+                  </span>
+                ) : (
+                  CATEGORY_LABEL[cat]
+                )}
+              </h2>
+              <ScaleTable rows={profile.filter((s) => s.category === cat)} />
+            </div>
+          ))}
+          <p style={{ fontSize: 11, color: "#8A9694", margin: "8px 0 0", lineHeight: 1.6 }}>
+            ※ 評価は全国の労働者データに基づく素点換算表(男女別)による5段階(単一質問の尺度は4段階。換算表に欄がない段階は空白)です。
+            「心理的な仕事の負担」等の負担・反応系の尺度は評価が高いほど注意が必要、
+            「コントロール度」「サポート」等の資源系の尺度は評価が高いほど良好であることを示します。
+          </p>
+
+          {/* コメント */}
+          <div
+            style={{
+              marginTop: 16,
+              background: "#F4FAF9",
+              border: `1px solid ${brand.line}`,
+              borderRadius: 10,
+              padding: "12px 16px",
+            }}
+          >
+            <h2 style={{ fontSize: 14, color: brand.tealDark, margin: "0 0 8px" }}>結果の見方とアドバイス</h2>
+            {advice.map((t, i) => (
+              <p key={i} style={{ fontSize: 12.5, color: "#44534F", lineHeight: 1.8, margin: "0 0 6px" }}>
+                ・{t}
+              </p>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div
+          style={{
+            background: "#FBF3E3",
+            border: "1px solid #EFD9A8",
+            borderRadius: 10,
+            padding: "12px 16px",
+            fontSize: 13,
+            color: "#8A6B2E",
+            lineHeight: 1.8,
+          }}
+        >
+          この受検データには回答の詳細(または性別の情報)が記録されていないため、尺度別のストレスプロフィールは表示できません(上記の領域別得点と総合判定のみ有効です)。
+        </div>
+      )}
+
+      {ext80 && (
+        <div style={{ marginTop: 20, pageBreakInside: "avoid" }}>
+          <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "0 0 2px" }}>
+            職場環境について(80項目版の追加尺度)
+          </h2>
+          <p style={{ fontSize: 10.5, color: "#8A9694", margin: "0 0 8px", lineHeight: 1.7 }}>
+            新職業性ストレス簡易調査票(推奨尺度セット短縮版)による結果です。
+            <strong>いずれの尺度も点数が高いほど良好</strong>な状態を表します(1〜4点。点が低いほど注意が必要という向きで統一されています)。
+            「情緒的負担」「役割葛藤」なども点が高いほど負担が小さいことを示します。
+            この表は回答値(1〜4点)の平均で、上の<strong>ストレスプロフィール(1〜5の評価点)とは目盛りが異なります</strong>。
+            「全国平均」は全国調査(1,600名超)の平均値(性別が記録されている場合は同性の平均)で、尺度ごとに異なる値になります。
+            この部分は高ストレスの判定には用いず、職場環境の改善を検討するための情報です。
+          </p>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
+                <th style={{ textAlign: "left", padding: "6px 8px" }}>尺度</th>
+                <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>あなたの得点</th>
+                <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>全国平均</th>
+                <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>差</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(["burden", "task", "dept", "org", "outcome"] as const).map((g) => (
+                <React.Fragment key={g}>
+                  <tr>
+                    <td colSpan={4} style={{ padding: "5px 8px", background: "#F4FAF9", fontWeight: 700, color: brand.tealDark }}>
+                      {EXT80_GROUP_LABEL[g]}
+                    </td>
+                  </tr>
+                  {ext80
+                    .filter((s) => s.group === g)
+                    .map((s) => (
+                      <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
+                        <td style={{ padding: "5px 8px", color: brand.ink }}>{s.label}</td>
+                        <td style={{ padding: "5px 8px", fontWeight: 700 }}>{s.score.toFixed(1)}</td>
+                        <td style={{ padding: "5px 8px", color: "#5B6B6A" }}>{s.norm.toFixed(2)}</td>
+                        <td
+                          style={{
+                            padding: "5px 8px",
+                            fontWeight: 700,
+                            color: s.diff <= -0.5 ? "#B02A2A" : s.diff >= 0.5 ? brand.tealDark : "#5B6B6A",
+                          }}
+                        >
+                          {s.diff > 0 ? "+" : ""}
+                          {s.diff.toFixed(1)}
+                          {s.diff <= -0.5 ? "(平均より低い)" : s.diff >= 0.5 ? "(平均より高い)" : ""}
+                        </td>
+                      </tr>
+                    ))}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div
+        style={{
+          maxWidth: 640,
+          margin: "16px auto 0",
+          background: "#fff",
+          border: `1px solid ${brand.line}`,
+          borderRadius: 16,
+          padding: "20px 22px",
+        }}
+      >
+        {detailBody}
+      </div>
+    );
+  }
+
   return (
-    <div style={{ maxWidth: 860, margin: embedded ? "24px auto 0" : "0 auto" }}>
+    <div style={{ maxWidth: 860, margin: "0 auto" }}>
       <style>{`
         @media print {
           header, footer, .no-print { display: none !important; }
@@ -148,19 +339,12 @@ export function ReportView({
         @page { size: A4; margin: 0; }
       `}</style>
 
-      <div
-        className="no-print"
-        style={{ display: "flex", justifyContent: embedded ? "space-between" : "flex-end", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}
-      >
-        {embedded ? (
-          <h2 style={{ fontSize: 18, color: brand.ink, margin: 0 }}>詳しい結果票</h2>
-        ) : (
-          <Link href={backHref}>
-            <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
-              {backLabel}
-            </Btn>
-          </Link>
-        )}
+      <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 12 }}>
+        <Link href={backHref}>
+          <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
+            {backLabel}
+          </Btn>
+        </Link>
         <Btn onClick={() => window.print()} style={{ padding: "8px 16px", fontSize: 13 }}>
           印刷 / PDFとして保存
         </Btn>
@@ -263,173 +447,7 @@ export function ReportView({
           </p>
         </div>
 
-        {detailed && profile && advice ? (
-          <>
-            {/* レーダーチャート(3分割) */}
-            <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "0 0 4px" }}>ストレスプロフィール(レーダーチャート)</h2>
-            <p style={{ fontSize: 11.5, color: "#8A9694", margin: "0 0 4px" }}>
-              素点換算表({result.gender === "male" ? "男性" : "女性"})による評価。チャートが外側に広いほど良好な状態、
-              中心に向かって小さいほどストレス状況に注意が必要です。
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 4 }}>
-              {(["stressor", "reaction", "support"] as const).map((cat) => (
-                <div key={cat}>
-                  <h3 style={{ fontSize: 12, color: brand.ink, textAlign: "center", margin: "8px 0 0" }}>
-                    {/* C は長いので「(サポート・満足度)」を2行目に中央揃えで出す */}
-                    {cat === "support" ? (
-                      <>
-                        C. ストレス反応に影響を与える他の因子
-                        <br />
-                        (サポート・満足度)
-                      </>
-                    ) : (
-                      CATEGORY_LABEL[cat]
-                    )}
-                  </h3>
-                  {/* 2行になった軸ラベル(家族・友人 など)が下端で切れないよう高さに余裕を持たせる */}
-                  <div style={{ width: "100%", height: 270 }}>
-                    <ResponsiveContainer>
-                      {/* 長い軸ラベルは2行にし、半径を少し小さくして端で文字が切れないようにする */}
-                      <RadarChart data={radarFor(cat)} outerRadius="62%" margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                        <PolarGrid stroke={brand.line} />
-                        <PolarAngleAxis dataKey="scale" tick={<RadarTick fontSize={9.5} fill="#44534F" />} />
-                        <PolarRadiusAxis domain={[0, 5]} tickCount={6} tick={{ fontSize: 8 }} />
-                        <Radar
-                          dataKey="評価"
-                          stroke={brand.teal}
-                          strokeWidth={2}
-                          fill={brand.teal}
-                          fillOpacity={0.3}
-                          dot={{ r: 3, fill: brand.tealDark, strokeWidth: 0 }}
-                          isAnimationActive={false}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* 尺度別評価表。レーダーチャートと同じ形の見出しを付け、●の色の見方を示す */}
-            <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "18px 0 4px" }}>尺度別の評価</h2>
-            <p style={{ fontSize: 11.5, color: "#8A9694", margin: "0 0 4px", lineHeight: 1.7 }}>
-              各尺度の素点を素点換算表({result.gender === "male" ? "男性" : "女性"})で5段階に評価したものです(単一質問の尺度は4段階で、換算表に欄がない段階は空白にしています)。
-              <span style={{ color: brand.teal }}>●</span>緑は良好〜普通、<span style={{ color: "#D64545" }}>●</span>赤は注意が必要な状態です。「負担」「イライラ感」などは多い・高いほど、「コントロール度」「サポート」などは低い・少ないほど注意が必要です。
-            </p>
-            {(["stressor", "reaction", "support"] as const).map((cat) => (
-              <div key={cat} style={{ marginTop: 14 }}>
-                <h2 style={{ fontSize: 14, color: brand.tealDark, margin: "0 0 6px" }}>
-                  {/* C は長いので、レーダーチャートの見出しと同じく「(サポート・満足度)」を2行目に出し、
-                      1行目の真ん中にそろえる(見出し全体は左寄せのまま) */}
-                  {cat === "support" ? (
-                    <span style={{ display: "inline-block", textAlign: "center" }}>
-                      C. ストレス反応に影響を与える他の因子
-                      <br />
-                      (サポート・満足度)
-                    </span>
-                  ) : (
-                    CATEGORY_LABEL[cat]
-                  )}
-                </h2>
-                <ScaleTable rows={profile.filter((s) => s.category === cat)} />
-              </div>
-            ))}
-            <p style={{ fontSize: 11, color: "#8A9694", margin: "8px 0 0", lineHeight: 1.6 }}>
-              ※ 評価は全国の労働者データに基づく素点換算表(男女別)による5段階(単一質問の尺度は4段階。換算表に欄がない段階は空白)です。
-              「心理的な仕事の負担」等の負担・反応系の尺度は評価が高いほど注意が必要、
-              「コントロール度」「サポート」等の資源系の尺度は評価が高いほど良好であることを示します。
-            </p>
-
-            {/* コメント */}
-            <div
-              style={{
-                marginTop: 16,
-                background: "#F4FAF9",
-                border: `1px solid ${brand.line}`,
-                borderRadius: 10,
-                padding: "12px 16px",
-              }}
-            >
-              <h2 style={{ fontSize: 14, color: brand.tealDark, margin: "0 0 8px" }}>結果の見方とアドバイス</h2>
-              {advice.map((t, i) => (
-                <p key={i} style={{ fontSize: 12.5, color: "#44534F", lineHeight: 1.8, margin: "0 0 6px" }}>
-                  ・{t}
-                </p>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div
-            style={{
-              background: "#FBF3E3",
-              border: "1px solid #EFD9A8",
-              borderRadius: 10,
-              padding: "12px 16px",
-              fontSize: 13,
-              color: "#8A6B2E",
-              lineHeight: 1.8,
-            }}
-          >
-            この受検データには回答の詳細(または性別の情報)が記録されていないため、尺度別のストレスプロフィールは表示できません(上記の領域別得点と総合判定のみ有効です)。
-          </div>
-        )}
-
-        {ext80 && (
-          <div style={{ marginTop: 20, pageBreakInside: "avoid" }}>
-            <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "0 0 2px" }}>
-              職場環境について(80項目版の追加尺度)
-            </h2>
-            <p style={{ fontSize: 10.5, color: "#8A9694", margin: "0 0 8px", lineHeight: 1.7 }}>
-              新職業性ストレス簡易調査票(推奨尺度セット短縮版)による結果です。
-              <strong>いずれの尺度も点数が高いほど良好</strong>な状態を表します(1〜4点。点が低いほど注意が必要という向きで統一されています)。
-              「情緒的負担」「役割葛藤」なども点が高いほど負担が小さいことを示します。
-              この表は回答値(1〜4点)の平均で、上の<strong>ストレスプロフィール(1〜5の評価点)とは目盛りが異なります</strong>。
-              「全国平均」は全国調査(1,600名超)の平均値(性別が記録されている場合は同性の平均)で、尺度ごとに異なる値になります。
-              この部分は高ストレスの判定には用いず、職場環境の改善を検討するための情報です。
-            </p>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead>
-                <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-                  <th style={{ textAlign: "left", padding: "6px 8px" }}>尺度</th>
-                  <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>あなたの得点</th>
-                  <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>全国平均</th>
-                  <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap" }}>差</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(["burden", "task", "dept", "org", "outcome"] as const).map((g) => (
-                  <React.Fragment key={g}>
-                    <tr>
-                      <td colSpan={4} style={{ padding: "5px 8px", background: "#F4FAF9", fontWeight: 700, color: brand.tealDark }}>
-                        {EXT80_GROUP_LABEL[g]}
-                      </td>
-                    </tr>
-                    {ext80
-                      .filter((s) => s.group === g)
-                      .map((s) => (
-                        <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
-                          <td style={{ padding: "5px 8px", color: brand.ink }}>{s.label}</td>
-                          <td style={{ padding: "5px 8px", fontWeight: 700 }}>{s.score.toFixed(1)}</td>
-                          <td style={{ padding: "5px 8px", color: "#5B6B6A" }}>{s.norm.toFixed(2)}</td>
-                          <td
-                            style={{
-                              padding: "5px 8px",
-                              fontWeight: 700,
-                              color: s.diff <= -0.5 ? "#B02A2A" : s.diff >= 0.5 ? brand.tealDark : "#5B6B6A",
-                            }}
-                          >
-                            {s.diff > 0 ? "+" : ""}
-                            {s.diff.toFixed(1)}
-                            {s.diff <= -0.5 ? "(平均より低い)" : s.diff >= 0.5 ? "(平均より高い)" : ""}
-                          </td>
-                        </tr>
-                      ))}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {detailBody}
 
         <p style={{ fontSize: 10.5, color: "#8A9694", marginTop: 18, lineHeight: 1.7 }}>
           本結果票は労働安全衛生法第66条の10に基づくストレスチェックの個人結果であり、医療上の診断ではありません。
@@ -440,13 +458,11 @@ export function ReportView({
       </div>
 
       <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-        {!embedded && (
-          <Link href={backHref}>
-            <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
-              {backLabel}
-            </Btn>
-          </Link>
-        )}
+        <Link href={backHref}>
+          <Btn tone="ghost" style={{ padding: "8px 14px", fontSize: 13 }}>
+            {backLabel}
+          </Btn>
+        </Link>
         <Btn onClick={() => window.print()} style={{ padding: "8px 16px", fontSize: 13 }}>
           印刷 / PDFとして保存
         </Btn>
