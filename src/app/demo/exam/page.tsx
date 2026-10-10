@@ -18,7 +18,6 @@ export default function DemoExamPage({ searchParams }: { searchParams: { q?: str
         profile={{
           userId: "demo-user",
           name: "",
-          empId: "",
           dept: "",
           companyId: "demo-company",
           companyName: DEMO_COMPANY,

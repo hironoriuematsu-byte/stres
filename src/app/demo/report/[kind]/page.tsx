@@ -25,7 +25,7 @@ export default function DemoReportPage({
       <ReportView
         result={demoResultRow(person, questionnaire)}
         subjectName={person.name}
-        subjectEmpId={person.empId}
+        subjectBirthDate={person.birthDate}
         companyName={DEMO_COMPANY}
         backHref="/demo"
         backLabel="サンプル一覧へ"

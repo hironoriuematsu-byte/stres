@@ -4,6 +4,7 @@ import { getSessionProfile, roleHome } from "@/lib/auth-server";
 import { Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { ReportView } from "./ReportView";
+import { fetchBirthDate } from "@/lib/birth-date-db";
 
 // 個人結果票。閲覧可否はRLSに委ねる:
 //   本人=自分の結果のみ / office=全件 / jimu=自社(誓約済)のみ
@@ -34,12 +35,9 @@ export default async function ReportPage({ params }: { params: { id: string } })
     );
   }
 
-  const [{ data: subject }, { data: company }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("name, emp_id")
-      .eq("user_id", result.user_id)
-      .maybeSingle(),
+  const [{ data: subject }, birth, { data: company }] = await Promise.all([
+    supabase.from("profiles").select("name").eq("user_id", result.user_id).maybeSingle(),
+    fetchBirthDate(supabase, result.user_id), // 列が無い環境(SQL 0024 未実行)でも落ちない
     supabase.from("companies").select("name").eq("id", result.company_id).maybeSingle(),
   ]);
 
@@ -47,7 +45,7 @@ export default async function ReportPage({ params }: { params: { id: string } })
     <ReportView
       result={result}
       subjectName={subject?.name ?? "(不明)"}
-      subjectEmpId={subject?.emp_id ?? ""}
+      subjectBirthDate={birth.value}
       companyName={company?.name ?? ""}
       backHref={backHref}
       backLabel={backLabel}

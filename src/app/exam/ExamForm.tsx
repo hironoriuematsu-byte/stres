@@ -28,7 +28,6 @@ import {
 type ExamProfile = {
   userId: string;
   name: string;
-  empId: string;
   dept: string;
   birthDate?: string; // 登録済みの生年月日(YYYY-MM-DD)
   birthDateSupported?: boolean; // false のときは列が無い(SQL 0024 未実行)ため入力欄を出さない
@@ -52,7 +51,6 @@ export function ExamForm({
   const router = useRouter();
   const [step, setStep] = useState(0); // 0=受検者情報 1=A 2=B 3=C 4=D 5=同意 6=結果 7=年度重複 8=追加23項目(80項目版)
   const [name, setName] = useState(profile.name);
-  const [empId, setEmpId] = useState(profile.empId);
   const [dept, setDept] = useState(profile.dept);
   // 生年月日は健康管理Webで健診結果・カルテと本人を突合するために使う。未登録の方には受検時に入れてもらう
   const askBirth = !demo && profile.birthDateSupported !== false;
@@ -134,11 +132,11 @@ export function ExamForm({
     setSaveError(null);
     const supabase = createClient();
 
-    // 本人が入力した氏名・社員番号・部署をプロフィールへ反映
-    // (失敗しても受検自体は続行する)
+    // 本人が入力した氏名・部署をプロフィールへ反映(失敗しても受検自体は続行する)。
+    // 社員番号は生年月日で本人を区別できるようになったため入力をやめた(登録済みの値はそのまま残す)
     await supabase
       .from("profiles")
-      .update({ name: cleanName, emp_id: empId.trim() || null, dept: dept.trim() })
+      .update({ name: cleanName, dept: dept.trim() })
       .eq("user_id", profile.userId);
     // 生年月日は別に保存する(列が無い環境でも上の更新に影響させない)
     if (askBirth && birthDate && birthDate !== profile.birthDate) {
@@ -202,7 +200,7 @@ export function ExamForm({
         <Badge>STEP 1 / {totalSteps}</Badge>
         <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 4px" }}>受検者情報</h2>
         <p style={{ fontSize: 13, color: "#5B6B6A", marginBottom: 14 }}>
-          ストレスチェックを開始します。氏名{askBirth ? "・生年月日" : ""}・部署・性別を入力してください(社員番号は任意です)。
+          ストレスチェックを開始します。氏名{askBirth ? "・生年月日" : ""}・部署・性別を入力してください。
         </p>
         <div
           style={{
@@ -240,12 +238,6 @@ export function ExamForm({
             </p>
           </div>
         )}
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
-            社員番号(任意)
-          </label>
-          <input value={empId} onChange={(e) => setEmpId(e.target.value)} placeholder="例: 10234" style={input} maxLength={30} />
-        </div>
         <div style={{ marginBottom: 14 }}>
           <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
             部署

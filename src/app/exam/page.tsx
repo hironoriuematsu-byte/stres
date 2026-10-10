@@ -74,7 +74,6 @@ export default async function ExamPage() {
       profile={{
         userId: profile.user_id,
         name: profile.name === "未設定" ? "" : profile.name,
-        empId: profile.emp_id ?? "",
         dept: profile.dept ?? "",
         birthDate: birth.value ?? "",
         birthDateSupported: birth.supported,

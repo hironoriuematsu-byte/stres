@@ -61,6 +61,7 @@ export type DemoPerson = {
   id: string;
   name: string;
   empId: string;
+  birthDate: string; // YYYY-MM-DD(架空)
   dept: string;
   gender: Gender;
   answers: Answers;
@@ -124,6 +125,7 @@ export function buildDemoPeople(): DemoPerson[] {
         id: `demo-${String(seq).padStart(3, "0")}`,
         name: `${surname} ${given}`,
         empId: `M${String(1000 + seq)}`,
+        birthDate: `${1966 + ((seq * 7) % 38)}-${String(1 + (seq % 12)).padStart(2, "0")}-${String(1 + ((seq * 3) % 28)).padStart(2, "0")}`,
         dept: d.name,
         gender,
         answers,

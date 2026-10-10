@@ -17,6 +17,7 @@ import { ResultRow } from "@/lib/types";
 import { buildAdvice, computeProfile, hasCompleteAnswers, Gender, ScaleResult } from "@/lib/profile-report";
 import { logAccess } from "@/lib/log";
 import { questionnaireLabel } from "@/lib/questionnaire-label";
+import { ageAt, formatBirthDate } from "@/lib/birth-date";
 import { IMPLEMENTER } from "@/lib/org";
 import { PrintHeader } from "@/components/PrintHeader";
 import { RadarTick } from "@/components/RadarTick";
@@ -88,7 +89,7 @@ function ScaleTable({ rows }: { rows: ScaleResult[] }) {
 export function ReportView({
   result,
   subjectName,
-  subjectEmpId,
+  subjectBirthDate,
   companyName,
   backHref,
   backLabel,
@@ -96,7 +97,7 @@ export function ReportView({
 }: {
   result: ResultRow & { answers: unknown; gender: Gender | null; answers_ext?: unknown; questionnaire?: string };
   subjectName: string;
-  subjectEmpId: string;
+  subjectBirthDate: string | null; // YYYY-MM-DD。未登録なら null
   companyName: string;
   backHref: string;
   backLabel: string;
@@ -125,6 +126,12 @@ export function ReportView({
         scale: s.short,
         評価: s.radar,
       }));
+
+  // 生年月日と実施日時点の年齢(同姓同名の方の区別のため。未登録なら「未登録」)
+  const birthAge = subjectBirthDate ? ageAt(subjectBirthDate, new Date(result.created_at)) : null;
+  const birthDateText = subjectBirthDate
+    ? `${formatBirthDate(subjectBirthDate)}${birthAge != null ? ` (${birthAge}歳)` : ""}`
+    : "未登録";
 
   return (
     <div style={{ maxWidth: 860, margin: "0 auto" }}>
@@ -180,7 +187,7 @@ export function ReportView({
               ["実施年度", `${result.fiscal_year}年度`],
               ["氏名", subjectName],
               ["実施日", new Date(result.created_at).toLocaleDateString("ja-JP")],
-              ["社員番号", subjectEmpId],
+              ["生年月日", birthDateText],
               ["部署", result.dept],
             ] as const
           ).map(([k, v]) => (
