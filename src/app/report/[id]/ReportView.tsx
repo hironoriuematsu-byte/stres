@@ -259,13 +259,7 @@ export function ReportView({
             <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "18px 0 4px" }}>尺度別の評価</h2>
             <p style={{ fontSize: 11.5, color: "#8A9694", margin: "0 0 4px", lineHeight: 1.7 }}>
               各尺度の素点を素点換算表({result.gender === "male" ? "男性" : "女性"})で5段階(単一質問の尺度は4段階)に評価したものです。
-              <span style={{ whiteSpace: "nowrap" }}>
-                <span style={{ color: brand.teal }}>●</span> 緑は良好〜普通、
-              </span>
-              <span style={{ whiteSpace: "nowrap" }}>
-                <span style={{ color: "#D64545" }}>●</span> 赤は注意が必要
-              </span>
-              な状態です。「負担」「イライラ感」などは高いほど、「コントロール度」「サポート」などは低いほど注意が必要です。
+              <span style={{ color: brand.teal }}>●</span>緑は良好〜普通、<span style={{ color: "#D64545" }}>●</span>赤は注意が必要な状態です。「負担」「イライラ感」などは高いほど、「コントロール度」「サポート」などは低いほど注意が必要です。
             </p>
             {(["stressor", "reaction", "support"] as const).map((cat) => (
               <div key={cat} style={{ marginTop: 14 }}>
