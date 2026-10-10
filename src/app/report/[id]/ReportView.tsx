@@ -290,13 +290,14 @@ export function ReportView({
             {(["stressor", "reaction", "support"] as const).map((cat) => (
               <div key={cat} style={{ marginTop: 14 }}>
                 <h2 style={{ fontSize: 14, color: brand.tealDark, margin: "0 0 6px" }}>
-                  {/* C は長いので、レーダーチャートの見出しと同じく「(サポート・満足度)」を2行目に出す */}
+                  {/* C は長いので、レーダーチャートの見出しと同じく「(サポート・満足度)」を2行目に出し、
+                      1行目の真ん中にそろえる(見出し全体は左寄せのまま) */}
                   {cat === "support" ? (
-                    <>
+                    <span style={{ display: "inline-block", textAlign: "center" }}>
                       C. ストレス反応に影響を与える他の因子
                       <br />
                       (サポート・満足度)
-                    </>
+                    </span>
                   ) : (
                     CATEGORY_LABEL[cat]
                   )}
