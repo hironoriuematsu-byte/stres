@@ -133,6 +133,19 @@ a {
   .report-info { grid-template-columns: 1fr 1fr; }
 }
 
+/* 個人結果票の尺度別評価表。
+   スマホ幅では画面いっぱいに使い(右3列は内容の幅、尺度名の列が残りを取る)、
+   PC幅では表を広げすぎず、尺度名と素点の間が空きすぎないようにしつつ、丸印の列を広く取る */
+.scale-table { width: 100%; border-collapse: collapse; }
+.scale-dots { width: 5em; }
+.scale-dots > span { width: 1em; }
+@media (min-width: 700px) {
+  .scale-table { max-width: 640px; }
+  .scale-table .scale-dots-head { white-space: nowrap; }
+  .scale-dots { width: 7em; }
+  .scale-dots > span { width: 1.4em; }
+}
+
 /* フッター: スマホ幅では「個人情報の取扱いについて」と Copyright を別の行にし、区切りの縦線を隠す */
 .site-footer-item { display: inline-block; white-space: nowrap; }
 @media (max-width: 560px) {

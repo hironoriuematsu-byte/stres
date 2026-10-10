@@ -39,12 +39,9 @@ function Dots({ s }: { s: ScaleResult }) {
   // 4段階の尺度は換算表どおり該当しない欄を空けて表示する
   const isBad = s.direction === "negative" ? s.column >= 4 : s.column <= 2;
   return (
-    <span style={{ display: "inline-flex", justifyContent: "center", width: "5em", whiteSpace: "nowrap" }}>
+    <span className="scale-dots" style={{ display: "inline-flex", justifyContent: "center", whiteSpace: "nowrap" }}>
       {[1, 2, 3, 4, 5].map((c) => (
-        <span
-          key={c}
-          style={{ width: "1em", textAlign: "center", color: c === s.column ? (isBad ? "#D64545" : brand.teal) : "#C9D6D4" }}
-        >
+        <span key={c} style={{ textAlign: "center", color: c === s.column ? (isBad ? "#D64545" : brand.teal) : "#C9D6D4" }}>
           {!s.columns.includes(c) ? "" : c === s.column ? "●" : "○"}
         </span>
       ))}
@@ -54,7 +51,7 @@ function Dots({ s }: { s: ScaleResult }) {
 
 function ScaleTable({ rows }: { rows: ScaleResult[] }) {
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+    <table className="scale-table" style={{ fontSize: 12.5 }}>
       <thead>
         <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
           <th style={{ textAlign: "left", padding: "6px 8px" }}>尺度</th>
@@ -65,7 +62,7 @@ function ScaleTable({ rows }: { rows: ScaleResult[] }) {
             (換算後)
           </th>
           <th style={{ textAlign: "left", padding: "6px 8px", whiteSpace: "nowrap", width: "1%" }}>評価</th>
-          <th style={{ textAlign: "center", padding: "6px 8px", width: "1%" }}>
+          <th className="scale-dots-head" style={{ textAlign: "center", padding: "6px 8px", width: "1%" }}>
             <span style={{ whiteSpace: "nowrap" }}>少ない/低い ←</span> <span style={{ whiteSpace: "nowrap" }}>→ 多い/高い</span>
           </th>
         </tr>
