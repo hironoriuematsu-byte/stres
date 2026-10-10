@@ -198,9 +198,20 @@ export function ReportView({
             {result.high_stress ? <Badge tone="red">高ストレス(面接指導の対象)</Badge> : <Badge>高ストレスに該当せず</Badge>}
           </div>
           {/* 先に本人の得点を示し、改行して判定基準を添える */}
+          {/* 「あなたの得点」の後で改行し、点数は1行に並べる(項目の途中では折り返さない) */}
           <p style={{ fontSize: 13, color: brand.ink, margin: "8px 0 0", lineHeight: 1.7 }}>
-            あなたの得点 — A: {result.score_a}/68点、B: {result.score_b}/116点、C: {result.score_c}/36点、A+C:{" "}
-            {result.score_a + result.score_c}点
+            あなたの得点
+            <br />
+            {[
+              `A:${result.score_a}/68点`,
+              `B:${result.score_b}/116点`,
+              `C:${result.score_c}/36点`,
+              `A+C:${result.score_a + result.score_c}点`,
+            ].map((t, i) => (
+              <span key={t} style={{ whiteSpace: "nowrap", marginRight: i < 3 ? "0.6em" : 0 }}>
+                {t}
+              </span>
+            ))}
           </p>
           <p style={{ fontSize: 12, color: "#5B6B6A", margin: "4px 0 0", lineHeight: 1.7 }}>
             判定基準(合計点数法): ①心身のストレス反応(B領域)の合計が77点以上、または
