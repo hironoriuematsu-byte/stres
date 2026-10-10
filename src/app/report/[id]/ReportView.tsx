@@ -255,8 +255,12 @@ export function ReportView({
               ))}
             </div>
 
-            {/* 尺度別評価表。最初に●の色と位置の見方を示す */}
-            <p style={{ fontSize: 12, color: "#5B6B6A", margin: "14px 0 0", lineHeight: 1.7 }}>
+            {/* 尺度別評価表。レーダーチャートと同じ形の見出しを付け、●の色の見方を示す */}
+            <h2 style={{ fontSize: 15, color: brand.tealDark, margin: "18px 0 4px" }}>尺度別の評価</h2>
+            <p style={{ fontSize: 11.5, color: "#8A9694", margin: "0 0 4px" }}>
+              各尺度の素点を素点換算表({result.gender === "male" ? "男性" : "女性"})で5段階(単一質問の尺度は4段階)に評価したものです。
+            </p>
+            <p style={{ fontSize: 12, color: "#5B6B6A", margin: "0", lineHeight: 1.7 }}>
               <strong style={{ color: brand.ink }}>表の見方：</strong>
               <span style={{ whiteSpace: "nowrap" }}>
                 <span style={{ color: brand.teal }}>●</span> 緑は良好〜普通、
