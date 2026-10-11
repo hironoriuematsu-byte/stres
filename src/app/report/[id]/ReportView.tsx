@@ -261,6 +261,8 @@ export function ReportView({
             この表は回答値(1〜4点)の平均で、上の<strong>ストレスプロフィール(1〜5の評価点)とは目盛りが異なります</strong>。
             「全国平均」は全国調査(1,600名超)の平均値(性別が記録されている場合は同性の平均)で、尺度ごとに異なる値になります。
             この部分は高ストレスの判定には用いず、職場環境の改善を検討するための情報です。
+            「差」の<span style={{ color: "#B02A2A", background: "#FDE3E3", padding: "0 4px", fontWeight: 700 }}>赤の網掛け</span>は全国平均より0.5点以上低く注意が必要な尺度、
+            <span style={{ color: brand.tealDark, fontWeight: 700 }}>緑</span>は全国平均より0.5点以上高く良好な尺度です。
           </p>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
@@ -286,16 +288,18 @@ export function ReportView({
                         <td style={{ padding: "5px 8px", color: brand.ink }}>{s.label}</td>
                         <td style={{ padding: "5px 8px", fontWeight: 700 }}>{s.score.toFixed(1)}</td>
                         <td style={{ padding: "5px 8px", color: "#5B6B6A" }}>{s.norm.toFixed(2)}</td>
+                        {/* 全国平均より0.5点以上低い(注意)は赤の網掛け、0.5点以上高い(良好)は緑。言葉は添えず色で示す */}
                         <td
                           style={{
                             padding: "5px 8px",
                             fontWeight: 700,
+                            whiteSpace: "nowrap",
                             color: s.diff <= -0.5 ? "#B02A2A" : s.diff >= 0.5 ? brand.tealDark : "#5B6B6A",
+                            background: s.diff <= -0.5 ? "#FDE3E3" : undefined,
                           }}
                         >
                           {s.diff > 0 ? "+" : ""}
                           {s.diff.toFixed(1)}
-                          {s.diff <= -0.5 ? "(平均より低い)" : s.diff >= 0.5 ? "(平均より高い)" : ""}
                         </td>
                       </tr>
                     ))}
