@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { brand } from "@/lib/brand";
 import { ROLE_LABEL, Role } from "@/lib/types";
 import { startNavigationProgress } from "@/lib/navigate";
+import { SiteNav, showSiteNav } from "@/components/SiteNav";
 
 export function Header({
   email,
@@ -33,9 +34,13 @@ export function Header({
   };
 
   const roleLabel = role && role in ROLE_LABEL ? ROLE_LABEL[role as Role] : null;
+  // サービス案内などの公開ページでは、事務所サイト(mestate.jp)と同じメニューを出す
+  // (ログイン中の方には、これまでどおりアカウント設定・ログアウトを出す)
+  const withSiteNav = !email && showSiteNav(pathname);
 
   return (
     <header
+      className={withSiteNav ? "app-header has-site-nav" : "app-header"}
       style={{
         maxWidth: 960,
         margin: "0 auto",
@@ -72,6 +77,7 @@ export function Header({
           職業性ストレス簡易調査票準拠
         </div>
       </div>
+      {withSiteNav && <SiteNav />}
       {email && (
         // スマートフォンの幅では氏名とボタンが行を分けて並ぶ。
         // 氏名やボタンの文字が途中で折り返さないようにする
