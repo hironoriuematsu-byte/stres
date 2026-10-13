@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
+import { EmployeeNotice } from "@/components/EmployeeNotice";
 import { brand } from "@/lib/brand";
-import { formatJpDate, interviewOptionLabel, jstDate, jstToday, priceAdd, UNIT_PRICE } from "@/lib/plan";
+import { formatJpDate, INTERVIEW_OPTIONS, interviewOptionLabel, QUESTIONNAIRE_OPTIONS, questionnaireLabel, jstDate, jstToday, priceAdd, UNIT_PRICE } from "@/lib/plan";
 
 type Payment = { id: string; kind: "new" | "add_seats" | "renew"; seats: number; amount: number; paid_at: string };
 
@@ -42,18 +43,26 @@ export function PlanStatusPanel({
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [showNotice, setShowNotice] = useState(false);
   const [payments, setPayments] = useState<Payment[]>(previewPayments ?? []);
+  const [iv, setIv] = useState(preview?.interview_option ?? ""); // 面接指導の担当(変更用)
+  const [ivOpen, setIvOpen] = useState(false);
+  const [q, setQ] = useState<string>("57"); // 調査票(57項目版/80項目版)
+  const [qOpen, setQOpen] = useState(false);
 
   const load = async () => {
     if (preview) return;
     const supabase = createClient();
     const [{ data }, { data: co }] = await Promise.all([
       supabase.rpc("exam_plan_status", { p_company: companyId, p_year: fiscalYear }),
-      supabase.from("companies").select("web_signup").eq("id", companyId).maybeSingle(),
+      supabase.from("companies").select("web_signup, questionnaire").eq("id", companyId).maybeSingle(),
     ]);
+    setQ((co as { questionnaire?: string } | null)?.questionnaire === "80" ? "80" : "57");
     // 顧問契約に切り替えた企業では、受検期間・人数枠の欄を出さない(制限なし)
     const row = (co as { web_signup?: boolean } | null)?.web_signup ? ((data as Status[] | null)?.[0] ?? null) : null;
     setSt(row);
-    if (row) setEnd(row.exam_end);
+    if (row) {
+      setEnd(row.exam_end);
+      setIv(row.interview_option ?? "");
+    }
     // お支払いの記録(領収書のダウンロード用)
     if (row && canEdit) {
       const { data: ps } = await supabase
@@ -105,6 +114,57 @@ export function PlanStatusPanel({
       setMsg({ ok: true, text: `締切日を${formatJpDate(end)}に変更しました。` });
       load();
     }
+  };
+
+  const saveInterview = async () => {
+    if (preview) {
+      setMsg({ ok: true, text: "(デモ)面接指導の担当を変更しました。実際の画面では保存されます。" });
+      setIvOpen(false);
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/plan/interview-option", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fiscalYear, option: iv }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "変更できませんでした");
+      setMsg({ ok: true, text: `面接指導の担当を「${interviewOptionLabel(iv)}」に変更しました。これから届く申出に適用されます。` });
+      setIvOpen(false);
+      load();
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
+    }
+    setBusy(false);
+  };
+
+  const saveQuestionnaire = async (next: string) => {
+    if (preview) {
+      setQ(next);
+      setQOpen(false);
+      setMsg({ ok: true, text: "(デモ)調査票を変更しました。実際の画面では保存されます。" });
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/plan/questionnaire", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionnaire: next }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "変更できませんでした");
+      setQ(next);
+      setQOpen(false);
+      setMsg({ ok: true, text: `調査票を${questionnaireLabel(next)}に変更しました。` });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
+    }
+    setBusy(false);
   };
 
   const buySeats = async () => {
@@ -177,8 +237,90 @@ export function PlanStatusPanel({
           {full && <div style={{ ...small, color: "#B02A2A" }}>人数枠に達しました。まだ受検する方がいる場合は人数を追加してください。</div>}
         </div>
         <div>
+          <div style={small}>調査票</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink, lineHeight: 1.6 }}>{questionnaireLabel(q)}</div>
+          {canEdit && st.used === 0 && !qOpen && (
+            <button
+              onClick={() => setQOpen(true)}
+              style={{ background: "none", border: 0, padding: 0, marginTop: 2, color: brand.tealDark, fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+            >
+              調査票を変更する(最初の方が受検するまで)
+            </button>
+          )}
+          {canEdit && st.used === 0 && qOpen && (
+            <div style={{ marginTop: 6, padding: 10, border: `1px solid ${brand.line}`, borderRadius: 8, background: "#FAFCFC" }}>
+              {QUESTIONNAIRE_OPTIONS.map((o) => (
+                <div key={o.value} style={{ marginBottom: 6 }}>
+                  <Btn
+                    tone={o.value === q ? "teal" : "ghost"}
+                    disabled={busy || o.value === q}
+                    onClick={() => saveQuestionnaire(o.value)}
+                    style={{ padding: "5px 12px", fontSize: 13 }}
+                  >
+                    {o.label}にする
+                  </Btn>
+                  <div style={{ ...small, marginTop: 2 }}>{o.desc}</div>
+                </div>
+              ))}
+              <Btn tone="ghost" onClick={() => setQOpen(false)} style={{ padding: "5px 12px", fontSize: 13 }}>
+                やめる
+              </Btn>
+            </div>
+          )}
+          {st.used > 0 && <div style={small}>受検が始まったため、今年度は変更できません。</div>}
+        </div>
+        <div>
           <div style={small}>産業医面接指導の担当</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink, lineHeight: 1.6 }}>{interviewOptionLabel(st.interview_option)}</div>
+          <div style={small}>
+            {st.interview_option === "mestate"
+              ? "申出は、当事務所(実施者)と担当者に通知されます。"
+              : "申出は、担当者(実施事務従事者)にだけ通知されます。"}
+          </div>
+          {canEdit && !ivOpen && (
+            <button
+              onClick={() => setIvOpen(true)}
+              style={{ background: "none", border: 0, padding: 0, marginTop: 2, color: brand.tealDark, fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+            >
+              担当を変更する
+            </button>
+          )}
+          {canEdit && ivOpen && (
+            <div style={{ marginTop: 6, padding: 10, border: `1px solid ${brand.line}`, borderRadius: 8, background: "#FAFCFC" }}>
+              {INTERVIEW_OPTIONS.map((o) => {
+                const disabled = o.value === "sanpo" && (st.workers ?? 0) >= 50;
+                return (
+                  <label key={o.value} style={{ display: "block", fontSize: 13, color: disabled ? "#AAB6B4" : brand.ink, marginBottom: 6 }}>
+                    <input
+                      type="radio"
+                      name="status-iv"
+                      disabled={disabled}
+                      checked={iv === o.value}
+                      onChange={() => setIv(o.value)}
+                      style={{ marginRight: 6 }}
+                    />
+                    {o.label}
+                    <div style={{ ...small, marginLeft: 22 }}>{o.desc}</div>
+                  </label>
+                );
+              })}
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                <Btn onClick={saveInterview} disabled={busy || !iv || iv === st.interview_option} style={{ padding: "6px 14px", fontSize: 13 }}>
+                  変更する
+                </Btn>
+                <Btn
+                  tone="ghost"
+                  onClick={() => {
+                    setIvOpen(false);
+                    setIv(st.interview_option ?? "");
+                  }}
+                  style={{ padding: "6px 14px", fontSize: 13 }}
+                >
+                  やめる
+                </Btn>
+              </div>
+            </div>
+          )}
           {st.interview_option === "sanpo" && (
             <div style={small}>
               申出があったときは、最寄りの地域産業保健センターに面接指導をお申し込みください(連絡先は
@@ -260,40 +402,17 @@ export function PlanStatusPanel({
             onClick={() => setShowNotice((v) => !v)}
             style={{ background: "none", border: "none", padding: 0, color: brand.tealDark, fontWeight: 700, fontSize: 13, cursor: "pointer" }}
           >
-            {showNotice ? "▲" : "▼"} 従業員の皆さまへのお知らせ文の例(実施前の周知に使えます)
+            {showNotice ? "▲" : "▼"} 従業員の皆さまへのお知らせ(受検用URL・QRコード入り。そのまま貼り付け・印刷できます)
           </button>
           {showNotice && (
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                fontFamily: "inherit",
-                fontSize: 13,
-                color: "#44534F",
-                lineHeight: 1.8,
-                background: "#F4FAF9",
-                border: `1px solid ${brand.line}`,
-                borderRadius: 10,
-                padding: "12px 14px",
-                margin: "8px 0 0",
-              }}
-            >
-              {`ストレスチェック実施のお知らせ
-
-労働安全衛生法に基づき、ストレスチェックを実施します。ご自身のストレスの状態に気づき、職場環境の改善につなげることが目的です。
-
-■ 受検期間: ${formatJpDate(st.exam_start)} 〜 ${formatJpDate(st.exam_end)}
-■ 受検方法: 配布する受検用URL(QRコード)から、スマートフォンまたはパソコンで回答してください(約10〜15分)。
-■ 実施者: 医師(産業医) 上松 弘典(うえまつ産業医事務所)
-■ 結果の取扱い:
- ・結果は受検後すぐにご本人に表示されます。
- ・個人の結果は、ご本人の同意がない限り会社に提供されません。
- ・高ストレスと判定された方は、医師による面接指導を申し出ることができます。
- ・受検しないこと、結果、面接指導の申出を理由に、不利益な取扱いをすることはありません。
- ・部署ごとの集計(10名未満の集団は除く)を職場環境の改善に活用します。個人が特定されることはありません。
- ・結果は実施者のもとで5年間保存されます。
-
-ご不明な点は、ストレスチェック担当者までお問い合わせください。`}
-            </pre>
+            <EmployeeNotice
+              companyId={companyId}
+              fiscalYear={fiscalYear}
+              examStart={st.exam_start}
+              examEnd={st.exam_end}
+              questionnaire={q}
+              previewUrl={preview ? "https://stres.mestate.jp/join/demo" : undefined}
+            />
           )}
         </div>
       )}

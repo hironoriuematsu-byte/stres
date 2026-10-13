@@ -7,6 +7,8 @@ import { brand } from "@/lib/brand";
 import { InterviewRequest, Profile, STATUS_LABEL } from "@/lib/types";
 import { logAccess } from "@/lib/log";
 import { LoadingCard } from "@/components/LoadingCard";
+import { fiscalYearOf, interviewDoctorLabel, jstDate } from "@/lib/plan";
+import { getFiscalYear } from "@/lib/fiscal";
 
 const NEXT_STATUS: Record<string, InterviewRequest["status"][]> = {
   pending: ["scheduled", "cancelled"],
@@ -26,18 +28,24 @@ export function InterviewPanel({
   const [rows, setRows] = useState<InterviewRequest[] | null>(null);
   const [people, setPeople] = useState<Record<string, Profile>>({});
   const [err, setErr] = useState<string | null>(null);
+  // Web申込の企業: 年度ごとの面接指導の担当(どの医師に申出が届くか)
+  const [plans, setPlans] = useState<{ fiscal_year: number; interview_option: string | null }[] | null>(null);
 
   const supabase = createClient();
 
   const reload = useCallback(async () => {
-    const [{ data: irs, error: e1 }, { data: ps }] = await Promise.all([
+    const [{ data: irs, error: e1 }, { data: ps }, { data: co }, { data: eps }] = await Promise.all([
       supabase
         .from("interview_requests")
         .select("*")
         .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
       supabase.from("profiles").select("user_id, name, emp_id, dept").eq("company_id", companyId),
+      supabase.from("companies").select("web_signup").eq("id", companyId).maybeSingle(),
+      supabase.from("exam_plans").select("fiscal_year, interview_option").eq("company_id", companyId).order("fiscal_year", { ascending: false }),
     ]);
+    const web = Boolean((co as { web_signup?: boolean } | null)?.web_signup);
+    setPlans(web ? ((eps as { fiscal_year: number; interview_option: string | null }[] | null) ?? []) : null);
     if (e1) {
       setErr(e1.message);
       setRows([]);
@@ -68,17 +76,35 @@ export function InterviewPanel({
 
   if (rows === null) return <LoadingCard />;
 
+  // 申出の年度の担当(その年度の申込がなければ直近の年度)
+  const optionOf = (createdAt: string): string | null =>
+    plans?.find((p) => p.fiscal_year <= fiscalYearOf(jstDate(createdAt)))?.interview_option ?? null;
+  const currentOption = plans ? (plans.find((p) => p.fiscal_year <= getFiscalYear())?.interview_option ?? null) : null;
+
   return (
     <Card>
       <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 12px" }}>
         <span style={{ color: brand.tealDark }}>{companyName}</span> 面接指導の申出一覧
       </h3>
+      {plans && (
+        <div style={{ fontSize: 13, color: brand.ink, background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 8, padding: "10px 12px", lineHeight: 1.7, marginBottom: 12 }}>
+          面接指導の担当: <strong>{interviewDoctorLabel(currentOption)}</strong>
+          <div style={{ fontSize: 12, color: "#5B6B6A" }}>
+            {currentOption === "mestate"
+              ? "申出は、うえまつ産業医事務所(実施者)と会社の担当者に通知されます。日程は当事務所からご連絡します。"
+              : currentOption === "sanpo"
+                ? "申出は会社の担当者にだけ通知されます。最寄りの地域産業保健センターに面接指導をお申し込みください。"
+                : "申出は会社の担当者にだけ通知されます。自社の産業医と日程を調整してください。"}
+            担当の変更は、メニュー画面の受検期間の欄からできます。
+          </div>
+        </div>
+      )}
       {err && <div style={{ fontSize: 13, color: "#B02A2A", marginBottom: 10 }}>{err}</div>}
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-              {["申出日", "氏名", "部署", "相談したいこと・連絡事項", "状況", "操作"].map((h) => (
+              {["申出日", "氏名", "部署", "相談したいこと・連絡事項", ...(plans ? ["担当医"] : []), "状況", "操作"].map((h) => (
                 <th key={h} style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>
                   {h}
                 </th>
@@ -99,6 +125,7 @@ export function InterviewPanel({
                 <td style={{ padding: "9px 10px", maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis" }}>
                   {[r.message, r.preferred].filter(Boolean).join(" / ") || "—"}
                 </td>
+                {plans && <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>{interviewDoctorLabel(optionOf(r.created_at))}</td>}
                 <td style={{ padding: "9px 10px" }}>
                   <Badge tone={r.status === "pending" ? "orange" : r.status === "done" ? "teal" : "gray"}>
                     {STATUS_LABEL[r.status]}

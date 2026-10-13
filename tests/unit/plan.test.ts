@@ -7,6 +7,8 @@ import {
   addDays,
   defaultEndOf,
   fiscalYearOf,
+  interviewNotifiesOffice,
+  interviewOptionError,
   maxEndOf,
   normalizeBizId,
   officeKey,
@@ -168,6 +170,10 @@ describe("年度の申込", () => {
   };
   it("正しい入力(全角数字も可)", () => {
     expect(parseOrderInput(base, "2026-10-13").ok).toBe(true);
+    const q = parseOrderInput({ ...base, questionnaire: "80" }, "2026-10-13");
+    expect(q.ok && q.value.questionnaire).toBe("80");
+    const d = parseOrderInput(base, "2026-10-13");
+    expect(d.ok && d.value.questionnaire).toBe("57");
     const r = parseOrderInput({ ...base, seats: "２８" }, "2026-10-13");
     expect(r.ok && r.value.seats).toBe(28);
   });
@@ -189,6 +195,22 @@ describe("年度の申込", () => {
     expect(parseOrderInput({ ...base, agreeTerms: false }, "2026-10-13").ok).toBe(false);
     expect(parseOrderInput({ ...base, agreeProcedure: false }, "2026-10-13").ok).toBe(false);
     expect(parseOrderInput({ ...base, seats: "0" }, "2026-10-13").ok).toBe(false);
+  });
+});
+
+describe("面接指導の担当", () => {
+  it("Web申込の企業は、当事務所の医師を選んだときだけ実施者にも通知する", () => {
+    expect(interviewNotifiesOffice(true, "mestate")).toBe(true);
+    expect(interviewNotifiesOffice(true, "own")).toBe(false);
+    expect(interviewNotifiesOffice(true, "sanpo")).toBe(false);
+    expect(interviewNotifiesOffice(true, null)).toBe(true); // 申込がない場合は念のため通知
+    expect(interviewNotifiesOffice(false, "own")).toBe(true); // 選任・顧問の企業はこれまで通り
+  });
+  it("地域産業保健センターは50人未満の事業場だけ", () => {
+    expect(interviewOptionError("sanpo", 49)).toBeNull();
+    expect(interviewOptionError("sanpo", 50)).toMatch(/50人未満/);
+    expect(interviewOptionError("own", 500)).toBeNull();
+    expect(interviewOptionError("other", 10)).toMatch(/選んでください/);
   });
 });
 

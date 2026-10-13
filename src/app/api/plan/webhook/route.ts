@@ -92,6 +92,10 @@ export async function POST(req: Request) {
   const invoiceId = typeof session.invoice === "string" ? session.invoice : (session.invoice?.id ?? null);
   if (invoiceId) await admin.from("plan_orders").update({ stripe_invoice_id: invoiceId }).eq("id", order.id);
   if (already) return NextResponse.json({ ok: true, already: true });
+  // 年度の申込で選んだ調査票(57項目版/80項目版)を、その会社の受検に使う
+  if ((order.kind === "new" || order.kind === "renew") && (order.questionnaire === "57" || order.questionnaire === "80")) {
+    await admin.from("companies").update({ questionnaire: order.questionnaire }).eq("id", companyId);
+  }
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
   if (order.kind === "new" || order.kind === "renew") {

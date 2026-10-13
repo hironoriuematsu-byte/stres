@@ -17,6 +17,8 @@ import {
   MIN_TOTAL_SEATS,
   periodError,
   priceNew,
+  QUESTIONNAIRE_OPTIONS,
+  Questionnaire,
   QUOTE_MAILTO,
   seatsGranted,
   WEB_MAX_SEATS,
@@ -46,6 +48,7 @@ export function PlanOrderPanel({
     examStart: firstStart,
     examEnd: defaultEndOf(firstStart),
     interviewOption: "" as InterviewOption | "",
+    questionnaire: "57" as Questionnaire,
     agreeTerms: false,
     agreeProcedure: false,
   });
@@ -68,7 +71,7 @@ export function PlanOrderPanel({
         .select("fiscal_year, seats, exam_end, interview_option, workers")
         .eq("company_id", companyId)
         .order("fiscal_year", { ascending: false }),
-      supabase.from("companies").select("web_signup, workers").eq("id", companyId).maybeSingle(),
+      supabase.from("companies").select("web_signup, workers, questionnaire").eq("id", companyId).maybeSingle(),
     ]).then(([{ data, error }, { data: c }]) => {
       const rows = error ? [] : ((data as PlanRow[]) ?? []);
       setPlans(rows);
@@ -80,6 +83,7 @@ export function PlanOrderPanel({
         workers: workers ? String(workers) : "",
         seats: last ? String(last.seats) : workers ? String(workers) : "",
         interviewOption: (last?.interview_option as InterviewOption) ?? "",
+        questionnaire: (c as { questionnaire?: string } | null)?.questionnaire === "80" ? "80" : "57",
       }));
       if (rows.length === 0) setOpen(true); // 初年度は最初から入力欄を開く
     });
@@ -194,7 +198,25 @@ export function PlanOrderPanel({
             {f.examStart && `${fiscalYearOf(f.examStart)}年度のお申込みになります。締切は${formatJpDate(maxEndOf(f.examStart))}まで無料で延ばせます。`}
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>産業医面接指導の担当</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>調査票(料金は同じです)</div>
+            <div style={{ ...small, marginBottom: 6 }}>最初の方が受検するまでは、この画面(受検期間の欄)から変更できます。</div>
+            {QUESTIONNAIRE_OPTIONS.map((o) => (
+              <label key={o.value} style={{ display: "block", fontSize: 13, color: brand.ink, marginBottom: 4 }}>
+                <input
+                  type="radio"
+                  name="order-q"
+                  checked={f.questionnaire === o.value}
+                  onChange={() => set("questionnaire", o.value)}
+                  style={{ marginRight: 6 }}
+                />
+                {o.label}
+                <div style={{ ...small, marginLeft: 22 }}>{o.desc}</div>
+              </label>
+            ))}
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>産業医面接指導の担当</div>
+            <div style={{ ...small, marginBottom: 6 }}>お申込みの後も、この画面(受検期間の欄)からいつでも変更できます。</div>
             {INTERVIEW_OPTIONS.map((o) => {
               const disabled = o.value === "sanpo" && large;
               return (
@@ -208,6 +230,7 @@ export function PlanOrderPanel({
                     style={{ marginRight: 6 }}
                   />
                   {o.label}
+                  <div style={{ ...small, marginLeft: 22 }}>{o.desc}</div>
                 </label>
               );
             })}

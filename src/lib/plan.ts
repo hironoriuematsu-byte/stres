@@ -25,7 +25,7 @@ export const INTERVIEW_OPTIONS: { value: InterviewOption; label: string; desc: s
   {
     value: "mestate",
     label: "うえまつ産業医事務所の医師が行う(有料)",
-    desc: `申出があった方ごとに1回 ${INTERVIEW_FEE.toLocaleString()}円(税込)。オンライン可・意見書込み。実施後にご請求します。`,
+    desc: `申出があった方ごとに1回 ${INTERVIEW_FEE.toLocaleString()}円(税込)。オンライン可・意見書込み。実施後にご請求します。申出があったときは、当事務所(実施者)と会社の担当者に通知が届きます。`,
   },
   {
     value: "own",
@@ -41,6 +41,24 @@ export const INTERVIEW_OPTIONS: { value: InterviewOption; label: string; desc: s
 
 export const interviewOptionLabel = (v: string | null | undefined): string =>
   INTERVIEW_OPTIONS.find((o) => o.value === v)?.label ?? "未選択";
+
+// 面接指導を行う医師(申出一覧などでの短い表示)
+export const interviewDoctorLabel = (v: string | null | undefined): string =>
+  v === "mestate" ? "うえまつ産業医事務所の医師" : v === "own" ? "自社の産業医" : v === "sanpo" ? "地域産業保健センターの医師" : "未選択";
+
+// 面接指導の申出を実施者(うえまつ産業医事務所)にも知らせるか。
+// Web申込の企業は「うえまつ産業医事務所の医師」を選んだときだけ。それ以外(自社の産業医・地域産業保健センター)は会社の担当者のみ
+export const interviewNotifiesOffice = (webSignup: boolean, option: string | null | undefined): boolean =>
+  !webSignup || option === "mestate" || !option;
+
+// 面接指導の担当の選び方のチェック(申込時・変更時の共通)
+export function interviewOptionError(option: string | null | undefined, workers: number | null | undefined): string | null {
+  if (!option || !INTERVIEW_OPTIONS.some((o) => o.value === option)) return "産業医面接指導の担当を選んでください";
+  if (option === "sanpo" && (workers ?? 0) >= 50) {
+    return "地域産業保健センターは50人未満の事業場が対象です。50人以上の事業場は、自社の産業医または当事務所をお選びください";
+  }
+  return null;
+}
 
 // ---- 料金 ----
 
@@ -230,7 +248,20 @@ export type OrderInput = {
   examStart: string;
   examEnd: string;
   interviewOption: InterviewOption;
+  questionnaire: Questionnaire;
 };
+
+// 調査票(57項目の職業性ストレス簡易調査票 / 80項目の新職業性ストレス簡易調査票)。料金は同じ
+export type Questionnaire = "57" | "80";
+export const QUESTIONNAIRE_OPTIONS: { value: Questionnaire; label: string; desc: string }[] = [
+  { value: "57", label: "57項目版(標準)", desc: "厚生労働省の標準の調査票です。回答時間の目安は10分ほどです。" },
+  {
+    value: "80",
+    label: "80項目版",
+    desc: "57項目に、働きがい・職場の一体感・上司や会社の支援などを加えた調査票です。職場環境の改善に役立てやすくなります。回答時間の目安は15分ほどです。",
+  },
+];
+export const questionnaireLabel = (q: string | null | undefined): string => (q === "80" ? "80項目版" : "57項目版");
 
 export function parseOrderInput(
   raw: Record<string, unknown>,
@@ -242,6 +273,7 @@ export function parseOrderInput(
     examStart: str(raw.examStart, 10),
     examEnd: str(raw.examEnd, 10),
     interviewOption: (["own", "mestate", "sanpo"] as const).find((o) => o === raw.interviewOption) as InterviewOption,
+    questionnaire: (raw.questionnaire === "80" ? "80" : "57") as Questionnaire,
   };
   if (!(v.workers >= 1 && v.workers <= 100000)) return { ok: false, error: "事業場の労働者数を入力してください" };
   if (!(v.seats >= 1)) return { ok: false, error: "受検予定人数を入力してください" };
@@ -257,13 +289,8 @@ export function parseOrderInput(
   }
   const pe = periodError(v.examStart, v.examEnd, today);
   if (pe) return { ok: false, error: pe };
-  if (!v.interviewOption) return { ok: false, error: "産業医面接指導の担当を選んでください" };
-  if (v.interviewOption === "sanpo" && v.workers >= 50) {
-    return {
-      ok: false,
-      error: "地域産業保健センターは50人未満の事業場が対象です。50人以上の事業場は、自社の産業医または当事務所をお選びください",
-    };
-  }
+  const ie = interviewOptionError(v.interviewOption, v.workers);
+  if (ie) return { ok: false, error: ie };
   if (raw.agreeProcedure !== true) return { ok: false, error: "実施方法の決定と従業員への周知についてご確認ください" };
   if (raw.agreeTerms !== true) return { ok: false, error: "利用規約への同意が必要です" };
   return { ok: true, value: v };

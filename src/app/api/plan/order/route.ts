@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       contact_email: email,
       contact_phone: company.contact_phone,
       workers: v.workers,
-      questionnaire: company.questionnaire === "80" ? "80" : "57",
+      questionnaire: v.questionnaire,
       exam_start: v.examStart,
       exam_end: v.examEnd,
       interview_option: v.interviewOption,
