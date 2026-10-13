@@ -77,6 +77,78 @@ export default function PlanPage() {
       </Card>
 
       <Card>
+        <h2 style={h2}>選ばれる理由</h2>
+        <ol style={{ margin: 0, paddingLeft: 20 }}>
+          <li style={li}>
+            <strong>産業医が実施者を務めます。</strong>
+            ストレスチェックの実施者は医師・保健師などに限られます。無料のツールは仕組みの提供が中心で、実施者は自社で確保する必要がありますが、このサービスは実施者込みです。
+          </li>
+          <li style={li}>
+            <strong>個人の結果が社内に残りません。</strong>
+            結果は実施者のもとで管理し、会社には本人が同意した結果と、個人が特定されない集団分析だけをお渡しします。社内の担当者が個人の結果を扱う負担と不安がありません。
+          </li>
+          <li style={li}>
+            <strong>お申込みの当日から始められます。</strong>
+            ソフトのインストールや従業員の名簿登録は不要です。受検用のQRコードを配るだけで、従業員の皆さまがスマートフォンから自分で登録・受検します。
+          </li>
+          <li style={li}>
+            <strong>受検した方に、その場で分かりやすい結果を返します。</strong>
+            レーダーチャート・尺度別の評価・アドバイスを受検直後に表示し、結果票は印刷・PDF保存もできます。
+          </li>
+          <li style={li}>
+            <strong>高ストレスの方への対応までつながります。</strong>
+            面接指導の申出を受け付け、当事務所の医師による面接指導(意見書込み)や、地域産業保健センターのご案内までご用意しています。
+          </li>
+          <li style={li}>
+            <strong>職場改善に使える集団分析が標準です。</strong>
+            部署別の集計に加え、仕事のストレス判定図・健康リスク(全国平均=100)を報告書でお渡しします。80項目版では職場環境の資源も分析できます。
+          </li>
+          <li style={li}>
+            <strong>少人数でも人数分だけ。</strong>
+            1名330円(10名までは3,300円)。結果の5年間の保存も料金に含まれます。
+          </li>
+        </ol>
+      </Card>
+
+      <Card>
+        <h2 style={h2}>ほかの方法との違い</h2>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ borderCollapse: "collapse", fontSize: 13, minWidth: 640, width: "100%" }}>
+            <thead>
+              <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
+                {["", "厚生労働省の無料プログラム", "人事労務システム・無料ツールなど", "このサービス"].map((t) => (
+                  <th key={t} style={{ textAlign: "left", padding: "8px 10px", whiteSpace: "nowrap" }}>{t}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["費用", "無料", "無料〜(サービスにより異なる)", "1名330円(10名まで3,300円)"],
+                ["実施者(医師など)", "自社で確保が必要", "自社で確保が必要な場合が多い", "産業医が実施者を務める"],
+                ["始め方", "Windowsのパソコンにインストールして運用", "アカウント・従業員情報の登録", "申込当日から。QRコードを配るだけ"],
+                ["本人への結果", "実施者が出力して通知", "サービスにより異なる", "受検直後に表示(アドバイス・結果票付き)"],
+                ["個人の結果の管理", "社内の担当者が管理", "社内の担当者が管理する場合が多い", "実施者のもとで管理(会社へは本人同意分のみ)"],
+                ["面接指導", "自社で医師を手配", "自社で医師を手配する場合が多い", "当事務所の医師(1回22,000円)・地域産業保健センターのご案内"],
+                ["集団分析", "あり", "あり(サービスにより異なる)", "あり(判定図・健康リスク・部署別)"],
+              ].map((r) => (
+                <tr key={r[0]} style={{ borderBottom: `1px solid ${brand.line}` }}>
+                  <th style={{ textAlign: "left", padding: "8px 10px", color: brand.ink, whiteSpace: "nowrap", verticalAlign: "top" }}>{r[0]}</th>
+                  <td style={{ padding: "8px 10px", color: "#5B6B6A", verticalAlign: "top" }}>{r[1]}</td>
+                  <td style={{ padding: "8px 10px", color: "#5B6B6A", verticalAlign: "top" }}>{r[2]}</td>
+                  <td style={{ padding: "8px 10px", color: brand.tealDark, fontWeight: 700, verticalAlign: "top", background: "#F4FAF9" }}>{r[3]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p style={{ fontSize: 12, color: "#8A9694", lineHeight: 1.8, margin: "8px 0 0" }}>
+          すでに社内に産業医・保健師がいて、実施者や個人情報の管理を社内で担える場合は、無料の方法も有力な選択肢です。
+          このサービスは、実施者の確保や個人の結果の管理を社内で行うのが難しい企業さま向けです。
+          このサービスの調査票と高ストレスの判定基準は、厚生労働省のマニュアルに基づく標準的なものです。
+        </p>
+      </Card>
+
+      <Card>
         <h2 style={h2}>含まれるもの</h2>
         <ul style={{ margin: 0, paddingLeft: 20 }}>
           <li style={li}>
