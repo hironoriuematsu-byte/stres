@@ -2,25 +2,29 @@ import Link from "next/link";
 import { Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER, SELLER } from "@/lib/org";
-import { INTERVIEW_FEE, MIN_TOTAL, MIN_TOTAL_SEATS, UNIT_PRICE } from "@/lib/plan";
+import { INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, pricingFor } from "@/lib/plan";
+import { getFiscalYear } from "@/lib/fiscal";
+import { loadPlanPrices } from "@/lib/plan-prices";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "利用規約(Web申込) | ストレスチェックWeb" };
 
-// Web申込(クレジットカード決済)の利用規約。ストレスチェックの実施の委託に関する定めを含む。
+// Web申込(Web上で決済)の利用規約。ストレスチェックの実施の委託に関する定めを含む。
 // 内容を変えたときは ENACTED / 改定日を更新すること
 const ENACTED = "2026年10月13日";
 
 const h = { fontSize: 15, color: brand.tealDark, margin: "18px 0 6px", fontWeight: 700 } as const;
 const ol = { fontSize: 14, color: "#44534F", lineHeight: 1.9, margin: "0 0 8px", paddingLeft: 22 } as const;
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const pricing = pricingFor(await loadPlanPrices(createClient()), getFiscalYear());
   return (
     <Card style={{ maxWidth: 820, margin: "0 auto" }}>
       <h1 style={{ fontSize: 20, color: brand.ink, margin: "0 0 4px" }}>ストレスチェックWeb 利用規約(Web申込)</h1>
       <p style={{ fontSize: 13, color: "#7A8886", margin: "0 0 12px" }}>制定: {ENACTED}</p>
       <p style={{ fontSize: 14, color: "#44534F", lineHeight: 1.9 }}>
         この規約は、{SELLER.name}(以下「当社」といいます。運営: {IMPLEMENTER.officeName})が提供する「ストレスチェックWeb」を、
-        Web申込(クレジットカード決済)により利用する事業者(以下「事業者」といいます)と当社との間に適用されます。
+        Web申込(Web上での決済)により利用する事業者(以下「事業者」といいます)と当社との間に適用されます。
       </p>
 
       <h2 style={h}>第1条(サービスの内容)</h2>
@@ -63,10 +67,12 @@ export default function TermsPage() {
 
       <h2 style={h}>第4条(料金と支払い)</h2>
       <ol style={ol}>
-        <li>料金は、受検者1名あたり {UNIT_PRICE}円(税込)とし、最低料金は {MIN_TOTAL.toLocaleString()}円(税込。{MIN_TOTAL_SEATS}名まで)とします。集団分析の料金を含みます。</li>
-        <li>事業者は、年度ごとの申込時に受検予定人数分の料金を、クレジットカードにより前払いします。</li>
+        <li>
+          料金は、当社のサービスのご案内ページに掲載する、受検開始日の属する年度の料金とします(本規約の掲載時点では、受検者1名あたり {pricing.unitPrice}円(税込)、最低料金 {pricing.minTotal.toLocaleString()}円(税込。{minSeats(pricing)}名まで))。集団分析の料金を含みます。
+        </li>
+        <li>事業者は、年度ごとの申込時に受検予定人数分の料金を、{PAYMENT_METHODS_TEXT}により前払いします。</li>
         <li>受検者が申込人数に達した後は受検できません。事業者は、受検期間中に1名単位で人数を追加購入できます。</li>
-        <li>当社は、料金を改定する場合があります。改定は、改定後の申込から適用します。</li>
+        <li>当社は、年度ごとに料金を改定する場合があります。改定するときは、あらかじめサービスのご案内ページでお知らせし、改定後の年度のお申込みから適用します。申込済みの年度の料金(人数の追加を含みます)は変わりません。</li>
       </ol>
 
       <h2 style={h}>第5条(受検期間)</h2>

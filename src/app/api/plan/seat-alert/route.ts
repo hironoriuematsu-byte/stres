@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getFiscalYear } from "@/lib/fiscal";
-import { formatJpDate, seatAlertLevel, UNIT_PRICE } from "@/lib/plan";
+import { formatJpDate, seatAlertLevel } from "@/lib/plan";
+import { loadPricing } from "@/lib/plan-prices";
 import { adminClient, sendMails } from "@/lib/plan-server";
 import { SELLER } from "@/lib/org";
 
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
       `受検者数: ${used}名 / ${seats}名`,
       "",
       "■ 受検人数の追加",
-      `ログイン後の画面の「${fiscalYear}年度の受検期間・受検者数」から、1名 ${UNIT_PRICE}円(税込)で追加できます。`,
+      `ログイン後の画面の「${fiscalYear}年度の受検期間・受検者数」から、1名 ${(await loadPricing(admin, fiscalYear)).unitPrice}円(税込)で追加できます。`,
       `${origin}/jimu`,
       "",
       `お問い合わせ: ${SELLER.email}`,

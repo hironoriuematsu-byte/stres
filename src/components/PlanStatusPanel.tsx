@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { EmployeeNotice } from "@/components/EmployeeNotice";
 import { brand } from "@/lib/brand";
-import { formatJpDate, INTERVIEW_OPTIONS, interviewOptionLabel, QUESTIONNAIRE_OPTIONS, questionnaireLabel, jstDate, jstToday, priceAdd, UNIT_PRICE } from "@/lib/plan";
+import { formatJpDate, INTERVIEW_OPTIONS, interviewOptionLabel, QUESTIONNAIRE_OPTIONS, questionnaireLabel, jstDate, jstToday, priceAdd, pricingFor } from "@/lib/plan";
+import { usePlanPrices } from "@/components/usePlanPrices";
 
 type Payment = { id: string; kind: "new" | "add_seats" | "renew"; seats: number; amount: number; paid_at: string };
 
@@ -43,6 +44,8 @@ export function PlanStatusPanel({
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [showNotice, setShowNotice] = useState(false);
   const [payments, setPayments] = useState<Payment[]>(previewPayments ?? []);
+  const prices = usePlanPrices(Boolean(preview));
+  const pricing = pricingFor(prices, fiscalYear); // この年度の単価
   const [iv, setIv] = useState(preview?.interview_option ?? ""); // 面接指導の担当(変更用)
   const [ivOpen, setIvOpen] = useState(false);
   const [q, setQ] = useState<string>("57"); // 調査票(57項目版/80項目版)
@@ -172,12 +175,12 @@ export function PlanStatusPanel({
     if (st && st.workers && st.seats + addN > st.workers) {
       const ok = window.confirm(
         `追加後の受検人数(${st.seats + addN}名)が、お申込み時の事業場の労働者数(${st.workers}名)を超えます。\n` +
-          `${addN}名・${priceAdd(addN).total.toLocaleString()}円の追加でよろしいですか？(お支払い後の返金はできません)`
+          `${addN}名・${priceAdd(addN, pricing).total.toLocaleString()}円の追加でよろしいですか？(お支払い後の返金はできません)`
       );
       if (!ok) return;
     }
     if (preview) {
-      setMsg({ ok: true, text: "(デモ)実際の画面では、ここからクレジットカードの決済画面に進みます。" });
+      setMsg({ ok: true, text: "(デモ)実際の画面では、ここから決済画面に進みます。" });
       return;
     }
     setBusy(true);
@@ -350,7 +353,7 @@ export function PlanStatusPanel({
             </Btn>
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink, marginBottom: 6 }}>受検人数の追加(1名 {UNIT_PRICE}円・税込)</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink, marginBottom: 6 }}>受検人数の追加(1名 {pricing.unitPrice}円・税込)</div>
             <input
               value={add}
               onChange={(e) => setAdd(e.target.value)}
@@ -359,7 +362,7 @@ export function PlanStatusPanel({
             />
             <span style={{ fontSize: 13, margin: "0 8px 0 4px" }}>名</span>
             <Btn tone="orange" onClick={buySeats} disabled={busy || !addOk || phase === "closed"} style={{ padding: "7px 14px", fontSize: 13 }}>
-              {addOk ? `${priceAdd(addN).total.toLocaleString()}円を支払って追加` : "追加する"}
+              {addOk ? `${priceAdd(addN, pricing).total.toLocaleString()}円を支払って追加` : "追加する"}
             </Btn>
             {phase === "closed" && <div style={small}>受検期間の終了後は追加できません。締切を延ばしてから追加してください。</div>}
           </div>

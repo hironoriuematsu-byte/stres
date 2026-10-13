@@ -27,7 +27,7 @@ export default async function ReceiptPage({ params }: { params: { id: string } }
     admin.from("profiles").select("role, company_id").eq("user_id", user.id).single(),
     admin
       .from("plan_orders")
-      .select("id, kind, status, company_id, company_name, fiscal_year, seats, amount, paid_at")
+      .select("*") // seats_granted は SQL 0026 以降の列のため、列名を指定しない
       .eq("id", params.id)
       .maybeSingle(),
   ]);

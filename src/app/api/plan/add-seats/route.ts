@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { MAX_SEATS, priceAdd } from "@/lib/plan";
+import { loadPricing } from "@/lib/plan-prices";
 import { adminClient, invoiceFields } from "@/lib/plan-server";
 import { createCheckoutSession, stripeConfigured } from "@/lib/stripe";
 import { getFiscalYear } from "@/lib/fiscal";
@@ -56,7 +57,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "顧問契約の企業は人数の上限がないため、追加は不要です" }, { status: 400 });
   }
 
-  const price = priceAdd(seats);
+  const pricing = await loadPricing(admin, fiscalYear); // その年度の単価
+  const price = priceAdd(seats, pricing);
   const email = user.email ?? "";
   const { data: order, error } = await admin
     .from("plan_orders")
@@ -76,6 +78,7 @@ export async function POST(req: Request) {
     })
     .select("id")
     .single();
+  if (order) await admin.from("plan_orders").update({ unit_price: pricing.unitPrice, seats_granted: seats }).eq("id", order.id); // 列がなければ無視される
   if (error || !order) {
     return NextResponse.json({ error: `申込を記録できませんでした: ${error?.message ?? ""}` }, { status: 500 });
   }

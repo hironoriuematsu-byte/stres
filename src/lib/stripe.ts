@@ -54,6 +54,8 @@ export async function createCheckoutSession(opts: {
     mode: "payment",
     locale: "ja",
     customer_email: opts.email,
+    // 顧客(Customer)を作る。銀行振込(振込先口座を会社ごとに発行し、入金を自動で照合)を使うときに必要
+    customer_creation: "always",
     client_reference_id: opts.orderId,
     success_url: opts.successUrl,
     cancel_url: opts.cancelUrl,

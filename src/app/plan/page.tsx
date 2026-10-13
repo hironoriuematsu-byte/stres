@@ -2,23 +2,34 @@ import Link from "next/link";
 import { Badge, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER } from "@/lib/org";
-import { INTERVIEW_FEE, MIN_TOTAL, MIN_TOTAL_SEATS, QUOTE_MAILTO, WEB_MAX_SEATS, UNIT_PRICE } from "@/lib/plan";
+import { formatJpDate, INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, pricingFor, QUOTE_MAILTO, upcomingPriceChange, WEB_MAX_SEATS } from "@/lib/plan";
+import { getFiscalYear } from "@/lib/fiscal";
+import { loadPlanPrices } from "@/lib/plan-prices";
+import { createClient } from "@/lib/supabase/server";
 import { PriceCalculator } from "./PriceCalculator";
 
 export const metadata = {
   title: "Web申込 | ストレスチェックWeb",
-  description: "産業医が実施者を務めるWebストレスチェック。受検者1名330円・最低3,300円(税込)、集団分析込み。クレジットカードでその場でお申込みいただけます。",
+  description: "産業医が実施者を務めるWebストレスチェック。受検者1名あたりの料金で集団分析込み。Webでその場でお申込みいただけます。",
 };
 
 const h2 = { fontSize: 18, color: brand.tealDark, margin: "0 0 10px" } as const;
 const p = { fontSize: 14, color: "#44534F", lineHeight: 1.9, margin: "0 0 8px" } as const;
 const li = { fontSize: 14, color: "#44534F", lineHeight: 1.9 } as const;
 
-export default function PlanPage() {
+export default async function PlanPage() {
+  // 料金は年度ごとの設定(plan_prices)から表示する。次の年度以降の改定があれば、あらかじめお知らせする
+  const prices = await loadPlanPrices(createClient());
+  const year = getFiscalYear();
+  const pricing = pricingFor(prices, year);
+  const UNIT_PRICE = pricing.unitPrice;
+  const MIN_TOTAL = pricing.minTotal;
+  const MIN_TOTAL_SEATS = minSeats(pricing);
+  const change = upcomingPriceChange(prices, year);
   return (
     <div style={{ maxWidth: 860, margin: "0 auto", display: "grid", gap: 16 }}>
       <Card>
-        <Badge tone="orange">導入記念価格</Badge>
+        <Badge tone="orange">Web申込</Badge>
         <h1 style={{ fontSize: 24, color: brand.ink, margin: "12px 0 8px", lineHeight: 1.5 }}>
           産業医が実施者を務める
           <br />
@@ -30,7 +41,7 @@ export default function PlanPage() {
         </p>
         <p style={p}>
           産業医を選任していない事業場、産業医と顧問契約のない企業さま向けのプランです。
-          会社を登録(無料)したあと、受検予定人数と受検期間を入れてクレジットカードでお支払いいただくと、すぐに受検の準備が整います。2年目以降はログインして同じ画面から申し込めます。
+          会社を登録(無料)したあと、受検予定人数と受検期間を入れてお支払いいただくと、すぐに受検の準備が整います。2年目以降はログインして同じ画面から申し込めます。
           少人数の事業場でも、人数分だけのご負担で実施できます。
         </p>
         <p style={{ ...p, fontSize: 13, background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
@@ -77,8 +88,14 @@ export default function PlanPage() {
             </tbody>
           </table>
         </div>
+        {change && (
+          <p style={{ fontSize: 13, color: "#8A5A00", background: "#FFF8E6", border: "1px solid #F0D9A8", borderRadius: 8, padding: "8px 12px", lineHeight: 1.7, margin: "8px 0 0" }}>
+            料金改定のお知らせ: {change.fiscal_year}年度（{formatJpDate(`${change.fiscal_year}-04-01`)}以降に受検を始めるお申込み）から、受検者1名{" "}
+            {change.pricing.unitPrice}円・最低料金 {change.pricing.minTotal.toLocaleString()}円（税込）になります。
+          </p>
+        )}
         <div style={{ marginTop: 14 }}>
-          <PriceCalculator />
+          <PriceCalculator pricing={pricing} />
         </div>
         <p style={{ fontSize: 13, margin: "10px 0 0" }}>
           {WEB_MAX_SEATS}名を超える場合のお見積り:{" "}
@@ -87,7 +104,8 @@ export default function PlanPage() {
           </a>
         </p>
         <p style={{ fontSize: 12, color: "#8A9694", lineHeight: 1.8, margin: "10px 0 0" }}>
-          お支払いはクレジットカード（前払い）です。領収書は決済後にメールでお送りします。価格は導入記念価格で、年度ごとに見直す場合があります。
+          お支払いは{PAYMENT_METHODS_TEXT}（前払い）です。領収書は決済後にメールでお送りします。
+          料金は受検を始める日の年度のものです。年度ごとに見直す場合があり、改定するときはこのページであらかじめお知らせします。
         </p>
       </Card>
 
@@ -126,7 +144,7 @@ export default function PlanPage() {
           </li>
           <li style={li}>
             <strong>少人数でも人数分だけ。</strong>
-            1名330円(10名までは3,300円)。結果の5年間の保存も料金に含まれます。
+            1名{UNIT_PRICE}円({MIN_TOTAL_SEATS}名までは{MIN_TOTAL.toLocaleString()}円)。結果の5年間の保存も料金に含まれます。
           </li>
         </ol>
       </Card>
@@ -137,21 +155,21 @@ export default function PlanPage() {
           <table style={{ borderCollapse: "collapse", fontSize: 13, minWidth: 640, width: "100%" }}>
             <thead>
               <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-                {["", "厚生労働省の無料プログラム", "人事労務システム・無料ツールなど", "このサービス"].map((t) => (
+                {["", "厚生労働省の無料プログラム", "ほかのストレスチェック提供会社", "このサービス"].map((t) => (
                   <th key={t} style={{ textAlign: "left", padding: "8px 10px", whiteSpace: "nowrap" }}>{t}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {[
-                ["費用", "無料", "無料〜(サービスにより異なる)", "1名330円(10名まで3,300円)"],
-                ["調査票", "57項目版・23項目版", "サービスにより異なる", "57項目版・80項目版(職場環境の23項目を追加。同じ料金)"],
-                ["実施者(医師など)", "自社で確保が必要", "自社で確保が必要な場合が多い", "産業医が実施者を務める"],
-                ["始め方", "Windowsのパソコンにインストールして運用", "アカウント・従業員情報の登録", "申込当日から。QRコードを配るだけ"],
-                ["本人への結果", "実施者が出力して通知", "サービスにより異なる", "受検直後に表示(アドバイス・結果票付き)"],
-                ["個人の結果の管理", "社内の担当者が管理", "社内の担当者が管理する場合が多い", "実施者のもとで管理(会社へは本人同意分のみ)"],
-                ["面接指導", "自社で医師を手配", "自社で医師を手配する場合が多い", "当事務所の医師(1回22,000円)・地域産業保健センターのご案内"],
-                ["集団分析", "あり", "あり(サービスにより異なる)", "あり(判定図・健康リスク・部署別)"],
+                ["費用", "無料", "サービス・人数により異なる(初期費用・最低料金・集団分析が別料金の場合も)", `1名${UNIT_PRICE}円(${MIN_TOTAL_SEATS}名まで${MIN_TOTAL.toLocaleString()}円)。集団分析込み`],
+                ["調査票", "57項目版・23項目版", "57項目版が中心(80項目版は別料金・未対応の場合も)", "57項目版・80項目版(職場環境の23項目を追加。同じ料金)"],
+                ["実施者(医師など)", "自社で確保が必要", "サービスにより異なる(自社の産業医が実施者となる場合も)", "産業医が実施者を務める"],
+                ["始め方", "Windowsのパソコンにインストールして運用", "見積り・契約のあとに開始(従業員名簿の登録が必要な場合も)", "申込当日から。QRコードを配るだけ"],
+                ["本人への結果", "実施者が出力して通知", "サービスにより異なる(後日の通知の場合も)", "受検直後に表示(アドバイス・結果票付き)"],
+                ["個人の結果の管理", "社内の担当者が管理", "サービスにより異なる", "実施者のもとで管理(会社へは本人同意分のみ)"],
+                ["面接指導", "自社で医師を手配", "オプション・別契約の場合も", `当事務所の医師(1回${INTERVIEW_FEE.toLocaleString()}円)・地域産業保健センターのご案内`],
+                ["集団分析", "あり", "あり(別料金・内容はサービスにより異なる)", "あり(判定図・健康リスク・部署別)"],
               ].map((r) => (
                 <tr key={r[0]} style={{ borderBottom: `1px solid ${brand.line}` }}>
                   <th style={{ textAlign: "left", padding: "8px 10px", color: brand.ink, whiteSpace: "nowrap", verticalAlign: "top" }}>{r[0]}</th>
@@ -164,6 +182,7 @@ export default function PlanPage() {
           </table>
         </div>
         <p style={{ fontSize: 12, color: "#8A9694", lineHeight: 1.8, margin: "8px 0 0" }}>
+          ほかの提供会社の内容は各社・プランにより異なります。上の表は一般的な傾向を示したもので、特定の会社のサービスを指すものではありません。
           すでに社内に産業医・保健師がいて、実施者や個人情報の管理を社内で担える場合は、無料の方法も有力な選択肢です。
           このサービスは、実施者の確保や個人の結果の管理を社内で行うのが難しい企業さま向けです。
           このサービスの調査票と高ストレスの判定基準は、厚生労働省のマニュアルに基づく標準的なものです。
@@ -221,7 +240,7 @@ export default function PlanPage() {
         <h2 style={h2}>ご利用の流れ</h2>
         <ol style={{ margin: 0, paddingLeft: 20 }}>
           <li style={li}>会社(事業場)とご担当者さまを登録(無料)。確認メールのリンクからログイン</li>
-          <li style={li}>ログイン後の画面で、受検予定人数・受検期間を入れてクレジットカードでお支払い</li>
+          <li style={li}>ログイン後の画面で、受検予定人数・受検期間を入れてお支払い</li>
           <li style={li}>受検用のURL・QRコードを従業員の皆さまにお知らせ</li>
           <li style={li}>従業員の皆さまが受検(結果はその場で本人に表示されます)</li>
           <li style={li}>締切後、集団分析報告書をご覧いただけます</li>
@@ -250,7 +269,7 @@ export default function PlanPage() {
           ["50人以上の事業場でも申し込めますか？", "はい。産業医を選任している事業場は、自社の産業医に面接指導を担当いただくこともできます。なお、50人以上の事業場には産業医の選任義務があります。選任がお済みでない場合はご相談ください。"],
           [`${WEB_MAX_SEATS}名を超える場合は？`, `${WEB_MAX_SEATS}名を超える場合は個別にお見積りします（割引があります）。複数の事業場をまとめたご依頼もご相談ください。`],
           ["翌年度も続けて使えますか？", "はい。2年目以降は、ログイン後の画面から同じ操作でお申し込みいただけます(会社の登録は最初の1回だけ)。更新の時期が近づくと、ご担当者さまにご案内メールをお送りします。従業員の皆さまのアカウントと過去の結果はそのまま引き継がれ、前年度との比較もできます。"],
-          ["請求書払いはできますか？", "Web申込はクレジットカードのみです。請求書払いをご希望の場合はお問い合わせください。"],
+          ["請求書払いはできますか？", `Web申込のお支払いは${PAYMENT_METHODS_TEXT}です。請求書払いをご希望の場合はお問い合わせください。`],
         ].map(([q, a]) => (
           <div key={q} style={{ marginBottom: 10 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: brand.ink }}>Q. {q}</div>

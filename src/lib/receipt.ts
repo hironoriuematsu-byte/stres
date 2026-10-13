@@ -9,6 +9,7 @@ type ReceiptOrder = {
   seats: number;
   amount: number;
   paid_at: string;
+  seats_granted?: number | null; // 申込時点の料金で決まった受検人数枠(最低料金のときは申込人数より多い)
 };
 
 // 申込(支払い)から領収書の記載内容を作る
@@ -16,8 +17,12 @@ export function receiptFromOrder(o: ReceiptOrder, registrationNo: string): Recei
   const purpose =
     o.kind === "add_seats"
       ? `${o.fiscal_year}年度 ストレスチェック 受検人数の追加(${o.seats}名分)`
-      : o.amount === MIN_TOTAL && o.seats < seatsGranted(o.seats)
-        ? `${o.fiscal_year}年度 ストレスチェック(最低料金・受検者${seatsGranted(o.seats)}名まで・集団分析込み)`
+      : o.seats_granted != null
+        ? o.seats_granted > o.seats
+          ? `${o.fiscal_year}年度 ストレスチェック(最低料金・受検者${o.seats_granted}名まで・集団分析込み)`
+          : `${o.fiscal_year}年度 ストレスチェック(受検者${o.seats}名分・集団分析込み)`
+        : o.amount === MIN_TOTAL && o.seats < seatsGranted(o.seats)
+          ? `${o.fiscal_year}年度 ストレスチェック(最低料金・受検者${seatsGranted(o.seats)}名まで・集団分析込み)`
         : `${o.fiscal_year}年度 ストレスチェック(受検者${o.seats}名分・集団分析込み)`;
   return {
     no: `R${o.fiscal_year}-${o.id.replace(/-/g, "").slice(0, 8).toUpperCase()}`,

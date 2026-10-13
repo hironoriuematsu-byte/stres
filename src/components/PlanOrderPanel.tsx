@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
+import { usePlanPrices } from "@/components/usePlanPrices";
 import {
   addDays,
   defaultEndOf,
@@ -14,7 +15,8 @@ import {
   InterviewOption,
   jstToday,
   maxEndOf,
-  MIN_TOTAL_SEATS,
+  minSeats,
+  pricingFor,
   periodError,
   priceNew,
   QUESTIONNAIRE_OPTIONS,
@@ -39,6 +41,7 @@ export function PlanOrderPanel({
   preview?: { workers: number }; // 紹介用(デモ): データベースを読まず、初年度の申込画面を表示する(支払いには進まない)
 }) {
   const [plans, setPlans] = useState<PlanRow[] | null>(null);
+  const prices = usePlanPrices();
   const [web, setWeb] = useState(false);
   const today = jstToday();
   const firstStart = addDays(today, 1);
@@ -101,7 +104,8 @@ export function PlanOrderPanel({
   const workersN = Number(f.workers.normalize("NFKC"));
   const over = Number.isInteger(seatsN) && Number.isInteger(workersN) && workersN > 0 && seatsN > workersN;
   const quote = Number.isInteger(seatsN) && seatsN > WEB_MAX_SEATS;
-  const price = Number.isInteger(seatsN) && seatsN >= 1 && !quote ? priceNew(seatsN) : null;
+  const pricing = pricingFor(prices, nextYear); // 受検開始日の年度の料金
+  const price = Number.isInteger(seatsN) && seatsN >= 1 && !quote ? priceNew(seatsN, pricing) : null;
   const large = Number.isInteger(workersN) && workersN >= 50;
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const input = { padding: "7px 10px", fontSize: 14, border: `1px solid ${brand.line}`, borderRadius: 8 } as const;
@@ -109,7 +113,7 @@ export function PlanOrderPanel({
 
   const submit = async () => {
     setErr(null);
-    if (preview) return setErr("(デモ)実際の画面では、ここからクレジットカードの決済画面に進みます。");
+    if (preview) return setErr("(デモ)実際の画面では、ここから決済画面に進みます。");
     const pe = periodError(f.examStart, f.examEnd, today);
     if (pe) return setErr(pe);
     if (!f.interviewOption) return setErr("産業医面接指導の担当を選んでください");
@@ -249,10 +253,11 @@ export function PlanOrderPanel({
             <div>
               <div style={small}>お支払い金額(税込)</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: brand.tealDark }}>{price ? `${price.total.toLocaleString()}円` : "—"}</div>
-              {price && seatsN < MIN_TOTAL_SEATS && <div style={small}>最低料金({seatsGranted(seatsN)}名まで)</div>}
+              {price && seatsN < minSeats(pricing) && <div style={small}>最低料金({seatsGranted(seatsN, pricing)}名まで)</div>}
+              {price && seatsN >= minSeats(pricing) && <div style={small}>{pricing.unitPrice}円 × {seatsN}名</div>}
             </div>
             <Btn tone="orange" onClick={submit} disabled={busy || !price || over || !f.agreeTerms || !f.agreeProcedure}>
-              {busy ? "決済画面を準備しています…" : "お支払いに進む(クレジットカード)"}
+              {busy ? "決済画面を準備しています…" : "お支払いに進む"}
             </Btn>
           </div>
           {err && <p style={{ fontSize: 13, color: "#B02A2A", margin: 0 }}>{err}</p>}

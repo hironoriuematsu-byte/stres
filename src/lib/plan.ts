@@ -6,10 +6,34 @@
 
 import { getFiscalYear } from "@/lib/fiscal";
 
-// 導入記念価格(1シーズン運用してから見直す)
+// 料金は年度ごとにデータベース(plan_prices)で設定する(実施者の画面から、次の年度以降の料金を事前に変更できる)。
+// ここの値は、データベースに設定がないとき(または読めないとき)の料金
 export const UNIT_PRICE = 330; // 受検者1名あたり(税込)
-export const MIN_TOTAL = 3300; // 最低料金(税込)。1シーズン運用後、問い合わせの件数を見て1,100円への引き下げを検討する
+export const MIN_TOTAL = 3300; // 最低料金(税込)
 export const MIN_TOTAL_SEATS = Math.ceil(MIN_TOTAL / UNIT_PRICE); // 最低料金で受検できる人数(10名)
+
+// お支払い方法の表示(Stripe の管理画面で有効にした支払い方法に合わせて変える)
+export const PAYMENT_METHODS_TEXT = "クレジットカード";
+
+// 年度の料金
+export type Pricing = { unitPrice: number; minTotal: number };
+export const DEFAULT_PRICING: Pricing = { unitPrice: UNIT_PRICE, minTotal: MIN_TOTAL };
+export type PlanPriceRow = { fiscal_year: number; unit_price: number; min_total: number; note?: string | null };
+// その年度の料金(その年度の設定がなければ、それより前で最も新しい年度の料金)
+export function pricingFor(rows: PlanPriceRow[] | null | undefined, fiscalYear: number): Pricing {
+  const r = (rows ?? []).filter((x) => x.fiscal_year <= fiscalYear).sort((a, b) => b.fiscal_year - a.fiscal_year)[0];
+  return r ? { unitPrice: r.unit_price, minTotal: r.min_total } : DEFAULT_PRICING;
+}
+// 最低料金で受検できる人数
+export const minSeats = (p: Pricing = DEFAULT_PRICING): number => Math.max(1, Math.ceil(p.minTotal / p.unitPrice));
+// 次の年度以降に料金の改定が予定されていれば、最も近いものを返す(宣伝ページなどでの事前のお知らせ用)
+export function upcomingPriceChange(rows: PlanPriceRow[] | null | undefined, currentYear: number): (PlanPriceRow & { pricing: Pricing }) | null {
+  const cur = pricingFor(rows, currentYear);
+  const next = (rows ?? [])
+    .filter((x) => x.fiscal_year > currentYear && (x.unit_price !== cur.unitPrice || x.min_total !== cur.minTotal))
+    .sort((a, b) => a.fiscal_year - b.fiscal_year)[0];
+  return next ? { ...next, pricing: { unitPrice: next.unit_price, minTotal: next.min_total } } : null;
+}
 export const MAX_SEATS = 10000; // 人数の追加購入の上限
 export const WEB_MAX_SEATS = 300; // Web申込(カード決済)は300名(99,000円)まで。超える場合は個別のお見積り(割引あり)
 export const QUOTE_MAILTO = `mailto:support@mestate.jp?subject=${encodeURIComponent("ストレスチェック 300名を超える場合のお見積り")}`;
@@ -65,20 +89,20 @@ export function interviewOptionError(option: string | null | undefined, workers:
 export type PriceLine = { name: string; unitAmount: number; quantity: number };
 
 // 新規申込の料金。人数×単価が最低料金に満たないときは最低料金(1行)にする
-export function priceNew(seats: number): { total: number; lines: PriceLine[] } {
-  const byUnit = seats * UNIT_PRICE;
-  if (byUnit >= MIN_TOTAL) {
+export function priceNew(seats: number, p: Pricing = DEFAULT_PRICING): { total: number; lines: PriceLine[] } {
+  const byUnit = seats * p.unitPrice;
+  if (byUnit >= p.minTotal) {
     return {
       total: byUnit,
-      lines: [{ name: "ストレスチェック(受検者1名あたり・集団分析込み)", unitAmount: UNIT_PRICE, quantity: seats }],
+      lines: [{ name: "ストレスチェック(受検者1名あたり・集団分析込み)", unitAmount: p.unitPrice, quantity: seats }],
     };
   }
   return {
-    total: MIN_TOTAL,
+    total: p.minTotal,
     lines: [
       {
-        name: `ストレスチェック 最低料金(${MIN_TOTAL_SEATS}名分まで・集団分析込み)`,
-        unitAmount: MIN_TOTAL,
+        name: `ストレスチェック 最低料金(${minSeats(p)}名分まで・集団分析込み)`,
+        unitAmount: p.minTotal,
         quantity: 1,
       },
     ],
@@ -86,10 +110,10 @@ export function priceNew(seats: number): { total: number; lines: PriceLine[] } {
 }
 
 // 人数の追加購入(最低料金なし)
-export function priceAdd(seats: number): { total: number; lines: PriceLine[] } {
+export function priceAdd(seats: number, p: Pricing = DEFAULT_PRICING): { total: number; lines: PriceLine[] } {
   return {
-    total: seats * UNIT_PRICE,
-    lines: [{ name: "ストレスチェック 受検人数の追加(1名あたり)", unitAmount: UNIT_PRICE, quantity: seats }],
+    total: seats * p.unitPrice,
+    lines: [{ name: "ストレスチェック 受検人数の追加(1名あたり)", unitAmount: p.unitPrice, quantity: seats }],
   };
 }
 
@@ -105,7 +129,7 @@ export function seatAlertLevel(used: number, seats: number): "near" | "full" | n
 export const taxIncluded = (total: number): number => Math.floor((total * 10) / 110);
 
 // 最低料金の範囲で受検できる人数(新規申込で購入人数が少ないときは、最低料金分まで受検枠を付ける)
-export const seatsGranted = (seats: number): number => Math.max(seats, MIN_TOTAL_SEATS);
+export const seatsGranted = (seats: number, p: Pricing = DEFAULT_PRICING): number => Math.max(seats, minSeats(p));
 
 // ---- 日付(日本時間の YYYY-MM-DD) ----
 

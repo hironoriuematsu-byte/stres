@@ -74,6 +74,7 @@ export type OrderRow = {
   contact_phone: string | null;
   workers: number | null;
   questionnaire: string;
+  seats_granted?: number | null; // 申込時点の料金で決まった受検人数枠(SQL 0026 以降)
   exam_start: string | null;
   exam_end: string | null;
   interview_option: string | null;

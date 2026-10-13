@@ -6,6 +6,7 @@ import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { formatJpDate, jstDate, jstToday } from "@/lib/plan";
 import { PlanOrdersPanel } from "@/components/PlanOrdersPanel";
+import { PlanPricesPanel } from "@/components/PlanPricesPanel";
 
 type Row = {
   company_id: string;
@@ -46,7 +47,7 @@ function statusOf(r: Row, year: number, today: string): Status {
 //   企業一覧 … 企業ごとの今年度の状況(未申込・受検期間中など)・受検者数・支払いの合計・担当者。企業を開く・顧問契約への切り替え
 //   申込・支払い … 申込ごとの記録、売上明細のCSV、領収書、受検期間・人数枠の変更、企業の統合
 export function WebCompaniesPanel({ fiscalYear, onOpenCompany }: { fiscalYear: number; onOpenCompany: (companyId: string) => void }) {
-  const [view, setView] = useState<"companies" | "orders">("companies");
+  const [view, setView] = useState<"companies" | "orders" | "prices">("companies");
   const [rows, setRows] = useState<Row[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -123,10 +124,13 @@ export function WebCompaniesPanel({ fiscalYear, onOpenCompany }: { fiscalYear: n
       <div style={{ display: "flex", gap: 6 }}>
         <button style={chip(view === "companies")} onClick={() => setView("companies")}>企業一覧</button>
         <button style={chip(view === "orders")} onClick={() => setView("orders")}>申込・支払い</button>
+        <button style={chip(view === "prices")} onClick={() => setView("prices")}>料金の設定</button>
       </div>
 
       {view === "orders" ? (
         <PlanOrdersPanel />
+      ) : view === "prices" ? (
+        <PlanPricesPanel />
       ) : (
         <Card>
           <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 4px" }}>Web申込の企業({fiscalYear}年度)</h3>

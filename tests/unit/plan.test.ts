@@ -17,6 +17,8 @@ import {
   periodError,
   priceAdd,
   priceNew,
+  pricingFor,
+  upcomingPriceChange,
   salesRows,
   seatAlertLevel,
   seatsGranted,
@@ -48,6 +50,31 @@ describe("料金", () => {
   it("税込金額に含まれる消費税", () => {
     expect(taxIncluded(3300)).toBe(300);
     expect(taxIncluded(33000)).toBe(3000);
+  });
+});
+
+describe("年度ごとの料金", () => {
+  const rows = [
+    { fiscal_year: 2026, unit_price: 330, min_total: 3300 },
+    { fiscal_year: 2028, unit_price: 385, min_total: 3850 },
+  ];
+  it("その年度の設定がなければ、前の年度で最も新しい料金", () => {
+    expect(pricingFor(rows, 2026)).toEqual({ unitPrice: 330, minTotal: 3300 });
+    expect(pricingFor(rows, 2027)).toEqual({ unitPrice: 330, minTotal: 3300 });
+    expect(pricingFor(rows, 2029)).toEqual({ unitPrice: 385, minTotal: 3850 });
+    expect(pricingFor([], 2026)).toEqual({ unitPrice: 330, minTotal: 3300 }); // 表がないときは既定
+  });
+  it("改定後の料金で計算する", () => {
+    const p = pricingFor(rows, 2028);
+    expect(priceNew(5, p).total).toBe(3850);
+    expect(seatsGranted(5, p)).toBe(10);
+    expect(priceNew(20, p).total).toBe(7700);
+    expect(priceAdd(2, p).total).toBe(770);
+  });
+  it("次の年度以降の改定のお知らせ", () => {
+    expect(upcomingPriceChange(rows, 2026)?.fiscal_year).toBe(2028);
+    expect(upcomingPriceChange(rows, 2028)).toBeNull();
+    expect(upcomingPriceChange([...rows, { fiscal_year: 2027, unit_price: 330, min_total: 3300 }], 2026)?.fiscal_year).toBe(2028); // 同じ料金の年度は飛ばす
   });
 });
 

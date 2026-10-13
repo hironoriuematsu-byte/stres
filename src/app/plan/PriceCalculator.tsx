@@ -3,15 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { brand } from "@/lib/brand";
-import { MIN_TOTAL_SEATS, priceNew, QUOTE_MAILTO, WEB_MAX_SEATS, seatsGranted } from "@/lib/plan";
+import { DEFAULT_PRICING, minSeats, priceNew, Pricing, QUOTE_MAILTO, WEB_MAX_SEATS, seatsGranted } from "@/lib/plan";
 
 // 宣伝ページの料金計算(受検予定人数を入れると金額が出る)
-export function PriceCalculator() {
+export function PriceCalculator({ pricing = DEFAULT_PRICING }: { pricing?: Pricing }) {
   const [text, setText] = useState("30");
   const n = Number(text.normalize("NFKC"));
   const quote = Number.isInteger(n) && n > WEB_MAX_SEATS; // 300名を超える場合はお見積り
   const valid = Number.isInteger(n) && n >= 1 && !quote;
-  const price = valid ? priceNew(n) : null;
+  const price = valid ? priceNew(n, pricing) : null;
 
   return (
     <div style={{ background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 12, padding: "14px 16px" }}>
@@ -30,9 +30,9 @@ export function PriceCalculator() {
           <>
             お支払い金額 <strong style={{ fontSize: 24, color: brand.tealDark }}>{price.total.toLocaleString()}円</strong>（税込）
             <div style={{ fontSize: 12, color: "#5B6B6A", marginTop: 4 }}>
-              {n < MIN_TOTAL_SEATS
-                ? `最低料金です（${seatsGranted(n)}名まで受検できます）`
-                : `330円 × ${n}名`}
+              {n < minSeats(pricing)
+                ? `最低料金です（${seatsGranted(n, pricing)}名まで受検できます）`
+                : `${pricing.unitPrice}円 × ${n}名`}
             </div>
           </>
         ) : (

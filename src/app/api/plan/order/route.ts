@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { fiscalYearOf, parseOrderInput, priceNew } from "@/lib/plan";
+import { fiscalYearOf, parseOrderInput, priceNew, seatsGranted } from "@/lib/plan";
+import { loadPricing } from "@/lib/plan-prices";
 import { adminClient, invoiceFields } from "@/lib/plan-server";
 import { createCheckoutSession, stripeConfigured } from "@/lib/stripe";
 
@@ -56,11 +57,11 @@ export async function POST(req: Request) {
   }
 
   const email = user.email ?? "";
-  const price = priceNew(v.seats);
-  const { data: order, error } = await admin
-    .from("plan_orders")
-    .insert({
-      kind: prior && prior.length > 0 ? "renew" : "new",
+  // 料金は受検開始日の年度のもの(申込時点の単価・受検人数枠を記録し、後の改定の影響を受けない)
+  const pricing = await loadPricing(admin, fiscalYear);
+  const price = priceNew(v.seats, pricing);
+  const row = {
+    kind: prior && prior.length > 0 ? "renew" : "new",
       company_id: me.company_id,
       fiscal_year: fiscalYear,
       seats: v.seats,
@@ -76,9 +77,16 @@ export async function POST(req: Request) {
       exam_start: v.examStart,
       exam_end: v.examEnd,
       interview_option: v.interviewOption,
-    })
+  };
+  let { data: order, error } = await admin
+    .from("plan_orders")
+    .insert({ ...row, unit_price: pricing.unitPrice, seats_granted: seatsGranted(v.seats, pricing) })
     .select("id")
     .single();
+  if (error && /unit_price|seats_granted/.test(error.message)) {
+    // 料金設定の列がまだない(SQL 0026 の実行前)
+    ({ data: order, error } = await admin.from("plan_orders").insert(row).select("id").single());
+  }
   if (error || !order) return NextResponse.json({ error: `申込を記録できませんでした: ${error?.message ?? ""}` }, { status: 500 });
   // 労働者数は次回の初期値に使う
   await admin.from("companies").update({ workers: v.workers }).eq("id", me.company_id);

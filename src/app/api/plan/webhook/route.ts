@@ -68,7 +68,8 @@ export async function POST(req: Request) {
   const { data: order } = await admin.from("plan_orders").select("*").eq("id", orderId).single<OrderRow>();
   if (!order) return NextResponse.json({ error: "order not found" }, { status: 404 });
 
-  const granted = order.kind === "add_seats" ? order.seats : seatsGranted(order.seats);
+  // 受検人数枠は申込時点の料金で決まる(記録がない古い申込は既定の料金で計算)
+  const granted = order.kind === "add_seats" ? order.seats : (order.seats_granted ?? seatsGranted(order.seats));
   const maxEnd = order.exam_start ? maxEndOf(order.exam_start) : order.exam_end ?? "2000-01-01";
   const { data: rows, error } = await admin.rpc("provision_plan_order", {
     p_order: order.id,
