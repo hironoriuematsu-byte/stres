@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { MAX_SEATS, priceAdd } from "@/lib/plan";
-import { adminClient, invoiceFooter } from "@/lib/plan-server";
+import { adminClient, invoiceFields } from "@/lib/plan-server";
 import { createCheckoutSession, stripeConfigured } from "@/lib/stripe";
 import { getFiscalYear } from "@/lib/fiscal";
 
@@ -86,7 +86,8 @@ export async function POST(req: Request) {
       successUrl: `${origin}/jimu?plan=added`,
       cancelUrl: `${origin}/jimu`,
       invoiceDescription: `${fiscalYear}年度 ストレスチェック 受検人数の追加(${company?.name ?? ""})`,
-      invoiceFooter: invoiceFooter(price.total),
+      invoiceFooter: invoiceFields(company?.name ?? "", price.total).footer,
+      invoiceCustomFields: invoiceFields(company?.name ?? "", price.total).customFields,
     });
     await admin.from("plan_orders").update({ stripe_session_id: session.id }).eq("id", order.id);
     return NextResponse.json({ url: session.url });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkEmailDomain } from "@/lib/email-domain-check";
 import { fiscalYearOf, parseApplyInput, priceNew } from "@/lib/plan";
-import { adminClient, invoiceFooter } from "@/lib/plan-server";
+import { adminClient, invoiceFields } from "@/lib/plan-server";
 import { createCheckoutSession, stripeConfigured } from "@/lib/stripe";
 
 export const runtime = "nodejs";
@@ -66,7 +66,8 @@ export async function POST(req: Request) {
       successUrl: `${origin}/plan/thanks?order=${order.id}`,
       cancelUrl: `${origin}/plan/apply?canceled=1`,
       invoiceDescription: `${fiscalYear}年度 ストレスチェック(${v.companyName})`,
-      invoiceFooter: invoiceFooter(price.total),
+      invoiceFooter: invoiceFields(v.companyName, price.total).footer,
+      invoiceCustomFields: invoiceFields(v.companyName, price.total).customFields,
     });
     await admin.from("plan_orders").update({ stripe_session_id: session.id }).eq("id", order.id);
     return NextResponse.json({ url: session.url });

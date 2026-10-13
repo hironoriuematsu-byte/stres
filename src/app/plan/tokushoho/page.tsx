@@ -7,7 +7,8 @@ import { MIN_TOTAL, MIN_TOTAL_SEATS, UNIT_PRICE } from "@/lib/plan";
 export const metadata = { title: "特定商取引法に基づく表記 | ストレスチェックWeb" };
 
 const rows: [string, string][] = [
-  ["販売事業者", SELLER.name],
+  ["販売事業者", `${SELLER.name}(うえまつ産業医事務所)`],
+  ["適格請求書発行事業者登録番号", SELLER.invoiceRegistrationNo],
   ["運営責任者", SELLER.representative],
   ["所在地", SELLER.address],
   ["電話番号", "ご請求があれば遅滞なく開示します(下記メールアドレスまでご連絡ください)"],

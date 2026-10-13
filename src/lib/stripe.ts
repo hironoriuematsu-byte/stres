@@ -7,7 +7,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 // 環境変数(Vercel):
 //   STRIPE_SECRET_KEY      … シークレットキー(sk_test_… / sk_live_…)
 //   STRIPE_WEBHOOK_SECRET  … Webhook の署名シークレット(whsec_…)
-//   INVOICE_REGISTRATION_NO … 適格請求書発行事業者の登録番号(T+13桁。未登録なら空)
+//   INVOICE_REGISTRATION_NO … (任意)登録番号を変えるときだけ。通常は lib/org.ts の SELLER の値を使う
 // どちらかのキーが無い間は、申込ページは「準備中」と表示して決済を受け付けない。
 // ============================================================
 
@@ -80,7 +80,8 @@ export async function createCheckoutSession(opts: {
   lines: CheckoutLine[];
   successUrl: string;
   cancelUrl: string;
-  invoiceFooter: string; // 領収書(請求書PDF)の下部に載せる文言(登録番号・消費税額など)
+  invoiceFooter: string; // 領収書(請求書PDF)の下部に載せる文言(発行者・登録番号)
+  invoiceCustomFields?: { name: string; value: string }[]; // 上部の項目(宛名・登録番号・適用税率。4つまで)
   invoiceDescription: string;
 }): Promise<{ id: string; url: string }> {
   return stripePost<{ id: string; url: string }>(
@@ -105,6 +106,7 @@ export async function createCheckoutSession(opts: {
         invoice_data: {
           description: opts.invoiceDescription,
           footer: opts.invoiceFooter,
+          custom_fields: opts.invoiceCustomFields?.slice(0, 4),
           metadata: { order_id: opts.orderId },
         },
       },

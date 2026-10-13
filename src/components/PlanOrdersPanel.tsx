@@ -171,7 +171,7 @@ export function PlanOrdersPanel() {
                     {o.amount.toLocaleString()}円
                     {(o.status === "provisioned" || o.status === "paid") && (
                       <div>
-                        <a href={`/api/plan/receipt?order=${o.id}`} target="_blank" rel="noreferrer" style={{ color: brand.tealDark, fontSize: 12 }}>
+                        <a href={`/plan/receipt/${o.id}`} target="_blank" rel="noreferrer" style={{ color: brand.tealDark, fontSize: 12 }}>
                           領収書
                         </a>
                       </div>

@@ -13,17 +13,25 @@ export function adminClient(): SupabaseClient | null {
   });
 }
 
-// 領収書(Stripe の請求書PDF)の下部に載せる文言
-export function invoiceFooter(total: number): string {
-  const reg = process.env.INVOICE_REGISTRATION_NO?.trim();
-  return [
-    `${SELLER.name} ${SELLER.address}`,
-    reg ? `登録番号: ${reg}` : null,
-    `上記金額のうち消費税(10%対象) ${taxIncluded(total).toLocaleString()}円`,
-  ]
-    .filter(Boolean)
-    .join(" / ");
+// 領収書(Stripe の請求書PDF)を適格請求書の記載事項を満たす形にする:
+//   上部の項目に宛名・登録番号・適用税率(税率ごとの対価と消費税額)、下部に発行者名と所在地
+export function invoiceFields(companyName: string, total: number): { customFields: { name: string; value: string }[]; footer: string } {
+  const reg = registrationNo();
+  const tax = taxIncluded(total);
+  return {
+    customFields: [
+      { name: "宛名", value: `${companyName} 御中`.slice(0, 140) },
+      ...(reg ? [{ name: "登録番号", value: reg }] : []),
+      { name: "適用税率", value: `10%(10%対象 ${total.toLocaleString()}円 うち消費税 ${tax.toLocaleString()}円)` },
+    ],
+    footer: [`${SELLER.issuerName} ${SELLER.address}`, reg ? `登録番号 ${reg}` : null, reg ? "本書は適格請求書を兼ねます" : null]
+      .filter(Boolean)
+      .join(" / "),
+  };
 }
+
+// 登録番号: 環境変数で上書きできる(通常は SELLER の値)
+export const registrationNo = (): string => process.env.INVOICE_REGISTRATION_NO?.trim() || SELLER.invoiceRegistrationNo;
 
 export async function officeEmails(admin: SupabaseClient): Promise<string[]> {
   const { data } = await admin.from("profiles").select("user_id").eq("role", "office");

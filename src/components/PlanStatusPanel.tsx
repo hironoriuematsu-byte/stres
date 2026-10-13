@@ -222,19 +222,20 @@ export function PlanStatusPanel({
                   <td style={{ padding: "5px 12px 5px 0", whiteSpace: "nowrap" }}>{p.kind === "new" ? "お申込み" : "人数の追加"} {p.seats}名</td>
                   <td style={{ padding: "5px 12px 5px 0", whiteSpace: "nowrap", textAlign: "right" }}>{p.amount.toLocaleString()}円</td>
                   <td style={{ padding: "5px 0", whiteSpace: "nowrap" }}>
-                    {preview ? (
-                      <span style={{ color: brand.tealDark, fontWeight: 700 }}>領収書(PDF)</span>
-                    ) : (
-                      <a href={`/api/plan/receipt?order=${p.id}`} target="_blank" rel="noreferrer" style={{ color: brand.tealDark, fontWeight: 700 }}>
-                        領収書(PDF)
-                      </a>
-                    )}
+                    <a
+                      href={preview ? "/demo/plan/receipt" : `/plan/receipt/${p.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ color: brand.tealDark, fontWeight: 700 }}
+                    >
+                      領収書
+                    </a>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <div style={small}>領収書は決済代行会社(Stripe)のページが開き、PDFでダウンロードできます。決済時にメールでもお送りしています。</div>
+          <div style={small}>領収書(インボイス対応)は「印刷 / PDFとして保存」で保存できます。決済時には決済代行会社(Stripe)からもメールでお送りしています。</div>
         </div>
       )}
 
