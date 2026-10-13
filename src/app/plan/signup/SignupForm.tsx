@@ -32,6 +32,7 @@ export function SignupForm({ enabled }: { enabled: boolean }) {
   const [err, setErr] = useState<string | null>(null);
   const [exists, setExists] = useState(false);
   const [done, setDone] = useState(false);
+  const [resent, setResent] = useState(false); // 以前の登録で確認がまだだったため、確認メールを送り直した
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const biz = normalizeBizId(f.bizId);
   const workersN = Number(f.workers.normalize("NFKC"));
@@ -53,6 +54,7 @@ export function SignupForm({ enabled }: { enabled: boolean }) {
         setExists(Boolean(json.exists));
         throw new Error(json.error ?? "登録できませんでした");
       }
+      setResent(Boolean(json.resent));
       setDone(true);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -65,10 +67,18 @@ export function SignupForm({ enabled }: { enabled: boolean }) {
       <Card style={{ maxWidth: 640, margin: "0 auto" }}>
         <Badge>確認メールを送りました</Badge>
         <h1 style={{ fontSize: 21, color: brand.ink, margin: "12px 0 10px" }}>会社のご登録ありがとうございます</h1>
+        {resent && (
+          <p style={{ fontSize: 13, color: "#8A5A00", background: "#FFF8E6", border: "1px solid #F0D9A8", borderRadius: 8, padding: "10px 12px", lineHeight: 1.7 }}>
+            このメールアドレスは以前にご登録いただいていましたが、確認がまだお済みでなかったため、確認メールを送り直しました(以前ご登録の会社で手続きを続けます)。
+          </p>
+        )}
         <ol style={{ fontSize: 14, color: "#44534F", lineHeight: 1.9, paddingLeft: 20, margin: "0 0 10px" }}>
-          <li>{f.contactEmail} に届いた確認メールのリンクを開いてください(ログインした状態になります)</li>
-          <li>ストレスチェックの担当者としての確認(人事権を持たないこと)を行ってください</li>
+          <li>
+            {f.contactEmail} に届く「<strong>担当者アカウントの確認(会社登録)</strong>」のメールのリンクを開き、「アカウントを有効にして担当者の画面へ」を押してください(リンクの有効期限は1時間です)
+          </li>
+          <li>ストレスチェックの担当者としての誓約(人事権を持たないこと・守秘義務)を行ってください</li>
           <li>表示される「ストレスチェックのお申込み」で、受検予定人数と受検期間を入れてお支払いください</li>
+          <li>お支払い後、「配布URL・QR」から従業員の皆さまに受検用のURL・QRコードを配れます。ほかの担当者の追加は「従業員招待」からできます</li>
         </ol>
         <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8 }}>
           来年度以降も、ログインして同じ画面からお申し込みいただけます(会社の登録は今回だけです)。

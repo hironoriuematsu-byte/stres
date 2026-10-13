@@ -11,16 +11,16 @@ export default async function JimuPage() {
   if (!profile || profile.role !== "jimu") redirect(roleHome(profile?.role));
 
   // 未誓約の実施事務従事者はRLSにより結果が0件になるため、先に誓約画面へ誘導(仕様1)
-  if (!profile.no_personnel_authority) {
-    return <Attestation initialName={profile.name === "未設定" ? "" : profile.name} />;
-  }
-
   const supabase = createClient();
   const { data: company } = await supabase
     .from("companies")
     .select("id, name, code, hm_enabled, web_signup")
     .eq("id", profile.company_id!)
     .single();
+
+  if (!profile.no_personnel_authority) {
+    return <Attestation initialName={profile.name === "未設定" ? "" : profile.name} webSignup={Boolean(company?.web_signup)} />;
+  }
 
   // 健康管理Webの導線は、併用企業かつ「事業者担当者を兼ねる」方にのみ表示する
   const hmEnabled = Boolean(company?.hm_enabled && profile.hm_company_access);

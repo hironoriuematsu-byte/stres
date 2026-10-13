@@ -19,9 +19,25 @@ function escapeHtml(s: string): string {
 // 1回限りのトークンが消費されて本人が開いたときに「期限切れ」になる。
 // 本人がボタンを押したとき(POST)に初めてトークンを使うことでこれを防ぐ。
 function confirmPage(tokenHash: string, type: string, next: string): Response {
-  const heading = type === "recovery" ? "パスワードの再設定" : type === "invite" ? "アカウントの有効化" : "メールアドレスの確認";
-  const button =
-    type === "recovery" ? "新しいパスワードを設定する" : type === "invite" ? "パスワードを設定して利用を開始する" : "続ける";
+  // Web申込で会社を登録した担当者(確認後に担当者の画面へ進む)
+  const admin = type === "signup" && next.startsWith("/jimu");
+  const heading = admin
+    ? "担当者アカウントの有効化"
+    : type === "recovery"
+      ? "パスワードの再設定"
+      : type === "invite"
+        ? "アカウントの有効化"
+        : "メールアドレスの確認";
+  const button = admin
+    ? "アカウントを有効にして担当者の画面へ"
+    : type === "recovery"
+      ? "新しいパスワードを設定する"
+      : type === "invite"
+        ? "パスワードを設定して利用を開始する"
+        : "続ける";
+  const lead = admin
+    ? "会社のご登録ありがとうございます。下のボタンを押すと、ストレスチェックの担当者(実施事務従事者)の画面が開きます。誓約のあと、受検予定人数と受検期間を入力してお支払いいただくと、受検用のURL・QRコードの配布や、ほかの担当者の追加ができるようになります。"
+    : "うえまつ産業医事務所 ストレスチェックWeb です。下のボタンを押して次へ進んでください。";
   const html = `<!doctype html>
 <html lang="ja">
 <head>
@@ -42,7 +58,7 @@ function confirmPage(tokenHash: string, type: string, next: string): Response {
 <body>
 <div class="wrap"><div class="card">
 <h1>${heading}</h1>
-<p>うえまつ産業医事務所 ストレスチェックWeb です。下のボタンを押して次へ進んでください。</p>
+<p>${lead}</p>
 <form method="post" action="/auth/callback">
 <input type="hidden" name="token_hash" value="${escapeHtml(tokenHash)}" />
 <input type="hidden" name="type" value="${escapeHtml(type)}" />

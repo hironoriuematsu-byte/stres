@@ -6,7 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 
-export function Attestation({ initialName }: { initialName: string }) {
+// Web申込の企業の流れ(誓約 → 受検人数・期間の入力とお支払い → 配布・担当者の追加)
+const WEB_STEPS = ["担当者の誓約", "受検人数・期間の入力とお支払い", "受検用URL・QRの配布(担当者の追加)"];
+
+export function Attestation({ initialName, webSignup = false }: { initialName: string; webSignup?: boolean }) {
   const router = useRouter();
   const [name, setName] = useState(initialName);
   const [checked, setChecked] = useState(false);
@@ -36,6 +39,19 @@ export function Attestation({ initialName }: { initialName: string }) {
 
   return (
     <Card style={{ maxWidth: 620, margin: "0 auto" }}>
+      {webSignup && (
+        <div style={{ background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: brand.ink }}>会社のご登録ありがとうございます</div>
+          <ol style={{ fontSize: 13, color: "#44534F", lineHeight: 1.8, margin: "6px 0 0", paddingLeft: 20 }}>
+            {WEB_STEPS.map((s, i) => (
+              <li key={s} style={{ fontWeight: i === 0 ? 700 : 400, color: i === 0 ? brand.tealDark : undefined }}>
+                {s}
+                {i === 0 && "(いまここ)"}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       <Badge tone="orange">実施事務従事者の誓約</Badge>
       <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 8px" }}>
         個人結果の閲覧には誓約が必要です
@@ -81,7 +97,7 @@ export function Attestation({ initialName }: { initialName: string }) {
       {err && <div style={{ fontSize: 13, color: "#B02A2A", marginTop: 10 }}>{err}</div>}
       <div style={{ marginTop: 18 }}>
         <Btn onClick={attest} disabled={!checked || !name.trim() || busy}>
-          {busy ? "送信中…" : "誓約して閲覧をはじめる"}
+          {busy ? "送信中…" : webSignup ? "誓約して、お申込みへ進む" : "誓約して閲覧をはじめる"}
         </Btn>
       </div>
       <p style={{ fontSize: 12.5, color: "#5B6B6A", marginTop: 14, lineHeight: 1.8 }}>

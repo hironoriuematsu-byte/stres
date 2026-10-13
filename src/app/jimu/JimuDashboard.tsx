@@ -145,7 +145,7 @@ export function JimuDashboard({
       {/* Web申込の企業のみ: 年度の申込(初年度・今年度の申込がない・受検期間が終わったとき) */}
       {tab === null && webSignup && <PlanOrderPanel companyId={companyId} currentYear={getFiscalYear()} />}
       {tab === null && <DashboardMenu
-          items={MENU_ITEMS}
+          items={webSignup ? MENU_ITEMS.map((m) => (m.key === "従業員招待" ? { ...m, desc: "従業員への招待メールの送信と、ほかの担当者(実施事務従事者)の追加" } : m)) : MENU_ITEMS}
           onSelect={(k) => {
             if (k !== "使い方ガイド") setTab(k);
           }}

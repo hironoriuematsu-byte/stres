@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { checkEmailDomain } from "@/lib/email-domain-check";
-import { clientIpHeaders } from "@/lib/supabase/server";
 import { jstToday, officeKey, parseSignupInput } from "@/lib/plan";
 import { adminClient, officeEmails, sendMails } from "@/lib/plan-server";
+import { IMPLEMENTER, SELLER } from "@/lib/org";
 import { stripeConfigured } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
 // 会社(事業場)の登録。お支払いはまだ行わず、登録した担当者がログイン後の画面で年度ごとに申し込む。
+// 担当者の確認メールは、従業員の受検登録(Supabase の確認メール)とは別の、担当者向けの内容でこちらから送る。
+// リンクを開くと担当者の画面(誓約 → 受検人数・期間の入力とお支払い)に進む。
 // 同じ会社の二重登録を防ぐため、次の場合は登録せずにログインへ案内する:
 //   - メールアドレスがすでに登録されている
 //   - 「登録番号(インボイス)または法人番号 + 事業場名」が一致する会社がすでにある
@@ -59,6 +60,17 @@ export async function POST(req: Request) {
     }
   }
 
+  // いたずらの大量登録を防ぐ(全体で10分間に10件まで)
+  const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const { count: recent } = await admin
+    .from("companies")
+    .select("id", { count: "exact", head: true })
+    .eq("web_signup", true)
+    .gte("created_at", since);
+  if ((recent ?? 0) >= 10) {
+    return NextResponse.json({ error: "ただいま登録が混み合っています。10分ほどおいてからもう一度お試しください。" }, { status: 429 });
+  }
+
   // 企業を作る(企業コード: W + 登録日 + 英数字3文字)
   const day = jstToday().replace(/-/g, "").slice(2);
   let company: { id: string; code: string } | null = null;
@@ -88,35 +100,67 @@ export async function POST(req: Request) {
   }
   if (!company) return NextResponse.json({ error: "登録できませんでした。もう一度お試しください。" }, { status: 500 });
 
-  // 担当者のアカウントを作る(確認メールのリンクを開くと有効になり、そのまま担当者の画面へ)
-  const anon = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    auth: { autoRefreshToken: false, persistSession: false },
-    global: { headers: clientIpHeaders(req) },
-  });
-  const origin = req.headers.get("origin") ?? new URL(req.url).origin;
-  const { data: signed, error: signErr } = await anon.auth.signUp({
+  // 担当者のアカウントを作る。確認用のリンクだけを発行し(Supabase からはメールを送らない)、メールはこちらから送る
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || req.headers.get("origin") || new URL(req.url).origin;
+  const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
+    type: "signup",
     email: v.contactEmail,
     password: v.password,
-    options: { emailRedirectTo: `${origin}/auth/callback?next=/jimu`, data: { full_name: v.contactName } },
+    options: { data: { full_name: v.contactName } },
   });
-  const isNew = (signed?.user?.identities?.length ?? 0) > 0;
-  if (signErr || !isNew) {
+  const existsMsg =
+    "このメールアドレスはすでに登録されています。ログインして、ログイン後の画面からお申し込みください(パスワードを忘れた場合は再設定できます)。";
+  if (linkErr || !link?.user || !link.properties?.hashed_token) {
     await admin.from("companies").delete().eq("id", company.id); // 作りかけの企業を消す
-    if (!signErr) {
-      return NextResponse.json(
-        {
-          error:
-            "このメールアドレスはすでに登録されています。ログインして、ログイン後の画面からお申し込みください(パスワードを忘れた場合は再設定できます)。",
-          exists: true,
-        },
-        { status: 409 }
-      );
+    const exists = linkErr && (linkErr.code === "email_exists" || /already been registered|already exists/i.test(linkErr.message));
+    if (exists) return NextResponse.json({ error: existsMsg, exists: true }, { status: 409 });
+    return NextResponse.json({ error: `登録できませんでした: ${linkErr?.message ?? ""}` }, { status: 400 });
+  }
+  const confirmUrl =
+    `${origin}/auth/callback?token_hash=${encodeURIComponent(link.properties.hashed_token)}` +
+    `&type=${encodeURIComponent(link.properties.verification_type || "signup")}&next=${encodeURIComponent("/jimu")}`;
+  const sendConfirm = (companyName: string) =>
+    sendMails(
+      [v.contactEmail],
+      "【ストレスチェックWeb】担当者アカウントの確認(会社登録)",
+      [
+        companyName,
+        `${v.contactName} 様`,
+        "",
+        "ストレスチェックWebに会社をご登録いただき、ありがとうございます。",
+        "下のリンクを開き、「アカウントを有効にして担当者の画面へ」を押してください。ストレスチェックの担当者(実施事務従事者)の画面が開きます。",
+        "",
+        confirmUrl,
+        "",
+        "■ このあとの流れ",
+        "1. 担当者としての誓約(人事権がないこと・守秘義務)",
+        "2. 受検予定人数と受検期間を入力して、お支払い(クレジットカード等)",
+        "3. お支払い後、従業員の皆さまに配る受検用のURL・QRコードが使えるようになります",
+        "   (ほかの担当者の追加も、同じ画面からできます)",
+        "",
+        "※ リンクの有効期限は、このメールが届いてから1時間です。期限が切れた場合は、ログイン画面の「パスワードを忘れた方」から再設定するとログインできます。",
+        "※ このメールに心当たりがない場合は、破棄してください。",
+        "",
+        `実施者: ${IMPLEMENTER.full}(${IMPLEMENTER.officeName})`,
+        `お問い合わせ: ${SELLER.email}`,
+      ].join("\n")
+    );
+
+  // すでにあるアカウント(従業員として登録済み・別の会社の担当者など)は、新しい会社に付け替えない
+  const { data: prof } = await admin.from("profiles").select("role, company_id").eq("user_id", link.user.id).maybeSingle();
+  if (prof) {
+    await admin.from("companies").delete().eq("id", company.id);
+    // 以前に会社登録して、確認メールのリンクをまだ開いていない担当者には、確認メールを送り直す
+    if (!link.user.email_confirmed_at && prof.role === "jimu" && prof.company_id) {
+      const { data: prev } = await admin.from("companies").select("name").eq("id", prof.company_id).maybeSingle();
+      await sendConfirm(prev?.name ?? v.companyName);
+      return NextResponse.json({ ok: true, resent: true });
     }
-    return NextResponse.json({ error: signErr.message }, { status: 400 });
+    return NextResponse.json({ error: existsMsg, exists: true }, { status: 409 });
   }
 
   const { error: profErr } = await admin.from("profiles").upsert({
-    user_id: signed.user!.id,
+    user_id: link.user.id,
     role: "jimu",
     name: v.contactName,
     emp_id: null,
@@ -148,5 +192,6 @@ export async function POST(req: Request) {
       "お支払いは、担当者がログイン後の画面で年度ごとに行います。"
   );
 
+  await sendConfirm(`${v.companyName} ${v.officeName}`);
   return NextResponse.json({ ok: true });
 }
