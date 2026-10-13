@@ -245,6 +245,16 @@ export function ApplyForm({ enabled, initialSeats, canceled }: { enabled: boolea
         )}
       </div>
 
+      {/* お支払いの前に、主な条件(支払時期・提供時期・キャンセル)をまとめて示す(最終確認) */}
+      <ul style={{ fontSize: 12, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 12px", paddingLeft: 18 }}>
+        <li>お支払い: クレジットカードで、この後の決済画面で確定した時点に決済されます。</li>
+        <li>ご利用開始: 決済後すぐに準備が整い、指定した開始日から受検できます。</li>
+        <li>
+          キャンセル: 受検期間の開始日の前日までに{" "}
+          <a href="mailto:support@mestate.jp" style={{ color: brand.tealDark }}>support@mestate.jp</a>{" "}
+          へご連絡いただければ全額を返金します。開始後の返金はいたしません(受検者が申込人数に満たない場合を含みます)。
+        </li>
+      </ul>
       {err && <p style={{ fontSize: 13, color: "#B02A2A", margin: "0 0 10px", lineHeight: 1.7 }}>{err}</p>}
       <Btn tone="orange" onClick={submit} disabled={!enabled || busy} style={{ width: "100%" }}>
         {busy ? "決済画面を準備しています…" : "お支払いに進む(クレジットカード)"}
