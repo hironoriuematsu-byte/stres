@@ -63,7 +63,8 @@ create policy "jimu reads own-company plan orders" on public.plan_orders
   for select using (my_role() = 'jimu' and company_id = my_company());
 
 -- 書き込みは決済の確認を経たサーバー処理(service_role)だけが行う
-revoke insert, update, delete on table public.plan_orders from anon, authenticated;
+revoke all on table public.plan_orders from anon;
+revoke insert, update, delete on table public.plan_orders from authenticated;
 grant select on table public.plan_orders to authenticated;
 
 -- ------------------------------------------------------------
@@ -89,7 +90,8 @@ drop policy if exists "members read own-company exam plan" on public.exam_plans;
 create policy "members read own-company exam plan" on public.exam_plans
   for select using (company_id = my_company() or my_role() = 'office');
 
-revoke insert, update, delete on table public.exam_plans from anon, authenticated;
+revoke all on table public.exam_plans from anon;
+revoke insert, update, delete on table public.exam_plans from authenticated;
 grant select on table public.exam_plans to authenticated;
 
 -- 日本時間の「今日」

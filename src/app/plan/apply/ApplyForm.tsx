@@ -85,6 +85,9 @@ export function ApplyForm({ enabled, initialSeats, canceled }: { enabled: boolea
         料金・内容は<Link href="/plan" style={{ color: brand.tealDark }}>サービスのご案内</Link>をご覧ください。
       </p>
 
+      <p style={{ fontSize: 13, color: brand.tealDark, background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 8, padding: "10px 12px", lineHeight: 1.7, margin: "0 0 12px" }}>
+        うえまつ産業医事務所と産業医の契約をいただいている企業さまは、お申込み・お支払いは不要です(ストレスチェックは契約に含まれます)。いつもの窓口までご連絡ください。
+      </p>
       {!enabled && (
         <p style={{ fontSize: 13, color: "#8A6B2E", background: "#FBF3E3", border: "1px solid #EFD9A8", borderRadius: 8, padding: "10px 12px", lineHeight: 1.7 }}>
           現在、Web申込は準備中です。お急ぎの場合は support@mestate.jp までお問い合わせください。

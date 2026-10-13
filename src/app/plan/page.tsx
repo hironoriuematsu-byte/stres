@@ -33,6 +33,10 @@ export default function PlanPage() {
           受検予定人数と受検期間を入れてクレジットカードでお支払いいただくと、すぐに受検の準備が整います。
           少人数の事業場でも、人数分だけのご負担で実施できます。
         </p>
+        <p style={{ ...p, fontSize: 13, background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
+          うえまつ産業医事務所と産業医の契約をいただいている企業さまは、このお申込みは不要です(ストレスチェックは契約に含まれます)。
+          実施をご希望の際は、いつもの窓口までご連絡ください。
+        </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
           <Link href="/plan/apply" style={{ background: brand.orange, color: "#fff", borderRadius: 10, padding: "11px 22px", fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
             申し込む
