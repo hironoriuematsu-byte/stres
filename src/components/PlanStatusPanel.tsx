@@ -101,6 +101,14 @@ export function PlanStatusPanel({
   };
 
   const buySeats = async () => {
+    // 桁の打ち間違いの確認: 追加後の人数枠が事業場の労働者数を超える場合は念のため確かめる
+    if (st && st.workers && st.seats + addN > st.workers) {
+      const ok = window.confirm(
+        `追加後の受検人数(${st.seats + addN}名)が、お申込み時の事業場の労働者数(${st.workers}名)を超えます。\n` +
+          `${addN}名・${priceAdd(addN).total.toLocaleString()}円の追加でよろしいですか？(お支払い後の返金はできません)`
+      );
+      if (!ok) return;
+    }
     if (preview) {
       setMsg({ ok: true, text: "(デモ)実際の画面では、ここからクレジットカードの決済画面に進みます。" });
       return;

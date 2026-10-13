@@ -142,6 +142,12 @@ describe("申込フォームの入力", () => {
     expect(r.ok).toBe(false);
     expect(!r.ok && r.error).toMatch(/50人未満/);
   });
+  it("受検予定人数が労働者数を超えると申し込めない(桁の打ち間違い対策)", () => {
+    const r = parseApplyInput({ ...base, workers: "30", seats: "300" }, "2026-10-13");
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.error).toMatch(/労働者数\(30名\)を超えています/);
+    expect(parseApplyInput({ ...base, workers: "30", seats: "30" }, "2026-10-13").ok).toBe(true);
+  });
   it("同意が無いと申し込めない", () => {
     expect(parseApplyInput({ ...base, agreeTerms: false }, "2026-10-13").ok).toBe(false);
     expect(parseApplyInput({ ...base, agreeProcedure: false }, "2026-10-13").ok).toBe(false);

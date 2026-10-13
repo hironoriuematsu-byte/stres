@@ -131,6 +131,11 @@ export function ApplyForm({ enabled, initialSeats, canceled }: { enabled: boolea
           足りなくなった場合は、受検期間中に1名から追加できます(余った分の返金はありません)。
           {price && seatsN < MIN_TOTAL_SEATS && ` 最低料金のため、${seatsGranted(seatsN)}名まで受検できます。`}
         </p>
+        {price && Number.isInteger(workersN) && workersN > 0 && seatsN > workersN && (
+          <p style={{ ...hint, color: "#B02A2A" }}>
+            事業場の労働者数({workersN}名)を超えています。桁の打ち間違いがないかご確認ください。
+          </p>
+        )}
       </div>
       <div style={{ ...field, display: "flex", gap: 12, flexWrap: "wrap" }}>
         <div>
@@ -251,9 +256,10 @@ export function ApplyForm({ enabled, initialSeats, canceled }: { enabled: boolea
         <li>ご利用開始: 決済後すぐに準備が整い、指定した開始日から受検できます。</li>
         <li>
           <strong style={{ color: brand.ink }}>キャンセル・返金: お申込み後のお客さまのご都合によるキャンセル・返金はお受けできません</strong>
-          (受検者が申込人数に満たない場合を含みます)。二重に決済された場合や、当社の事情でサービスを提供できない場合は返金します(
-          <a href="mailto:support@mestate.jp" style={{ color: brand.tealDark }}>support@mestate.jp</a>)。
-          人数・受検期間をご確認のうえお進みください。
+          (受検者が申込人数に満たない場合を含みます)。二重に決済された場合や、当社の事情でサービスを提供できない場合は返金します。
+          申込人数の入力間違いは、決済日から7日以内に
+          <a href="mailto:support@mestate.jp" style={{ color: brand.tealDark }}>support@mestate.jp</a>
+          へご連絡いただければ、未使用の人数分を返金します。人数・受検期間をご確認のうえお進みください。
         </li>
       </ul>
       {err && <p style={{ fontSize: 13, color: "#B02A2A", margin: "0 0 10px", lineHeight: 1.7 }}>{err}</p>}

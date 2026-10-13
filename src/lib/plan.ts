@@ -203,6 +203,13 @@ export function parseApplyInput(
   if (!/^[0-9+\-() ]{10,}$/.test(v.contactPhone)) return { ok: false, error: "電話番号を正しく入力してください" };
   if (!(v.workers >= 1 && v.workers <= 100000)) return { ok: false, error: "事業場の労働者数を入力してください" };
   if (!(v.seats >= 1 && v.seats <= MAX_SEATS)) return { ok: false, error: `受検予定人数は1〜${MAX_SEATS}名で入力してください` };
+  // 桁の打ち間違い(30名を300名など)を防ぐ: 受検するのは事業場で働く方なので、労働者数を超えることはない
+  if (v.seats > v.workers) {
+    return {
+      ok: false,
+      error: `受検予定人数(${v.seats}名)が事業場の労働者数(${v.workers}名)を超えています。人数をご確認ください`,
+    };
+  }
   const pe = periodError(v.examStart, v.examEnd, today);
   if (pe) return { ok: false, error: pe };
   if (!v.interviewOption) return { ok: false, error: "産業医面接指導の担当を選んでください" };

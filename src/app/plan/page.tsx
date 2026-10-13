@@ -59,7 +59,7 @@ export default function PlanPage() {
                 ["受検期間の延長", "無料（開始から3か月まで）"],
                 ["集団分析報告書", "料金に含まれます"],
                 ["産業医面接指導（当事務所が担当する場合）", `1回 ${INTERVIEW_FEE.toLocaleString()}円（税込）・申出があった方のみ`],
-                ["キャンセル・返金", "お申込み後のお客さまのご都合によるキャンセル・返金はお受けできません(二重に決済された場合・当社の事情で提供できない場合を除きます)"],
+                ["キャンセル・返金", "お申込み後のお客さまのご都合によるキャンセル・返金はお受けできません(二重に決済された場合・当社の事情で提供できない場合を除きます)。人数の入力間違いは、決済日から7日以内のご連絡で未使用分を返金します"],
               ].map(([k, v]) => (
                 <tr key={k} style={{ borderBottom: `1px solid ${brand.line}` }}>
                   <th style={{ textAlign: "left", padding: "8px 12px 8px 0", color: brand.ink, whiteSpace: "nowrap" }}>{k}</th>
