@@ -16,9 +16,9 @@ export default async function BrochurePage() {
   const year = getFiscalYear();
   const pricing = pricingFor(prices, year);
   const change = upcomingPriceChange(prices, year);
-  const h = { fontSize: 14.5, color: brand.tealDark, margin: "14px 0 6px", borderLeft: `4px solid ${brand.teal}`, paddingLeft: 8 } as const;
-  const t = { fontSize: 12.5, color: "#2C3B39", lineHeight: 1.75, margin: 0 } as const;
-  const cell = { border: "1px solid #C9D6D4", padding: "4px 10px", fontSize: 12.5 } as const;
+  const h = { fontSize: 14.5, color: brand.tealDark, margin: "10px 0 4px", borderLeft: `4px solid ${brand.teal}`, paddingLeft: 8 } as const;
+  const t = { fontSize: 12.5, color: "#2C3B39", lineHeight: 1.65, margin: 0 } as const;
+  const cell = { border: "1px solid #C9D6D4", padding: "2px 10px", fontSize: 12.5 } as const;
 
   return (
     <div style={{ maxWidth: 800, margin: "0 auto" }}>
@@ -29,7 +29,7 @@ export default async function BrochurePage() {
           body { background: #fff !important; }
           .brochure { border: none !important; padding: 0 !important; }
         }
-        @page { size: A4; margin: 14mm; }
+        @page { size: A4; margin: 12mm 14mm; }
       `}</style>
       <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <Link href="/plan" style={{ fontSize: 13, color: brand.tealDark }}>← サービスのご案内に戻る</Link>
@@ -112,15 +112,15 @@ export default async function BrochurePage() {
         <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
           {IMPLEMENTER_PROFILE.photo && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={IMPLEMENTER_PROFILE.photo} alt={`実施者 ${IMPLEMENTER.name}`} width={64} height={80} style={{ borderRadius: 6, objectFit: "cover" }} />
+            <img src={IMPLEMENTER_PROFILE.photo} alt={`実施者 ${IMPLEMENTER.name}`} width={56} height={70} style={{ borderRadius: 6, objectFit: "cover" }} />
           )}
           <p style={t}>
             実施者: {IMPLEMENTER.full}({IMPLEMENTER.officeName})
+            {IMPLEMENTER_PROFILE.career.length > 0 && <> ・ {IMPLEMENTER_PROFILE.career.join(" / ")}</>}
             <br />
             運営: {SELLER.name}({SELLER.address})
           </p>
         </div>
-        {IMPLEMENTER_PROFILE.career.length > 0 && <p style={t}>経歴: {IMPLEMENTER_PROFILE.career.join(" / ")}</p>}
         <ul style={{ ...t, paddingLeft: 18 }}>
           {SECURITY_POINTS.map((s) => (
             <li key={s}>{s}</li>

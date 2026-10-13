@@ -15,10 +15,10 @@ export const IMPLEMENTER = {
   corporateName: "Mestate LLC",
 } as const;
 
-// 宣伝ページ・社内検討用資料に載せる実施者の紹介。経歴・資格は1行ずつ。空の場合は表示しない
+// 宣伝ページ・社内検討用資料に載せる実施者の紹介。資格は1つずつ(mestate.jp の表記に合わせる)。空の場合は表示しない
 // (photo: public/ に置いた顔写真のパス。例 "/plan/doctor.jpg")
 export const IMPLEMENTER_PROFILE: { career: string[]; photo: string } = {
-  career: [],
+  career: ["産業医", "総合内科専門医", "労働衛生コンサルタント", "博士(社会健康医学)"],
   photo: "/plan/doctor.jpg",
 };
 

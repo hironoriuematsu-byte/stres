@@ -224,11 +224,13 @@ export default async function PlanPage() {
               {IMPLEMENTER.officeName}({SELLER.name})/ {SELLER.address}
             </div>
             {IMPLEMENTER_PROFILE.career.length > 0 && (
-              <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
                 {IMPLEMENTER_PROFILE.career.map((c) => (
-                  <li key={c} style={{ fontSize: 13, color: "#44534F", lineHeight: 1.8 }}>{c}</li>
+                  <span key={c} style={{ fontSize: 12.5, color: brand.tealDark, border: `1px solid ${brand.line}`, background: "#F4FAF9", borderRadius: 999, padding: "3px 10px" }}>
+                    {c}
+                  </span>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         </div>
