@@ -27,7 +27,8 @@ export const SELLER = {
   name: "メステート合同会社",
   issuerName: "メステート合同会社 うえまつ産業医事務所", // 領収書(適格請求書)の発行者名
   representative: "上松 弘典",
-  address: IMPLEMENTER.officeAddress,
+  // 公開する所在地(事業所)。本店所在地は公開しない(Stripe の審査用の欄にのみ登録)
+  address: `〒604-8221 ${IMPLEMENTER.officeAddress}`,
   email: "support@mestate.jp",
   // 適格請求書発行事業者の登録番号(国税庁の公表サイトで公開されている情報)
   invoiceRegistrationNo: "T7130003006446",
