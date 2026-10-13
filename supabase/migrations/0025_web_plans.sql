@@ -49,6 +49,9 @@ create table if not exists public.plan_orders (
   provisioned_at        timestamptz
 );
 
+-- 領収書(Stripe の請求書・領収書)を後から取り出すための請求書ID
+alter table public.plan_orders add column if not exists stripe_invoice_id text;
+
 create index if not exists idx_plan_orders_created on public.plan_orders(created_at desc);
 create index if not exists idx_plan_orders_company on public.plan_orders(company_id);
 

@@ -216,3 +216,70 @@ export function parseApplyInput(
   if (!v.agreeProcedure) return { ok: false, error: "実施方法の決定と従業員への周知についてご確認ください" };
   return { ok: true, value: v };
 }
+
+// ---- 売上明細(実施者の画面からCSVで一括ダウンロード) ----
+
+export type SalesOrder = {
+  id: string;
+  kind: "new" | "add_seats";
+  status: string;
+  company_name: string;
+  office_name: string | null;
+  contact_name: string;
+  contact_email: string;
+  fiscal_year: number;
+  seats: number;
+  amount: number;
+  created_at: string;
+  paid_at: string | null;
+  stripe_payment_intent: string | null;
+  stripe_invoice_id: string | null;
+};
+
+// 日時(UTC)を日本時間の日付(YYYY-MM-DD)にする
+export const jstDate = (ts: string): string => new Date(new Date(ts).getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+
+export const SALES_HEADERS = [
+  "売上日(決済日)",
+  "区分",
+  "会社名",
+  "事業場名",
+  "担当者",
+  "メールアドレス",
+  "年度",
+  "人数",
+  "金額(税込)",
+  "うち消費税(10%)",
+  "税抜金額",
+  "申込ID",
+  "Stripe決済ID",
+  "Stripe請求書ID",
+];
+
+// 支払い済みの申込を、決済日が from〜to(日本時間・両端を含む。空なら制限なし)のものだけ行にする
+export function salesRows(orders: SalesOrder[], from = "", to = ""): (string | number)[][] {
+  return orders
+    .filter((o) => (o.status === "provisioned" || o.status === "paid") && o.paid_at)
+    .map((o) => ({ o, day: jstDate(o.paid_at!) }))
+    .filter(({ day }) => (!from || day >= from) && (!to || day <= to))
+    .sort((a, b) => (a.o.paid_at! < b.o.paid_at! ? -1 : 1))
+    .map(({ o, day }) => {
+      const tax = taxIncluded(o.amount);
+      return [
+        day,
+        o.kind === "new" ? "新規申込" : "人数追加",
+        o.company_name,
+        o.office_name ?? "",
+        o.contact_name,
+        o.contact_email,
+        o.fiscal_year,
+        o.seats,
+        o.amount,
+        tax,
+        o.amount - tax,
+        o.id,
+        o.stripe_payment_intent ?? "",
+        o.stripe_invoice_id ?? "",
+      ];
+    });
+}

@@ -34,6 +34,28 @@ export function encodeForm(obj: Record<string, unknown>, prefix = ""): string[] 
   return out;
 }
 
+async function stripeGet<T>(path: string): Promise<T> {
+  const res = await fetch(`https://api.stripe.com/v1/${path}`, {
+    headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
+  });
+  const json = (await res.json()) as T & { error?: { message?: string } };
+  if (!res.ok) throw new Error(`Stripe: ${json.error?.message ?? res.status}`);
+  return json;
+}
+
+// 領収書のページ(請求書・領収書のPDFをダウンロードできる Stripe のページ)のURLを、その都度取り出す。
+// 請求書IDが未記録の古い申込は、決済画面(Checkout Session)から請求書をたどる
+export async function receiptPageUrl(opts: { invoiceId?: string | null; sessionId?: string | null }): Promise<string | null> {
+  let invoiceId = opts.invoiceId ?? null;
+  if (!invoiceId && opts.sessionId) {
+    const s = await stripeGet<{ invoice: string | null }>(`checkout/sessions/${encodeURIComponent(opts.sessionId)}`);
+    invoiceId = s.invoice;
+  }
+  if (!invoiceId) return null;
+  const inv = await stripeGet<{ hosted_invoice_url: string | null }>(`invoices/${encodeURIComponent(invoiceId)}`);
+  return inv.hosted_invoice_url;
+}
+
 async function stripePost<T>(path: string, params: Record<string, unknown>, idempotencyKey?: string): Promise<T> {
   const res = await fetch(`https://api.stripe.com/v1/${path}`, {
     method: "POST",

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
-import { formatJpDate, interviewOptionLabel } from "@/lib/plan";
+import { formatJpDate, interviewOptionLabel, jstToday, SALES_HEADERS, salesRows, SalesOrder } from "@/lib/plan";
+import { buildCsv, downloadCsv } from "@/lib/csv";
 
 type Order = {
   id: string;
@@ -25,6 +26,9 @@ type Order = {
   interview_option: string | null;
   error: string | null;
   created_at: string;
+  paid_at: string | null;
+  stripe_payment_intent: string | null;
+  stripe_invoice_id: string | null;
 };
 
 type Plan = { company_id: string; fiscal_year: number; seats: number; exam_start: string; exam_end: string; max_end: string };
@@ -44,6 +48,10 @@ export function PlanOrdersPanel() {
   const [showAll, setShowAll] = useState(false);
   const [edit, setEdit] = useState<Plan | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  // 売上明細の期間(既定は今月)
+  const thisMonth = jstToday().slice(0, 7);
+  const [from, setFrom] = useState(`${thisMonth}-01`);
+  const [to, setTo] = useState(jstToday());
 
   const load = async () => {
     const supabase = createClient();
@@ -77,6 +85,17 @@ export function PlanOrdersPanel() {
     }
   };
 
+  const exportSales = () => {
+    const rows = salesRows(orders as SalesOrder[], from, to);
+    if (rows.length === 0) {
+      setMsg("指定した期間に売上はありません。");
+      return;
+    }
+    const total = rows.reduce((a, r) => a + Number(r[8]), 0);
+    downloadCsv(`売上明細_${from || "開始"}_${to || "現在"}.csv`, buildCsv(SALES_HEADERS, rows));
+    setMsg(`${rows.length}件・合計${total.toLocaleString()}円(税込)の売上明細をダウンロードしました。`);
+  };
+
   const shown = showAll ? orders : orders.filter((o) => o.status !== "pending" && o.status !== "expired");
   const cell = { padding: "7px 8px", fontSize: 12.5, verticalAlign: "top" } as const;
   const input = { padding: "5px 8px", fontSize: 13, border: `1px solid ${brand.line}`, borderRadius: 6 } as const;
@@ -92,6 +111,16 @@ export function PlanOrdersPanel() {
       <p style={{ fontSize: 12, color: "#8A9694", margin: "4px 0 10px", lineHeight: 1.7 }}>
         お支払いが確認されると、企業・受検期間・配布URLが自動で作られ、担当者に招待メールが送られます。「要確認」は開設処理で問題があった申込です。
       </p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", fontSize: 13, margin: "0 0 10px", padding: "10px 12px", background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 10 }}>
+        <strong style={{ color: brand.ink }}>売上明細(CSV)</strong>
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={input} />
+        〜
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={input} />
+        <Btn tone="ghost" onClick={exportSales} style={{ padding: "6px 14px", fontSize: 13 }}>
+          一括ダウンロード
+        </Btn>
+        <span style={{ fontSize: 12, color: "#8A9694" }}>決済日(日本時間)で集計。金額・消費税・税抜金額・Stripeの決済IDを含みます</span>
+      </div>
       {msg && <p style={{ fontSize: 13, color: brand.tealDark }}>{msg}</p>}
       <div style={{ overflowX: "auto" }}>
         <table style={{ borderCollapse: "collapse", width: "100%" }}>
@@ -138,7 +167,16 @@ export function PlanOrdersPanel() {
                       <>人数追加 {o.seats}名</>
                     )}
                   </td>
-                  <td style={{ ...cell, whiteSpace: "nowrap" }}>{o.amount.toLocaleString()}円</td>
+                  <td style={{ ...cell, whiteSpace: "nowrap" }}>
+                    {o.amount.toLocaleString()}円
+                    {(o.status === "provisioned" || o.status === "paid") && (
+                      <div>
+                        <a href={`/api/plan/receipt?order=${o.id}`} target="_blank" rel="noreferrer" style={{ color: brand.tealDark, fontSize: 12 }}>
+                          領収書
+                        </a>
+                      </div>
+                    )}
+                  </td>
                   <td style={cell}>
                     {plan ? (
                       <>

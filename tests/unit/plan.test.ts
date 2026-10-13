@@ -12,6 +12,7 @@ import {
   periodError,
   priceAdd,
   priceNew,
+  salesRows,
   seatAlertLevel,
   seatsGranted,
   taxIncluded,
@@ -55,6 +56,30 @@ describe("人数枠のお知らせ", () => {
     expect(seatAlertLevel(24, 30)).toBe("near");
     expect(seatAlertLevel(17, 21)).toBe("near"); // 21×0.8=16.8 → 17名で
     expect(seatAlertLevel(0, 0)).toBeNull();
+  });
+});
+
+describe("売上明細", () => {
+  const base = {
+    kind: "new" as const, company_name: "A社", office_name: null, contact_name: "山田", contact_email: "a@x.jp",
+    fiscal_year: 2026, seats: 30, created_at: "2026-10-01T00:00:00Z", stripe_payment_intent: "pi_1", stripe_invoice_id: "in_1",
+  };
+  it("支払い済みだけを、決済日(日本時間)の期間で並べる", () => {
+    const rows = salesRows(
+      [
+        { ...base, id: "1", status: "provisioned", amount: 9900, paid_at: "2026-10-31T16:00:00Z" }, // JST 11/1
+        { ...base, id: "2", status: "provisioned", amount: 3300, paid_at: "2026-10-05T03:00:00Z" },
+        { ...base, id: "3", status: "pending", amount: 3300, paid_at: null },
+        { ...base, id: "4", status: "expired", amount: 3300, paid_at: null },
+      ],
+      "2026-10-01",
+      "2026-10-31"
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0][0]).toBe("2026-10-05");
+    expect(rows[0].slice(8, 11)).toEqual([3300, 300, 3000]);
+    const all = salesRows([{ ...base, id: "1", status: "provisioned", amount: 9900, paid_at: "2026-10-31T16:00:00Z" }]);
+    expect(all[0][0]).toBe("2026-11-01");
   });
 });
 

@@ -28,6 +28,10 @@ export default function DemoPlanPage() {
           interview_option: "mestate",
           workers: 32,
         }}
+        previewPayments={[
+          { id: "demo-1", kind: "new", seats: 25, amount: 8250, paid_at: `${addDays(start, -7)}T01:00:00Z` },
+          { id: "demo-2", kind: "add_seats", seats: 5, amount: 1650, paid_at: `${addDays(start, 6)}T01:00:00Z` },
+        ]}
       />
       <p style={{ fontSize: 13, color: "#5B6B6A", margin: 0 }}>
         お申込みは <Link href="/plan" style={{ color: brand.tealDark }}>サービスのご案内</Link> から。

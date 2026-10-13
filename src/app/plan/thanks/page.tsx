@@ -17,7 +17,7 @@ export default function ThanksPage() {
       <ul style={{ ...p, paddingLeft: 20 }}>
         <li>招待メール(ログイン用のパスワードの設定)</li>
         <li>お申込み内容と、受検の準備のご案内</li>
-        <li>領収書(決済代行会社 Stripe から)</li>
+        <li>領収書(決済代行会社 Stripe から。ログイン後の画面の「お支払いの記録」からもダウンロードできます)</li>
       </ul>
       <p style={p}>
         パスワードを設定してログインすると、受検用のURL・QRコードを従業員の皆さまにお知らせできます。

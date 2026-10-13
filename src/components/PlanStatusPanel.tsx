@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
-import { formatJpDate, interviewOptionLabel, jstToday, priceAdd, UNIT_PRICE } from "@/lib/plan";
+import { formatJpDate, interviewOptionLabel, jstDate, jstToday, priceAdd, UNIT_PRICE } from "@/lib/plan";
+
+type Payment = { id: string; kind: "new" | "add_seats"; seats: number; amount: number; paid_at: string };
 
 export type PlanStatus = Status;
 
@@ -25,11 +27,13 @@ export function PlanStatusPanel({
   fiscalYear,
   canEdit,
   preview,
+  previewPayments,
 }: {
   companyId: string;
   fiscalYear: number;
   canEdit: boolean;
   preview?: Status; // 紹介用(デモ): データベースを読まずにこの内容を表示し、操作は保存しない
+  previewPayments?: Payment[];
 }) {
   const [st, setSt] = useState<Status | null>(preview ?? null);
   const [end, setEnd] = useState(preview?.exam_end ?? "");
@@ -37,6 +41,7 @@ export function PlanStatusPanel({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [showNotice, setShowNotice] = useState(false);
+  const [payments, setPayments] = useState<Payment[]>(previewPayments ?? []);
 
   const load = async () => {
     if (preview) return;
@@ -45,6 +50,17 @@ export function PlanStatusPanel({
     const row = (data as Status[] | null)?.[0] ?? null;
     setSt(row);
     if (row) setEnd(row.exam_end);
+    // お支払いの記録(領収書のダウンロード用)
+    if (row && canEdit) {
+      const { data: ps } = await supabase
+        .from("plan_orders")
+        .select("id, kind, seats, amount, paid_at")
+        .eq("company_id", companyId)
+        .eq("fiscal_year", fiscalYear)
+        .in("status", ["paid", "provisioned"])
+        .order("paid_at");
+      setPayments(((ps as Payment[]) ?? []).filter((p) => p.paid_at));
+    }
   };
 
   useEffect(() => {
@@ -194,6 +210,33 @@ export function PlanStatusPanel({
       )}
 
       {msg && <p style={{ fontSize: 13, color: msg.ok ? brand.tealDark : "#B02A2A", margin: "12px 0 0" }}>{msg.text}</p>}
+
+      {canEdit && payments.length > 0 && (
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${brand.line}` }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink, marginBottom: 6 }}>お支払いの記録</div>
+          <table style={{ borderCollapse: "collapse", fontSize: 13 }}>
+            <tbody>
+              {payments.map((p) => (
+                <tr key={p.id} style={{ borderBottom: `1px solid ${brand.line}` }}>
+                  <td style={{ padding: "5px 12px 5px 0", whiteSpace: "nowrap" }}>{formatJpDate(jstDate(p.paid_at))}</td>
+                  <td style={{ padding: "5px 12px 5px 0", whiteSpace: "nowrap" }}>{p.kind === "new" ? "お申込み" : "人数の追加"} {p.seats}名</td>
+                  <td style={{ padding: "5px 12px 5px 0", whiteSpace: "nowrap", textAlign: "right" }}>{p.amount.toLocaleString()}円</td>
+                  <td style={{ padding: "5px 0", whiteSpace: "nowrap" }}>
+                    {preview ? (
+                      <span style={{ color: brand.tealDark, fontWeight: 700 }}>領収書(PDF)</span>
+                    ) : (
+                      <a href={`/api/plan/receipt?order=${p.id}`} target="_blank" rel="noreferrer" style={{ color: brand.tealDark, fontWeight: 700 }}>
+                        領収書(PDF)
+                      </a>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={small}>領収書は決済代行会社(Stripe)のページが開き、PDFでダウンロードできます。決済時にメールでもお送りしています。</div>
+        </div>
+      )}
 
       {canEdit && (
         <div style={{ marginTop: 12 }}>

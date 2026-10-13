@@ -22,7 +22,9 @@ export async function POST(req: Request) {
 
   const event = JSON.parse(payload) as {
     type: string;
-    data: { object: { id: string; payment_status?: string; payment_intent?: string | null; metadata?: Record<string, string> } };
+    data: {
+      object: { id: string; payment_status?: string; payment_intent?: string | null; invoice?: string | null; metadata?: Record<string, string> };
+    };
   };
   const session = event.data.object;
   const orderId = session.metadata?.order_id;
@@ -56,6 +58,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status: 500 }); // Stripe に再送してもらう
   }
   const { company_id: companyId, already } = rows[0] as { company_id: string; company_code: string; already: boolean };
+  // 領収書を後から取り出せるよう、請求書IDを記録する(再送の場合も上書きして構わない)
+  if (session.invoice) await admin.from("plan_orders").update({ stripe_invoice_id: session.invoice }).eq("id", order.id);
   if (already) return NextResponse.json({ ok: true, already: true });
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
@@ -102,6 +106,9 @@ export async function POST(req: Request) {
         "3. 「配布URL・QR」から受検用のURL・QRコードを従業員の皆さまにお知らせください。",
         "   受検期間の前に、実施の目的・期間・結果の取扱いを従業員の皆さまへ周知してください。",
         "4. 締切後に「集団分析」で集団分析報告書をご覧いただけます。",
+        "",
+        "■ 領収書",
+        "決済代行会社(Stripe)から領収書のメールが届きます。ログイン後の画面の「お支払いの記録」からも、いつでもダウンロードできます。",
         "",
         `実施者: ${IMPLEMENTER.full}(${IMPLEMENTER.officeName})`,
         `お問い合わせ: ${SELLER.email}`,
