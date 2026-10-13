@@ -250,9 +250,10 @@ export function ApplyForm({ enabled, initialSeats, canceled }: { enabled: boolea
         <li>お支払い: クレジットカードで、この後の決済画面で確定した時点に決済されます。</li>
         <li>ご利用開始: 決済後すぐに準備が整い、指定した開始日から受検できます。</li>
         <li>
-          キャンセル: 受検期間の開始日の前日までに{" "}
-          <a href="mailto:support@mestate.jp" style={{ color: brand.tealDark }}>support@mestate.jp</a>{" "}
-          へご連絡いただければ全額を返金します。開始後の返金はいたしません(受検者が申込人数に満たない場合を含みます)。
+          <strong style={{ color: brand.ink }}>キャンセル・返金: お申込み後のお客さまのご都合によるキャンセル・返金はお受けできません</strong>
+          (受検者が申込人数に満たない場合を含みます)。二重に決済された場合や、当社の事情でサービスを提供できない場合は返金します(
+          <a href="mailto:support@mestate.jp" style={{ color: brand.tealDark }}>support@mestate.jp</a>)。
+          人数・受検期間をご確認のうえお進みください。
         </li>
       </ul>
       {err && <p style={{ fontSize: 13, color: "#B02A2A", margin: "0 0 10px", lineHeight: 1.7 }}>{err}</p>}
