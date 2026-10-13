@@ -18,27 +18,28 @@ import {
 import { encodeForm, verifyStripeSignature } from "@/lib/stripe";
 
 describe("料金", () => {
-  it("人数×330円。5,500円に満たないときは最低料金", () => {
+  it("人数×330円。3,300円(10名分)に満たないときは最低料金", () => {
     expect(UNIT_PRICE).toBe(330);
-    expect(MIN_TOTAL).toBe(5500);
-    expect(priceNew(10).total).toBe(5500);
-    expect(priceNew(10).lines).toHaveLength(1);
-    expect(priceNew(10).lines[0].quantity).toBe(1);
-    expect(priceNew(16).total).toBe(5500);
-    expect(priceNew(17).total).toBe(5610);
+    expect(MIN_TOTAL).toBe(3300);
+    expect(priceNew(3).total).toBe(3300);
+    expect(priceNew(3).lines).toHaveLength(1);
+    expect(priceNew(3).lines[0].quantity).toBe(1);
+    expect(priceNew(9).total).toBe(3300);
+    expect(priceNew(10).total).toBe(3300);
+    expect(priceNew(10).lines[0]).toMatchObject({ unitAmount: 330, quantity: 10 });
+    expect(priceNew(11).total).toBe(3630);
     expect(priceNew(100).total).toBe(33000);
-    expect(priceNew(100).lines[0]).toMatchObject({ unitAmount: 330, quantity: 100 });
   });
-  it("最低料金のときは17名分の受検枠を付ける", () => {
-    expect(MIN_TOTAL_SEATS).toBe(17);
-    expect(seatsGranted(5)).toBe(17);
+  it("最低料金のときは10名分の受検枠を付ける", () => {
+    expect(MIN_TOTAL_SEATS).toBe(10);
+    expect(seatsGranted(5)).toBe(10);
     expect(seatsGranted(30)).toBe(30);
   });
   it("追加購入は最低料金なし", () => {
     expect(priceAdd(3).total).toBe(990);
   });
   it("税込金額に含まれる消費税", () => {
-    expect(taxIncluded(5500)).toBe(500);
+    expect(taxIncluded(3300)).toBe(300);
     expect(taxIncluded(33000)).toBe(3000);
   });
 });

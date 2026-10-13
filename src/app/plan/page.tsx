@@ -7,7 +7,7 @@ import { PriceCalculator } from "./PriceCalculator";
 
 export const metadata = {
   title: "Web申込 | ストレスチェックWeb",
-  description: "産業医が実施者を務めるWebストレスチェック。受検者1名330円・最低5,500円(税込)、集団分析込み。クレジットカードでその場でお申込みいただけます。",
+  description: "産業医が実施者を務めるWebストレスチェック。受検者1名330円・最低3,300円(税込)、集団分析込み。クレジットカードでその場でお申込みいただけます。",
 };
 
 const h2 = { fontSize: 18, color: brand.tealDark, margin: "0 0 10px" } as const;

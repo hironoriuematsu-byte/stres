@@ -8,8 +8,8 @@ import { getFiscalYear } from "@/lib/fiscal";
 
 // 導入記念価格(1シーズン運用してから見直す)
 export const UNIT_PRICE = 330; // 受検者1名あたり(税込)
-export const MIN_TOTAL = 5500; // 最低料金(税込)
-export const MIN_TOTAL_SEATS = Math.ceil(MIN_TOTAL / UNIT_PRICE); // 最低料金で受検できる人数(17名)
+export const MIN_TOTAL = 3300; // 最低料金(税込)。1シーズン運用後、問い合わせの件数を見て1,100円への引き下げを検討する
+export const MIN_TOTAL_SEATS = Math.ceil(MIN_TOTAL / UNIT_PRICE); // 最低料金で受検できる人数(10名)
 export const MAX_SEATS = 10000;
 // 産業医面接指導(うえまつ産業医事務所が担当する場合。1回・オンライン可・意見書込み・税込)
 export const INTERVIEW_FEE = 22000;

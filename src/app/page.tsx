@@ -72,7 +72,7 @@ export default async function Home() {
       <Card style={{ marginTop: 14 }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: brand.ink, marginBottom: 6 }}>産業医との契約がない企業さまへ</div>
         <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 10px" }}>
-          産業医が実施者を務めるストレスチェックを、受検者1名330円・最低5,500円(税込・集団分析込み)で、Webからその場でお申し込みいただけます。
+          産業医が実施者を務めるストレスチェックを、受検者1名330円・最低3,300円(税込・集団分析込み)で、Webからその場でお申し込みいただけます。
         </p>
         <Link href="/plan" style={{ color: brand.orange, fontWeight: 700, fontSize: 14 }}>
           サービスのご案内・お申込み →
