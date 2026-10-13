@@ -37,6 +37,13 @@ export default function PlanPage() {
           うえまつ産業医事務所と産業医の契約をいただいている企業さまは、このお申込みは不要です(ストレスチェックは契約に含まれます)。
           実施をご希望の際は、いつもの窓口までご連絡ください。
         </p>
+        <p style={{ ...p, fontSize: 13, background: "#FBF3E3", border: "1px solid #EFD9A8", borderRadius: 10, padding: "10px 12px" }}>
+          <strong>昨年度以前にこのサービスをご利用の企業さまへ：</strong>2年目以降は新規のお申込みではなく、
+          <Link href="/plan/continue" style={{ color: brand.tealDark, fontWeight: 700 }}>
+            継続利用のお申込み
+          </Link>
+          からお進みください(従業員の皆さまの登録し直しは不要です)。
+        </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
           <Link href="/plan/apply" style={{ background: brand.orange, color: "#fff", borderRadius: 10, padding: "11px 22px", fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
             申し込む

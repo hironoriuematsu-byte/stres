@@ -170,6 +170,7 @@ export type ApplyInput = {
   interviewOption: InterviewOption;
   agreeTerms: boolean; // 利用規約(業務委託の内容を含む)への同意
   agreeProcedure: boolean; // 実施方法の決定・周知を事業者が行うことの確認
+  firstTime: boolean; // このサービスの利用が初めてであること(2年目以降は継続申込)
 };
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.normalize("NFKC").trim().slice(0, max) : "");
@@ -197,6 +198,7 @@ export function parseApplyInput(
     interviewOption: (["own", "mestate", "sanpo"] as const).find((o) => o === raw.interviewOption) as InterviewOption,
     agreeTerms: raw.agreeTerms === true,
     agreeProcedure: raw.agreeProcedure === true,
+    firstTime: raw.firstTime === true,
   };
   if (!v.companyName) return { ok: false, error: "会社名を入力してください" };
   if (!v.address) return { ok: false, error: "事業場の所在地を入力してください" };
@@ -225,6 +227,12 @@ export function parseApplyInput(
     return {
       ok: false,
       error: "地域産業保健センターは50人未満の事業場が対象です。50人以上の事業場は、自社の産業医または当事務所をお選びください",
+    };
+  }
+  if (!v.firstTime) {
+    return {
+      ok: false,
+      error: "2年目以降のお申込みは、ご担当者さまのログイン後の画面の「次の年度のお申込み」から行ってください(/plan/continue)",
     };
   }
   if (!v.agreeTerms) return { ok: false, error: "利用規約への同意が必要です" };

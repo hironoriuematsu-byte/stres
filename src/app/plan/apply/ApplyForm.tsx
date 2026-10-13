@@ -45,6 +45,7 @@ export function ApplyForm({ enabled, initialSeats, canceled }: { enabled: boolea
     interviewOption: "" as InterviewOption | "",
     agreeTerms: false,
     agreeProcedure: false,
+    firstTime: null as boolean | null, // このサービスの利用は初めてか(継続利用の誤申込を防ぐ)
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -59,6 +60,10 @@ export function ApplyForm({ enabled, initialSeats, canceled }: { enabled: boolea
 
   const submit = async () => {
     setErr(null);
+    if (f.firstTime !== true) {
+      setErr("このサービスのご利用が初めてかどうかを選んでください(2年目以降は継続利用のお申込みからお進みください)");
+      return;
+    }
     if (!check.ok) {
       setErr(check.error);
       return;
@@ -101,6 +106,27 @@ export function ApplyForm({ enabled, initialSeats, canceled }: { enabled: boolea
           お支払いは完了していません。内容を確認して、もう一度お進みください。
         </p>
       )}
+
+      <div style={{ border: `2px solid ${brand.teal}`, borderRadius: 12, padding: "12px 14px", margin: "0 0 14px" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: brand.ink, marginBottom: 6 }}>このサービスのご利用は初めてですか？</div>
+        <label style={{ display: "block", fontSize: 14, marginBottom: 4, cursor: "pointer" }}>
+          <input type="radio" name="first" checked={f.firstTime === true} onChange={() => set("firstTime", true)} style={{ marginRight: 6 }} />
+          はい、初めて申し込みます
+        </label>
+        <label style={{ display: "block", fontSize: 14, cursor: "pointer" }}>
+          <input type="radio" name="first" checked={f.firstTime === false} onChange={() => set("firstTime", false)} style={{ marginRight: 6 }} />
+          いいえ、以前この会社(事業場)で利用しました
+        </label>
+        {f.firstTime === false && (
+          <p style={{ fontSize: 13, color: "#8A6B2E", background: "#FBF3E3", borderRadius: 8, padding: "10px 12px", margin: "8px 0 0", lineHeight: 1.7 }}>
+            2年目以降は、ここから申し込むと別の企業として登録され、従業員の皆さまが登録し直せなくなります。
+            <Link href="/plan/continue" style={{ color: brand.tealDark, fontWeight: 700 }}>
+              継続利用のお申込み
+            </Link>
+            (ご担当者さまのログイン後の画面)からお進みください。
+          </p>
+        )}
+      </div>
 
       <h2 style={{ ...section, borderTop: "none", paddingTop: 0 }}>会社・事業場</h2>
       <div style={field}>
@@ -273,7 +299,7 @@ export function ApplyForm({ enabled, initialSeats, canceled }: { enabled: boolea
         </li>
       </ul>
       {err && <p style={{ fontSize: 13, color: "#B02A2A", margin: "0 0 10px", lineHeight: 1.7 }}>{err}</p>}
-      <Btn tone="orange" onClick={submit} disabled={!enabled || busy} style={{ width: "100%" }}>
+      <Btn tone="orange" onClick={submit} disabled={!enabled || busy || f.firstTime === false} style={{ width: "100%" }}>
         {busy ? "決済画面を準備しています…" : "お支払いに進む(クレジットカード)"}
       </Btn>
       <p style={{ ...hint, textAlign: "center" }}>

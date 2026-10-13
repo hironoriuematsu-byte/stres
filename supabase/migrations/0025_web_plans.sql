@@ -283,6 +283,115 @@ revoke all on function public.provision_plan_order(uuid, text, int, date) from p
 grant execute on function public.provision_plan_order(uuid, text, int, date) to service_role;
 
 -- ------------------------------------------------------------
+-- 5. 企業の統合(リカバリ用・実施者のみ)
+--    継続利用の企業が誤って「新規」で申し込み、別の企業として開設された場合などに、
+--    その企業(p_from)のデータをすべて元の企業(p_to)に移し、p_from を削除する。
+--    移すもの: 受検期間・人数枠(同じ年度があれば人数を合算)、配布URL(元の企業に同じ年度が無ければ
+--    URLをそのまま引き継ぐので、配布済みのQRコードも使える)、申込・支払いの記録、担当者・従業員、
+--    受検結果、面接指導の申出、部署、在籍労働者数、報告書の記載事項、操作記録
+--    1つのトランザクションで行い、途中で失敗したら何も変わらない
+-- ------------------------------------------------------------
+create or replace function public.office_merge_company(p_from uuid, p_to uuid)
+returns text
+language plpgsql security definer set search_path = public as $$
+#variable_conflict use_column
+declare
+  v_from companies;
+  v_to   companies;
+  r      record;
+  v_users int;
+  v_results int;
+  v_note  text := '';
+begin
+  if coalesce(my_role(), '') <> 'office' then
+    raise exception '企業の統合ができるのは実施者のみです';
+  end if;
+  if p_from = p_to then
+    raise exception '統合元と統合先が同じ企業です';
+  end if;
+  select * into v_from from companies where id = p_from for update;
+  select * into v_to   from companies where id = p_to for update;
+  if v_from.id is null or v_to.id is null then
+    raise exception '企業が見つかりません';
+  end if;
+  -- 同じ人が両方の企業で同じ年度に受検している場合は、どちらを残すか判断が必要なので止める
+  -- (通常は1人1アカウント=1企業なので起きない)
+  if exists (
+    select 1 from results a join results b on a.user_id = b.user_id and a.fiscal_year = b.fiscal_year
+     where a.company_id = p_from and b.company_id = p_to
+  ) then
+    raise exception '同じ方が両方の企業で同じ年度に受検しています。統合する前に実施者が確認してください';
+  end if;
+
+  -- 受検期間・人数枠: 統合先に同じ年度があれば人数を合算し、期間は広い方に合わせる
+  for r in select * from exam_plans where company_id = p_from loop
+    if exists (select 1 from exam_plans p where p.company_id = p_to and p.fiscal_year = r.fiscal_year) then
+      update exam_plans p
+         set seats = p.seats + r.seats,
+             exam_start = least(p.exam_start, r.exam_start),
+             max_end = greatest(p.max_end, r.max_end),
+             exam_end = greatest(p.exam_end, r.exam_end),
+             updated_at = now()
+       where p.company_id = p_to and p.fiscal_year = r.fiscal_year;
+      delete from exam_plans p where p.company_id = p_from and p.fiscal_year = r.fiscal_year;
+    else
+      update exam_plans p set company_id = p_to, updated_at = now()
+       where p.company_id = p_from and p.fiscal_year = r.fiscal_year;
+    end if;
+  end loop;
+
+  -- 配布URL: 統合先に同じ年度のURLが無ければ、統合元のURLをそのまま引き継ぐ(配布済みのQRがそのまま使える)
+  for r in select * from campaigns where company_id = p_from loop
+    if exists (select 1 from campaigns k where k.company_id = p_to and k.fiscal_year = r.fiscal_year) then
+      delete from campaigns k where k.id = r.id;
+      v_note := v_note || r.fiscal_year || '年度の配布URLは統合先のものを使います(統合元のQRは無効)。';
+    else
+      update campaigns k set company_id = p_to where k.id = r.id;
+    end if;
+  end loop;
+
+  update plan_orders set company_id = p_to where company_id = p_from;
+  update profiles set company_id = p_to where company_id = p_from;
+  get diagnostics v_users = row_count;
+  update results set company_id = p_to where company_id = p_from;
+  get diagnostics v_results = row_count;
+  update interview_requests set company_id = p_to where company_id = p_from;
+  update access_logs set company_id = p_to where company_id = p_from;
+
+  insert into departments (company_id, name, sort_order)
+  select p_to, d.name, d.sort_order from departments d where d.company_id = p_from
+  on conflict (company_id, name) do nothing;
+  delete from departments where company_id = p_from;
+
+  insert into company_year_info (company_id, fiscal_year, headcount, updated_at, updated_by)
+  select p_to, y.fiscal_year, y.headcount, y.updated_at, y.updated_by from company_year_info y where y.company_id = p_from
+  on conflict (company_id, fiscal_year) do nothing;
+  delete from company_year_info where company_id = p_from;
+
+  if not exists (select 1 from company_report_info i where i.company_id = p_to) then
+    update company_report_info set company_id = p_to where company_id = p_from;
+  end if;
+  delete from company_report_info where company_id = p_from;
+
+  -- 統合元の企業を削除する。健康管理Webなど他の機能のデータが残っていて削除できない場合は、名前に印を付けて残す
+  begin
+    delete from companies where id = p_from;
+  exception when foreign_key_violation then
+    update companies set name = '【統合済み→' || v_to.code || '】' || v_from.name where id = p_from;
+    v_note := v_note || '統合元の企業は他のデータが残っているため削除せず、名前に【統合済み】を付けました。';
+  end;
+
+  insert into access_logs (user_id, role, action, target, company_id)
+  values (auth.uid(), 'office', 'merge_company',
+          v_from.name || '(' || v_from.code || ') → ' || v_to.name || '(' || v_to.code || ')', p_to);
+
+  return format('%s(%s)を%s(%s)に統合しました。アカウント %s件・受検結果 %s件を移しました。%s',
+                v_from.name, v_from.code, v_to.name, v_to.code, v_users, v_results, v_note);
+end $$;
+
+grant execute on function public.office_merge_company(uuid, uuid) to authenticated;
+
+-- ------------------------------------------------------------
 -- 確認: すべて ✅ なら完了
 -- ------------------------------------------------------------
 select * from (

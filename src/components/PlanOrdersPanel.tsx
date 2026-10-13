@@ -6,6 +6,8 @@ import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { formatJpDate, interviewOptionLabel, jstToday, SALES_HEADERS, salesRows, SalesOrder } from "@/lib/plan";
 import { buildCsv, downloadCsv } from "@/lib/csv";
+import { CompanySelect } from "@/components/CompanySelect";
+import { Company } from "@/lib/types";
 
 type Order = {
   id: string;
@@ -45,7 +47,10 @@ const STATUS: Record<string, { label: string; color: string }> = {
 export function PlanOrdersPanel() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [codes, setCodes] = useState<Record<string, string>>({}); // 企業ID → 企業コード(同じ名前の企業を見分ける)
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const codes = Object.fromEntries(companies.map((c) => [c.id, c.code])); // 企業ID → 企業コード(同じ名前の企業を見分ける)
+  // 企業の統合(継続利用の企業が誤って新規で申し込んだときのリカバリ)
+  const [merge, setMerge] = useState<{ fromId: string; fromLabel: string; toId: string } | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [edit, setEdit] = useState<Plan | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -59,9 +64,9 @@ export function PlanOrdersPanel() {
     const [o, p, c] = await Promise.all([
       supabase.from("plan_orders").select("*").order("created_at", { ascending: false }).limit(300),
       supabase.from("exam_plans").select("company_id, fiscal_year, seats, exam_start, exam_end, max_end"),
-      supabase.from("companies").select("id, code"),
+      supabase.from("companies").select("id, name, code").order("name"),
     ]);
-    setCodes(Object.fromEntries(((c.data as { id: string; code: string }[]) ?? []).map((x) => [x.id, x.code])));
+    setCompanies((c.data as Company[]) ?? []);
     setOrders((o.data as Order[]) ?? []);
     setPlans((p.data as Plan[]) ?? []);
     if (o.error) setMsg(`読み込めませんでした: ${o.error.message}(SQL 0025 が未実行の可能性があります)`);
@@ -84,6 +89,25 @@ export function PlanOrdersPanel() {
     setMsg(error ? error.message : "受検期間・人数枠を変更しました。");
     if (!error) {
       setEdit(null);
+      load();
+    }
+  };
+
+  const runMerge = async () => {
+    if (!merge?.toId) return;
+    const to = companies.find((c) => c.id === merge.toId);
+    if (
+      !window.confirm(
+        `「${merge.fromLabel}」のデータ(受検期間・人数枠・配布URL・担当者・従業員・受検結果・申込の記録など)をすべて\n` +
+          `「${to?.name}(${to?.code})」に移し、「${merge.fromLabel}」を削除します。元には戻せません。よろしいですか？`
+      )
+    )
+      return;
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc("office_merge_company", { p_from: merge.fromId, p_to: merge.toId });
+    setMsg(error ? `統合できませんでした: ${error.message}` : String(data));
+    if (!error) {
+      setMerge(null);
       load();
     }
   };
@@ -154,6 +178,16 @@ export function PlanOrdersPanel() {
                     <strong>{o.company_name}</strong>
                     {o.office_name && <div>{o.office_name}</div>}
                     {o.company_id && codes[o.company_id] && <div style={{ color: "#8A9694" }}>企業コード {codes[o.company_id]}</div>}
+                    {o.kind === "new" && o.company_id && codes[o.company_id] && (
+                      <button
+                        onClick={() =>
+                          setMerge({ fromId: o.company_id!, fromLabel: `${o.company_name}(${codes[o.company_id!]})`, toId: "" })
+                        }
+                        style={{ background: "none", border: "none", padding: 0, color: brand.tealDark, fontWeight: 700, cursor: "pointer", fontSize: 12 }}
+                      >
+                        既存の企業に統合
+                      </button>
+                    )}
                     {o.workers != null && <div style={{ color: "#5B6B6A" }}>労働者 {o.workers}名</div>}
                   </td>
                   <td style={cell}>
@@ -209,6 +243,32 @@ export function PlanOrdersPanel() {
           </tbody>
         </table>
       </div>
+
+      {merge && (
+        <div style={{ marginTop: 14, padding: "12px 14px", background: "#FBF3E3", border: "1px solid #EFD9A8", borderRadius: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink, marginBottom: 4 }}>既存の企業に統合する(リカバリ用)</div>
+          <p style={{ fontSize: 12, color: "#5B6B6A", lineHeight: 1.7, margin: "0 0 8px" }}>
+            継続利用の企業が誤って新規で申し込んだ場合などに、「{merge.fromLabel}」を元の企業にまとめます。
+            受検期間・人数枠(同じ年度があれば人数を合算)・配布URL(元の企業に同じ年度のURLが無ければ、配布済みのQRがそのまま使えます)・
+            担当者・従業員・受検結果・面接指導の申出・申込と支払いの記録をすべて移します。操作はログに残ります。
+          </p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: 13 }}>統合先:</span>
+            <CompanySelect
+              companies={companies.filter((c) => c.id !== merge.fromId)}
+              value={merge.toId}
+              onChange={(id) => setMerge({ ...merge, toId: id })}
+              label=""
+            />
+            <Btn tone="orange" onClick={runMerge} disabled={!merge.toId} style={{ padding: "6px 14px", fontSize: 13 }}>
+              統合する
+            </Btn>
+            <Btn tone="ghost" onClick={() => setMerge(null)} style={{ padding: "6px 14px", fontSize: 13 }}>
+              やめる
+            </Btn>
+          </div>
+        </div>
+      )}
 
       {edit && (
         <div style={{ marginTop: 14, padding: "12px 14px", background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 10 }}>

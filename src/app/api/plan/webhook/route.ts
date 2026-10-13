@@ -168,5 +168,6 @@ export async function POST(req: Request) {
 async function sameNameNote(admin: NonNullable<ReturnType<typeof adminClient>>, name: string, companyId: string): Promise<string> {
   const { data } = await admin.from("companies").select("code").eq("name", name).neq("id", companyId);
   if (!data || data.length === 0) return "";
-  return `\n\n※ 同じ名前の企業がすでに登録されています(企業コード: ${data.map((c) => c.code).join("、")})。別の企業として開設しました。画面では企業コードで見分けてください。`;
+  return `\n\n※ 同じ名前の企業がすでに登録されています(企業コード: ${data.map((c) => c.code).join("、")})。別の企業として開設しました。` +
+    "同じ会社が継続利用を誤って新規で申し込んだ場合は、実施者の画面「Web申込」の「既存の企業に統合」で元の企業にまとめられます。別の会社であれば、画面では企業コードで見分けてください。";
 }

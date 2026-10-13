@@ -124,6 +124,7 @@ describe("申込フォームの入力", () => {
     interviewOption: "sanpo",
     agreeTerms: true,
     agreeProcedure: true,
+    firstTime: true,
   };
   it("正しい入力", () => {
     const r = parseApplyInput(base, "2026-10-13");
@@ -154,6 +155,11 @@ describe("申込フォームの入力", () => {
     expect(!r.ok && r.error).toMatch(/300名を超える場合は、個別にお見積り/);
     expect(parseApplyInput({ ...base, workers: "500", seats: "300", interviewOption: "own" }, "2026-10-13").ok).toBe(true);
     expect(priceNew(300).total).toBe(99000);
+  });
+  it("2年目以降(初めてでない)は新規として申し込めない", () => {
+    const r = parseApplyInput({ ...base, firstTime: false }, "2026-10-13");
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.error).toMatch(/次の年度のお申込み/);
   });
   it("同意が無いと申し込めない", () => {
     expect(parseApplyInput({ ...base, agreeTerms: false }, "2026-10-13").ok).toBe(false);
