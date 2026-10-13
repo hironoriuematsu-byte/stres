@@ -3,13 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { brand } from "@/lib/brand";
-import { MIN_TOTAL_SEATS, priceNew, seatsGranted } from "@/lib/plan";
+import { MIN_TOTAL_SEATS, priceNew, QUOTE_MAILTO, QUOTE_SEATS, seatsGranted } from "@/lib/plan";
 
 // 宣伝ページの料金計算(受検予定人数を入れると金額が出る)
 export function PriceCalculator() {
   const [text, setText] = useState("30");
   const n = Number(text.normalize("NFKC"));
-  const valid = Number.isInteger(n) && n >= 1 && n <= 10000;
+  const quote = Number.isInteger(n) && n >= QUOTE_SEATS; // 300名以上はお見積り
+  const valid = Number.isInteger(n) && n >= 1 && !quote;
   const price = valid ? priceNew(n) : null;
 
   return (
@@ -35,10 +36,19 @@ export function PriceCalculator() {
             </div>
           </>
         ) : (
-          <span style={{ color: "#B02A2A", fontSize: 13 }}>1〜10,000の数字を入力してください</span>
+          quote ? (
+            <span style={{ fontSize: 14 }}>
+              {QUOTE_SEATS}名以上は個別にお見積りします(割引があります)。
+              <a href={QUOTE_MAILTO} style={{ color: brand.tealDark, fontWeight: 700 }}>
+                お見積りのご依頼(メール)
+              </a>
+            </span>
+          ) : (
+            <span style={{ color: "#B02A2A", fontSize: 13 }}>人数を数字で入力してください</span>
+          )
         )}
       </div>
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 12, display: quote ? "none" : "block" }}>
         <Link
           href={valid ? `/plan/apply?seats=${n}` : "/plan/apply"}
           style={{ display: "inline-block", background: brand.orange, color: "#fff", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 15, textDecoration: "none" }}

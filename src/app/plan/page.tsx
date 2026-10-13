@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER } from "@/lib/org";
-import { INTERVIEW_FEE, MIN_TOTAL, MIN_TOTAL_SEATS, UNIT_PRICE } from "@/lib/plan";
+import { INTERVIEW_FEE, MIN_TOTAL, MIN_TOTAL_SEATS, QUOTE_MAILTO, QUOTE_SEATS, UNIT_PRICE } from "@/lib/plan";
 import { PriceCalculator } from "./PriceCalculator";
 
 export const metadata = {
@@ -56,10 +56,11 @@ export default function PlanPage() {
                 ["受検者1名あたり", `${UNIT_PRICE}円（税込）`],
                 ["最低料金", `${MIN_TOTAL.toLocaleString()}円（税込・${MIN_TOTAL_SEATS}名まで）`],
                 ["受検人数の追加", `1名 ${UNIT_PRICE}円（税込）・受検期間中に画面から追加できます`],
+                [`${QUOTE_SEATS}名以上`, "個別にお見積りします（割引があります）。メールでお問い合わせください"],
                 ["受検期間の延長", "無料（開始から3か月まで）"],
                 ["集団分析報告書", "料金に含まれます"],
                 ["産業医面接指導（当事務所が担当する場合）", `1回 ${INTERVIEW_FEE.toLocaleString()}円（税込）・申出があった方のみ`],
-                ["キャンセル・返金", "お申込み後のお客さまのご都合によるキャンセル・返金はお受けできません(二重に決済された場合・当社の事情で提供できない場合を除きます)。人数の入力間違いは、決済日から7日以内のご連絡で未使用分を返金します"],
+                ["キャンセル・返金", "お申込み後のお客さまのご都合によるキャンセル・返金はお受けできません(二重に決済された場合・当社の事情で提供できない場合を除きます)"],
               ].map(([k, v]) => (
                 <tr key={k} style={{ borderBottom: `1px solid ${brand.line}` }}>
                   <th style={{ textAlign: "left", padding: "8px 12px 8px 0", color: brand.ink, whiteSpace: "nowrap" }}>{k}</th>
@@ -72,6 +73,12 @@ export default function PlanPage() {
         <div style={{ marginTop: 14 }}>
           <PriceCalculator />
         </div>
+        <p style={{ fontSize: 13, margin: "10px 0 0" }}>
+          {QUOTE_SEATS}名以上のお見積り:{" "}
+          <a href={QUOTE_MAILTO} style={{ color: brand.tealDark, fontWeight: 700 }}>
+            support@mestate.jp
+          </a>
+        </p>
         <p style={{ fontSize: 12, color: "#8A9694", lineHeight: 1.8, margin: "10px 0 0" }}>
           お支払いはクレジットカード（前払い）です。領収書は決済後にメールでお送りします。価格は導入記念価格で、年度ごとに見直す場合があります。
         </p>
@@ -234,6 +241,7 @@ export default function PlanPage() {
           ["産業医がいなくても実施できますか？", "はい。当事務所の医師が実施者を務めます。50人未満の事業場も、法改正によりストレスチェックが義務化される予定です。"],
           ["受検しない従業員の分も払う必要がありますか？", "お申込み時の受検予定人数分のお支払いです。足りなくなった場合は1名から追加でき、余った分の返金はありません。少なめにお申込みいただき、必要に応じて追加する方法もおすすめです。"],
           ["50人以上の事業場でも申し込めますか？", "はい。産業医を選任している事業場は、自社の産業医に面接指導を担当いただくこともできます。なお、50人以上の事業場には産業医の選任義務があります。選任がお済みでない場合はご相談ください。"],
+          [`${QUOTE_SEATS}名以上の場合は？`, `${QUOTE_SEATS}名以上は個別にお見積りします（割引があります）。複数の事業場をまとめたご依頼もご相談ください。`],
           ["請求書払いはできますか？", "Web申込はクレジットカードのみです。請求書払いをご希望の場合はお問い合わせください。"],
         ].map(([q, a]) => (
           <div key={q} style={{ marginBottom: 10 }}>
