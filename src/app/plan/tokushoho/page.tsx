@@ -17,7 +17,7 @@ function rowsFor(unitPrice: number, minTotal: number, seats: number): [string, s
   ["所在地", SELLER.address],
   ["電話番号", "ご請求があれば遅滞なく開示します(下記メールアドレスまでご連絡ください)"],
   ["メールアドレス", SELLER.email],
-  ["販売価格", `受検者1名あたり ${unitPrice}円(税込)、最低料金 ${minTotal.toLocaleString()}円(税込・${seats}名まで)。受検を始める日の年度の料金で、お申込み画面に表示します。改定する場合は、サービスのご案内ページであらかじめお知らせします`],
+  ["販売価格", `受検者1名あたり ${unitPrice}円(税込)、最低料金 ${minTotal.toLocaleString()}円(税込・${seats}名まで)。お申込み時点の料金をお申込み画面に表示します(申込後に料金を改定しても、お申込み済みの料金は変わりません)`],
   ["商品代金以外の必要料金", "なし(インターネットの通信料はお客さまのご負担となります)"],
   ["支払方法", PAYMENT_METHODS_TEXT],
   ["支払時期", "お申込み時に決済されます"],

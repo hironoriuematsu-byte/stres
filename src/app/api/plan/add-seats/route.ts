@@ -57,7 +57,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "顧問契約の企業は人数の上限がないため、追加は不要です" }, { status: 400 });
   }
 
-  const pricing = await loadPricing(admin, fiscalYear); // その年度の単価
+  // 単価は、その年度に申し込んだときの単価(年度の途中で料金を改定しても、申込済みの企業の追加は変わらない)
+  const { data: base } = await admin
+    .from("plan_orders")
+    .select("unit_price")
+    .eq("company_id", me.company_id)
+    .eq("fiscal_year", fiscalYear)
+    .in("kind", ["new", "renew"])
+    .in("status", ["paid", "provisioned"])
+    .not("unit_price", "is", null)
+    .order("created_at")
+    .limit(1)
+    .maybeSingle();
+  const pricing = await loadPricing(admin, fiscalYear);
+  if (base?.unit_price) pricing.unitPrice = base.unit_price as number;
   const price = priceAdd(seats, pricing);
   const email = user.email ?? "";
   const { data: order, error } = await admin

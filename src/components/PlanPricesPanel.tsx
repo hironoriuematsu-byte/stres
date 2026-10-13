@@ -8,12 +8,13 @@ import { getFiscalYear } from "@/lib/fiscal";
 import { loadPlanPrices } from "@/lib/plan-prices";
 import { minSeats, pricingFor, type PlanPriceRow } from "@/lib/plan";
 
-// 実施者向け: Web申込の料金を年度ごとに設定する。変更できるのは次の年度以降だけ
-// (今年度の料金は、申込済みの企業との公平のため変えない)。設定すると、宣伝ページに改定のお知らせが自動で出る
+// 実施者向け: Web申込の料金を年度ごとに設定する。今年度以降を変更できる。
+// 変更後のお申込みから新しい料金になり、申込済みの企業(その年度の人数の追加を含む)は申込時の単価のまま。
+// 次の年度以降の料金を設定すると、宣伝ページに改定のお知らせが自動で出る
 export function PlanPricesPanel() {
   const current = getFiscalYear();
   const [rows, setRows] = useState<PlanPriceRow[] | null>(null);
-  const [f, setF] = useState({ year: String(current + 1), unit: "", min: "", note: "" });
+  const [f, setF] = useState({ year: String(current), unit: "", min: "", note: "" });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -42,7 +43,13 @@ export function PlanPricesPanel() {
     setBusy(false);
     if (error) setMsg({ ok: false, text: error.message });
     else {
-      setMsg({ ok: true, text: `${f.year}年度の料金を設定しました。宣伝ページ・利用規約・特商法の表示に、改定のお知らせが出ます。` });
+      setMsg({
+        ok: true,
+        text:
+          Number(f.year) === current
+            ? `${f.year}年度の料金を変更しました。これからのお申込みと、宣伝ページ・利用規約・特商法の表示に反映されます(申込済みの企業は変わりません)。`
+            : `${f.year}年度の料金を設定しました。宣伝ページに改定のお知らせが出ます。`,
+      });
       reload();
     }
   };
@@ -62,8 +69,8 @@ export function PlanPricesPanel() {
       <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 4px" }}>料金の設定(年度ごと・税込)</h3>
       <p style={{ ...small, margin: "0 0 10px" }}>
         今年度({current}年度)の料金: 受検者1名 {cur.unitPrice}円・最低料金 {cur.minTotal.toLocaleString()}円({minSeats(cur)}名まで)。
-        料金は受検開始日の年度で決まります。変更できるのは次の年度以降だけで、設定すると宣伝ページに「料金改定のお知らせ」が自動で表示されます。
-        申込済みの年度(人数の追加を含む)の料金は変わりません。
+        料金は受検開始日の年度で決まります。今年度の料金を変えると、これからのお申込みから新しい料金になります。
+        申込済みの企業は、申込時の単価のままです(その年度の人数の追加も同じ単価)。次の年度以降の料金を設定すると、宣伝ページに「料金改定のお知らせ」が自動で表示されます。
       </p>
       {rows === null ? (
         <div style={small}>読み込み中…</div>
@@ -103,10 +110,17 @@ export function PlanPricesPanel() {
         <label style={{ fontSize: 13, fontWeight: 700 }}>
           年度
           <br />
-          <select value={f.year} onChange={(e) => setF({ ...f, year: e.target.value })} style={input}>
-            {[1, 2, 3].map((d) => (
+          <select
+            value={f.year}
+            onChange={(e) => {
+              const p = pricingFor(rows, Number(e.target.value)); // その年度に適用される料金を初期値にする
+              setF({ ...f, year: e.target.value, unit: String(p.unitPrice), min: String(p.minTotal) });
+            }}
+            style={input}
+          >
+            {[0, 1, 2, 3].map((d) => (
               <option key={d} value={current + d}>
-                {current + d}年度
+                {current + d}年度{d === 0 ? "(今年度)" : ""}
               </option>
             ))}
           </select>

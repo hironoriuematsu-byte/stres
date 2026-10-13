@@ -45,7 +45,9 @@ export function PlanStatusPanel({
   const [showNotice, setShowNotice] = useState(false);
   const [payments, setPayments] = useState<Payment[]>(previewPayments ?? []);
   const prices = usePlanPrices(Boolean(preview));
-  const pricing = pricingFor(prices, fiscalYear); // この年度の単価
+  // 人数の追加の単価: この年度に申し込んだときの単価(記録がなければ、この年度の料金)
+  const [orderUnit, setOrderUnit] = useState<number | null>(null);
+  const pricing = { ...pricingFor(prices, fiscalYear), ...(orderUnit ? { unitPrice: orderUnit } : {}) };
   const [iv, setIv] = useState(preview?.interview_option ?? ""); // 面接指導の担当(変更用)
   const [ivOpen, setIvOpen] = useState(false);
   const [q, setQ] = useState<string>("57"); // 調査票(57項目版/80項目版)
@@ -65,6 +67,19 @@ export function PlanStatusPanel({
     if (row) {
       setEnd(row.exam_end);
       setIv(row.interview_option ?? "");
+    }
+    if (row) {
+      const { data: base } = await supabase
+        .from("plan_orders")
+        .select("*")
+        .eq("company_id", companyId)
+        .eq("fiscal_year", fiscalYear)
+        .in("kind", ["new", "renew"])
+        .in("status", ["paid", "provisioned"])
+        .order("created_at")
+        .limit(1)
+        .maybeSingle();
+      setOrderUnit(((base as { unit_price?: number | null } | null)?.unit_price as number | null) ?? null);
     }
     // お支払いの記録(領収書のダウンロード用)
     if (row && canEdit) {
