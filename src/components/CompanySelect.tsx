@@ -69,6 +69,8 @@ export function CompanySelect({
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {selected ? selected.name : "選択してください"}
         </span>
+        {/* 同じ名前の企業を取り違えないよう、選択中の企業の企業コードも示す */}
+        {selected?.code && <span style={{ fontSize: 11, fontWeight: 400, color: "#8A9694", whiteSpace: "nowrap" }}>{selected.code}</span>}
         <span style={{ fontSize: 11, color: "#8A9694" }}>▼</span>
       </button>
 

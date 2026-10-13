@@ -45,6 +45,7 @@ const STATUS: Record<string, { label: string; color: string }> = {
 export function PlanOrdersPanel() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [codes, setCodes] = useState<Record<string, string>>({}); // 企業ID → 企業コード(同じ名前の企業を見分ける)
   const [showAll, setShowAll] = useState(false);
   const [edit, setEdit] = useState<Plan | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -55,10 +56,12 @@ export function PlanOrdersPanel() {
 
   const load = async () => {
     const supabase = createClient();
-    const [o, p] = await Promise.all([
+    const [o, p, c] = await Promise.all([
       supabase.from("plan_orders").select("*").order("created_at", { ascending: false }).limit(300),
       supabase.from("exam_plans").select("company_id, fiscal_year, seats, exam_start, exam_end, max_end"),
+      supabase.from("companies").select("id, code"),
     ]);
+    setCodes(Object.fromEntries(((c.data as { id: string; code: string }[]) ?? []).map((x) => [x.id, x.code])));
     setOrders((o.data as Order[]) ?? []);
     setPlans((p.data as Plan[]) ?? []);
     if (o.error) setMsg(`読み込めませんでした: ${o.error.message}(SQL 0025 が未実行の可能性があります)`);
@@ -150,6 +153,7 @@ export function PlanOrdersPanel() {
                   <td style={cell}>
                     <strong>{o.company_name}</strong>
                     {o.office_name && <div>{o.office_name}</div>}
+                    {o.company_id && codes[o.company_id] && <div style={{ color: "#8A9694" }}>企業コード {codes[o.company_id]}</div>}
                     {o.workers != null && <div style={{ color: "#5B6B6A" }}>労働者 {o.workers}名</div>}
                   </td>
                   <td style={cell}>

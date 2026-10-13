@@ -57,7 +57,11 @@ export async function POST(req: Request) {
     await sendMails(office, "【ストレスチェックWeb】Web申込の開設に失敗しました(要確認)", `${orderSummary(order, granted)}\n\nエラー: ${msg}`);
     return NextResponse.json({ error: msg }, { status: 500 }); // Stripe に再送してもらう
   }
-  const { company_id: companyId, already } = rows[0] as { company_id: string; company_code: string; already: boolean };
+  const { company_id: companyId, company_code: companyCode, already } = rows[0] as {
+    company_id: string;
+    company_code: string;
+    already: boolean;
+  };
   // 領収書を後から取り出せるよう、請求書IDを記録する(再送の場合も上書きして構わない)
   if (session.invoice) await admin.from("plan_orders").update({ stripe_invoice_id: session.invoice }).eq("id", order.id);
   if (already) return NextResponse.json({ ok: true, already: true });
@@ -125,8 +129,15 @@ export async function POST(req: Request) {
   await sendMails(
     office,
     order.kind === "new" ? "【ストレスチェックWeb】Web申込がありました" : "【ストレスチェックWeb】受検人数の追加購入がありました",
-    `${orderSummary(order, granted)}${note ? `\n\n要確認: ${note}` : ""}\n\n${origin}/office`
+    `${orderSummary(order, granted)}\n企業コード: ${companyCode}${await sameNameNote(admin, order.company_name, companyId)}${note ? `\n\n要確認: ${note}` : ""}\n\n${origin}/office`
   );
 
   return NextResponse.json({ ok: true });
+}
+
+// 同じ名前の企業がすでにある場合の注記(企業は内部IDで区別しているため混ざらないが、実施者が画面で取り違えないように知らせる)
+async function sameNameNote(admin: NonNullable<ReturnType<typeof adminClient>>, name: string, companyId: string): Promise<string> {
+  const { data } = await admin.from("companies").select("code").eq("name", name).neq("id", companyId);
+  if (!data || data.length === 0) return "";
+  return `\n\n※ 同じ名前の企業がすでに登録されています(企業コード: ${data.map((c) => c.code).join("、")})。別の企業として開設しました。画面では企業コードで見分けてください。`;
 }
