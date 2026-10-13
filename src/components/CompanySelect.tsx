@@ -24,17 +24,21 @@ export function CompanySelect({
   const selected = companies.find((c) => c.id === value);
   const [open, setOpen] = useState(autoOpen && !selected);
   const [q, setQ] = useState("");
+  // 契約の区分でしぼり込む(Web申込の企業がある場合のみ表示)
+  const [kind, setKind] = useState<"all" | "contract" | "web">("all");
+  const hasWeb = companies.some((c) => c.web_signup);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const hits = useMemo(() => {
     const key = q.trim().toLowerCase();
+    const byKind = companies.filter((c) => (kind === "all" ? true : kind === "web" ? c.web_signup : !c.web_signup));
     const list = key
-      ? companies.filter(
+      ? byKind.filter(
           (c) => c.name.toLowerCase().includes(key) || (c.code ?? "").toLowerCase().includes(key)
         )
-      : companies;
+      : byKind;
     return [...list].sort((a, b) => a.name.localeCompare(b.name, "ja"));
-  }, [companies, q]);
+  }, [companies, q, kind]);
 
   const pick = (id: string) => {
     onChange(id);
@@ -71,6 +75,7 @@ export function CompanySelect({
         </span>
         {/* 同じ名前の企業を取り違えないよう、選択中の企業の企業コードも示す */}
         {selected?.code && <span style={{ fontSize: 11, fontWeight: 400, color: "#8A9694", whiteSpace: "nowrap" }}>{selected.code}</span>}
+        {selected?.web_signup && <WebBadge />}
         <span style={{ fontSize: 11, color: "#8A9694" }}>▼</span>
       </button>
 
@@ -105,6 +110,36 @@ export function CompanySelect({
               marginBottom: 8,
             }}
           />
+          {hasWeb && (
+            <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+              {(
+                [
+                  ["all", "すべて"],
+                  ["contract", "選任・顧問"],
+                  ["web", "Web申込"],
+                ] as const
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setKind(k)}
+                  style={{
+                    flex: 1,
+                    fontSize: 12,
+                    padding: "4px 6px",
+                    borderRadius: 999,
+                    border: `1px solid ${brand.teal}`,
+                    background: kind === k ? brand.teal : "#fff",
+                    color: kind === k ? "#fff" : brand.tealDark,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           <div style={{ maxHeight: 260, overflowY: "auto" }}>
             {hits.length === 0 ? (
               <p style={{ fontSize: 13, color: "#8A9694", margin: "6px 4px" }}>該当する企業がありません</p>
@@ -129,6 +164,7 @@ export function CompanySelect({
                 >
                   <span style={{ fontWeight: 700 }}>{c.name}</span>
                   {c.code && <span style={{ color: "#8A9694", fontSize: 12, marginLeft: 8 }}>{c.code}</span>}
+                  {c.web_signup && <WebBadge />}
                 </button>
               ))
             )}
@@ -154,5 +190,25 @@ export function CompanySelect({
         </div>
       )}
     </div>
+  );
+}
+
+// Web申込(カード決済)の企業の印。選任・顧問契約の企業と見分ける
+export function WebBadge() {
+  return (
+    <span
+      style={{
+        fontSize: 10.5,
+        fontWeight: 700,
+        color: "#B4561A",
+        background: "#FCEADC",
+        borderRadius: 999,
+        padding: "1px 7px",
+        marginLeft: 6,
+        whiteSpace: "nowrap",
+      }}
+    >
+      Web申込
+    </span>
   );
 }

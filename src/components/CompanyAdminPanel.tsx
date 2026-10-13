@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { WebBadge } from "@/components/CompanySelect";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
@@ -180,6 +181,7 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
                   {label} {sortKey === key ? (sortAsc ? "▲" : "▼") : "△"}
                 </th>
               ))}
+              <th style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>契約</th>
               <th style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>調査票</th>
               <th style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>健康管理Web</th>
               <th style={{ textAlign: "left", padding: "9px 10px" }}>操作</th>
@@ -197,6 +199,9 @@ export function CompanyAdminPanel({ companies }: { companies: Company[] }) {
                 </td>
                 <td style={{ padding: "9px 10px" }}>
                   <code>{c.code}</code>
+                </td>
+                <td style={{ padding: "9px 10px", whiteSpace: "nowrap", fontSize: 12.5 }}>
+                  {c.web_signup ? <WebBadge /> : <span style={{ color: "#5B6B6A" }}>選任・顧問</span>}
                 </td>
                 <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
                   <select

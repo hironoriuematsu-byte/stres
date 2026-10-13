@@ -20,6 +20,8 @@ export type Company = {
   questionnaire?: "57" | "80";
   // 健康管理Webを併用する企業のみ true(ストレスチェック単独契約では false)
   hm_enabled?: boolean;
+  // Web申込(カード決済)で利用中の企業のみ true(選任・顧問契約の企業は false)
+  web_signup?: boolean;
 };
 
 export type ResultRow = {

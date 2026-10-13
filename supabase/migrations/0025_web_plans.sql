@@ -335,6 +335,36 @@ end $$;
 grant execute on function public.office_set_web_signup(uuid, boolean) to authenticated;
 
 -- ------------------------------------------------------------
+-- 5-3. Web申込の企業の一覧(実施者のみ): 年度ごとの状況・受検者数・支払いの合計などを1回で取得する
+--      (Web申込から顧問契約に切り替えた企業も、支払いの記録があれば一覧に含める)
+-- ------------------------------------------------------------
+create or replace function public.office_web_companies(p_year int)
+returns table(
+  company_id uuid, name text, code text, office_name text, biz_id text, address text, workers int,
+  web_signup boolean, created_at timestamptz, jimu_names text,
+  seats int, used int, exam_start date, exam_end date,
+  orders int, paid_total int, last_paid_at timestamptz, last_year int
+)
+language sql stable security definer set search_path = public as $$
+  select c.id, c.name, c.code, c.office_name, c.biz_id, c.address, c.workers, c.web_signup, c.created_at,
+         (select string_agg(p.name, '、' order by p.created_at) from profiles p where p.company_id = c.id and p.role = 'jimu'),
+         ep.seats,
+         (select count(*)::int from results r where r.company_id = c.id and r.fiscal_year = p_year),
+         ep.exam_start, ep.exam_end,
+         (select count(*)::int from plan_orders o where o.company_id = c.id and o.status in ('paid', 'provisioned')),
+         (select coalesce(sum(o.amount), 0)::int from plan_orders o where o.company_id = c.id and o.status in ('paid', 'provisioned')),
+         (select max(o.paid_at) from plan_orders o where o.company_id = c.id and o.status in ('paid', 'provisioned')),
+         (select max(e.fiscal_year) from exam_plans e where e.company_id = c.id)
+    from companies c
+    left join exam_plans ep on ep.company_id = c.id and ep.fiscal_year = p_year
+   where my_role() = 'office'
+     and (c.web_signup or exists (select 1 from plan_orders o where o.company_id = c.id))
+   order by c.created_at desc
+$$;
+
+grant execute on function public.office_web_companies(int) to authenticated;
+
+-- ------------------------------------------------------------
 -- 6. 企業の統合(リカバリ用・実施者のみ)
 --    継続利用の企業が誤って「新規」で申し込み、別の企業として開設された場合などに、
 --    その企業(p_from)のデータをすべて元の企業(p_to)に移し、p_from を削除する。
