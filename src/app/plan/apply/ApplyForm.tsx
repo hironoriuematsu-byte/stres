@@ -17,7 +17,7 @@ import {
   parseApplyInput,
   priceNew,
   QUOTE_MAILTO,
-  QUOTE_SEATS,
+  WEB_MAX_SEATS,
   seatsGranted,
 } from "@/lib/plan";
 
@@ -51,7 +51,7 @@ export function ApplyForm({ enabled, initialSeats, canceled }: { enabled: boolea
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
 
   const seatsN = Number(f.seats.normalize("NFKC"));
-  const quote = Number.isInteger(seatsN) && seatsN >= QUOTE_SEATS; // 300名以上はお見積り
+  const quote = Number.isInteger(seatsN) && seatsN > WEB_MAX_SEATS; // 300名を超える場合はお見積り
   const price = Number.isInteger(seatsN) && seatsN >= 1 && !quote ? priceNew(seatsN) : null;
   const workersN = Number(f.workers.normalize("NFKC"));
   const large = Number.isInteger(workersN) && workersN >= 50;
@@ -136,7 +136,7 @@ export function ApplyForm({ enabled, initialSeats, canceled }: { enabled: boolea
         </p>
         {quote && !(Number.isInteger(workersN) && workersN > 0 && seatsN > workersN) && (
           <p style={{ ...hint, color: "#8A6B2E" }}>
-            {QUOTE_SEATS}名以上は個別にお見積りします(割引があります)。
+            {WEB_MAX_SEATS}名を超える場合は個別にお見積りします(割引があります)。
             <a href={QUOTE_MAILTO} style={{ color: brand.tealDark, fontWeight: 700 }}>
               お見積りのご依頼(メール)
             </a>

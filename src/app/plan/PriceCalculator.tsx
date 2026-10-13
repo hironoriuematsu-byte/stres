@@ -3,13 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { brand } from "@/lib/brand";
-import { MIN_TOTAL_SEATS, priceNew, QUOTE_MAILTO, QUOTE_SEATS, seatsGranted } from "@/lib/plan";
+import { MIN_TOTAL_SEATS, priceNew, QUOTE_MAILTO, WEB_MAX_SEATS, seatsGranted } from "@/lib/plan";
 
 // 宣伝ページの料金計算(受検予定人数を入れると金額が出る)
 export function PriceCalculator() {
   const [text, setText] = useState("30");
   const n = Number(text.normalize("NFKC"));
-  const quote = Number.isInteger(n) && n >= QUOTE_SEATS; // 300名以上はお見積り
+  const quote = Number.isInteger(n) && n > WEB_MAX_SEATS; // 300名を超える場合はお見積り
   const valid = Number.isInteger(n) && n >= 1 && !quote;
   const price = valid ? priceNew(n) : null;
 
@@ -38,7 +38,7 @@ export function PriceCalculator() {
         ) : (
           quote ? (
             <span style={{ fontSize: 14 }}>
-              {QUOTE_SEATS}名以上は個別にお見積りします(割引があります)。
+              {WEB_MAX_SEATS}名を超える場合は個別にお見積りします(割引があります)。
               <a href={QUOTE_MAILTO} style={{ color: brand.tealDark, fontWeight: 700 }}>
                 お見積りのご依頼(メール)
               </a>

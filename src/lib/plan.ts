@@ -11,8 +11,8 @@ export const UNIT_PRICE = 330; // 受検者1名あたり(税込)
 export const MIN_TOTAL = 3300; // 最低料金(税込)。1シーズン運用後、問い合わせの件数を見て1,100円への引き下げを検討する
 export const MIN_TOTAL_SEATS = Math.ceil(MIN_TOTAL / UNIT_PRICE); // 最低料金で受検できる人数(10名)
 export const MAX_SEATS = 10000; // 人数の追加購入の上限
-export const QUOTE_SEATS = 300; // この人数以上はWeb申込ではなく個別のお見積り(割引あり)
-export const QUOTE_MAILTO = `mailto:support@mestate.jp?subject=${encodeURIComponent("ストレスチェック 300名以上のお見積り")}`;
+export const WEB_MAX_SEATS = 300; // Web申込(カード決済)は300名(99,000円)まで。超える場合は個別のお見積り(割引あり)
+export const QUOTE_MAILTO = `mailto:support@mestate.jp?subject=${encodeURIComponent("ストレスチェック 300名を超える場合のお見積り")}`;
 // 産業医面接指導(うえまつ産業医事務所が担当する場合。1回・オンライン可・意見書込み・税込)
 export const INTERVIEW_FEE = 22000;
 
@@ -212,10 +212,10 @@ export function parseApplyInput(
       error: `受検予定人数(${v.seats}名)が事業場の労働者数(${v.workers}名)を超えています。人数をご確認ください`,
     };
   }
-  if (v.seats >= QUOTE_SEATS) {
+  if (v.seats > WEB_MAX_SEATS) {
     return {
       ok: false,
-      error: `受検予定人数が${QUOTE_SEATS}名以上の場合は、個別にお見積りします(割引があります)。support@mestate.jp までお問い合わせください`,
+      error: `受検予定人数が${WEB_MAX_SEATS}名を超える場合は、個別にお見積りします(割引があります)。support@mestate.jp までお問い合わせください`,
     };
   }
   const pe = periodError(v.examStart, v.examEnd, today);

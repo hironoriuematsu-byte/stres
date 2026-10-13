@@ -148,11 +148,12 @@ describe("申込フォームの入力", () => {
     expect(!r.ok && r.error).toMatch(/労働者数\(30名\)を超えています/);
     expect(parseApplyInput({ ...base, workers: "30", seats: "30" }, "2026-10-13").ok).toBe(true);
   });
-  it("300名以上はWeb申込ではなくお見積り", () => {
-    const r = parseApplyInput({ ...base, workers: "500", seats: "300", interviewOption: "own" }, "2026-10-13");
+  it("300名まではWeb申込、301名以上はお見積り", () => {
+    const r = parseApplyInput({ ...base, workers: "500", seats: "301", interviewOption: "own" }, "2026-10-13");
     expect(r.ok).toBe(false);
-    expect(!r.ok && r.error).toMatch(/個別にお見積り/);
-    expect(parseApplyInput({ ...base, workers: "500", seats: "299", interviewOption: "own" }, "2026-10-13").ok).toBe(true);
+    expect(!r.ok && r.error).toMatch(/300名を超える場合は、個別にお見積り/);
+    expect(parseApplyInput({ ...base, workers: "500", seats: "300", interviewOption: "own" }, "2026-10-13").ok).toBe(true);
+    expect(priceNew(300).total).toBe(99000);
   });
   it("同意が無いと申し込めない", () => {
     expect(parseApplyInput({ ...base, agreeTerms: false }, "2026-10-13").ok).toBe(false);
