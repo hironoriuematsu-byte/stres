@@ -130,7 +130,7 @@ export default async function BrochurePage() {
         <div style={{ marginTop: 16, paddingTop: 10, borderTop: `1px solid ${brand.line}`, fontSize: 12.5, color: "#44534F", lineHeight: 1.7 }}>
           お申込み・詳しい内容: https://stres.mestate.jp/plan ・ デモ: https://stres.mestate.jp/demo
           <br />
-          お問い合わせ: {SELLER.email}(オンラインでのご説明も承ります) ・ 作成日: {formatJpDate(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10))}
+          お問い合わせ: {SELLER.email} ・ 作成日: {formatJpDate(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10))}
         </div>
       </div>
     </div>

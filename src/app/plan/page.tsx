@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER, IMPLEMENTER_PROFILE, SELLER } from "@/lib/org";
-import { CONSULT_MAILTO, formatJpDate, minSeats, pricingFor, upcomingPriceChange } from "@/lib/plan";
+import { formatJpDate, minSeats, pricingFor, upcomingPriceChange } from "@/lib/plan";
 import { getFiscalYear } from "@/lib/fiscal";
 import { loadPlanPrices } from "@/lib/plan-prices";
 import { createClient } from "@/lib/supabase/server";
@@ -221,7 +221,9 @@ export default async function PlanPage() {
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: brand.ink }}>実施者: {IMPLEMENTER.full}</div>
             <div style={{ fontSize: 13, color: "#44534F", lineHeight: 1.8 }}>
-              運営: {SELLER.name}{IMPLEMENTER.officeName} / {SELLER.address}
+              運営: {SELLER.name}{IMPLEMENTER.officeName}
+              <br />
+              {SELLER.address}
             </div>
             {IMPLEMENTER_PROFILE.career.length > 0 && (
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
@@ -252,15 +254,12 @@ export default async function PlanPage() {
         ))}
       </Card>
 
-      {/* 9. 申込・相談 */}
+      {/* 9. 申込 */}
       <div style={{ textAlign: "center", display: "grid", gap: 10, justifyItems: "center" }}>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
           <Link href="/plan/signup" style={{ ...cta, fontSize: 16, padding: "12px 28px" }}>
             会社を登録して申し込む
           </Link>
-          <a href={CONSULT_MAILTO} style={sub}>
-            オンラインで説明を聞く(15分・無料)
-          </a>
         </div>
         <div style={{ fontSize: 12, color: "#5B6B6A" }}>
           <Link href="/plan/terms" style={{ color: brand.tealDark }}>利用規約</Link>
