@@ -109,9 +109,17 @@ export default async function BrochurePage() {
         </ul>
 
         <h2 style={h}>運営者・安全管理</h2>
-        <p style={t}>
-          実施者: {IMPLEMENTER.full}({IMPLEMENTER.officeName}) / 運営: {SELLER.name}({SELLER.address})
-        </p>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+          {IMPLEMENTER_PROFILE.photo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={IMPLEMENTER_PROFILE.photo} alt={`実施者 ${IMPLEMENTER.name}`} width={64} height={80} style={{ borderRadius: 6, objectFit: "cover" }} />
+          )}
+          <p style={t}>
+            実施者: {IMPLEMENTER.full}({IMPLEMENTER.officeName})
+            <br />
+            運営: {SELLER.name}({SELLER.address})
+          </p>
+        </div>
         {IMPLEMENTER_PROFILE.career.length > 0 && <p style={t}>経歴: {IMPLEMENTER_PROFILE.career.join(" / ")}</p>}
         <ul style={{ ...t, paddingLeft: 18 }}>
           {SECURITY_POINTS.map((s) => (

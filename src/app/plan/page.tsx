@@ -14,6 +14,7 @@ import {
   HEADLINE,
   KEY_POINTS,
   OBLIGATION,
+  OBLIGATION_DATE,
   priceExamples,
   priceNotes,
   SECURITY_POINTS,
@@ -60,7 +61,7 @@ export default async function PlanPage() {
 
       {/* 1. ひと目で伝わる最初の画面 */}
       <Card>
-        <Badge tone="orange">50人未満の事業場も義務化へ</Badge>
+        <Badge tone="orange">2028年4月から 50人未満の事業場も義務化</Badge>
         <h1 style={{ fontSize: 26, color: brand.ink, margin: "12px 0 14px", lineHeight: 1.45 }}>{HEADLINE}</h1>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
           {KEY_POINTS.map((k) => (
@@ -102,7 +103,7 @@ export default async function PlanPage() {
 
       {/* 2. 義務化 */}
       <Card style={{ background: "#FFFBF2", borderColor: "#F0D9A8" }}>
-        <h2 style={{ ...h2, color: "#8A5A00" }}>50人未満の事業場も、ストレスチェックが義務に</h2>
+        <h2 style={{ ...h2, color: "#8A5A00" }}>{OBLIGATION_DATE}から、50人未満の事業場も義務化</h2>
         <p style={{ fontSize: 14, color: "#44534F", lineHeight: 1.9, margin: 0 }}>
           {OBLIGATION}このサービスなら、実施者を含めて1名{pricing.unitPrice}円から準備できます。
         </p>
@@ -215,7 +216,7 @@ export default async function PlanPage() {
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
           {IMPLEMENTER_PROFILE.photo && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={IMPLEMENTER_PROFILE.photo} alt={IMPLEMENTER.name} width={110} height={110} style={{ borderRadius: 10, objectFit: "cover" }} />
+            <img src={IMPLEMENTER_PROFILE.photo} alt={`実施者 ${IMPLEMENTER.name}`} width={120} height={150} style={{ borderRadius: 10, objectFit: "cover" }} />
           )}
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: brand.ink }}>実施者: {IMPLEMENTER.full}</div>

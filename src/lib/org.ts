@@ -19,7 +19,7 @@ export const IMPLEMENTER = {
 // (photo: public/ に置いた顔写真のパス。例 "/plan/doctor.jpg")
 export const IMPLEMENTER_PROFILE: { career: string[]; photo: string } = {
   career: [],
-  photo: "",
+  photo: "/plan/doctor.jpg",
 };
 
 // Web申込(クレジットカード決済)の販売事業者。特定商取引法に基づく表記・領収書で使う
