@@ -69,6 +69,15 @@ export default async function Home() {
           </button>
         </Link>
       </Card>
+      <Card style={{ marginTop: 14 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: brand.ink, marginBottom: 6 }}>産業医との契約がない企業さまへ</div>
+        <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 10px" }}>
+          産業医が実施者を務めるストレスチェックを、受検者1名330円・最低5,500円(税込・集団分析込み)で、Webからその場でお申し込みいただけます。
+        </p>
+        <Link href="/plan" style={{ color: brand.orange, fontWeight: 700, fontSize: 14 }}>
+          サービスのご案内・お申込み →
+        </Link>
+      </Card>
       <p style={{ fontSize: 12, color: "#8A9694", lineHeight: 1.8, marginTop: 14, padding: "0 4px" }}>
         通信はTLSで暗号化され、結果データはSupabase(東京リージョン)に保存時暗号化(AES-256)の上で保管されます。個人結果の閲覧範囲は労働安全衛生法第66条の10に基づき、データベースの行レベルセキュリティで制御されています。
       </p>

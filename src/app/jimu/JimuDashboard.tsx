@@ -9,6 +9,7 @@ import { brand } from "@/lib/brand";
 import { fiscalYearOptions, getFiscalYear } from "@/lib/fiscal";
 import { DashboardMenu, MenuItem } from "@/components/DashboardMenu";
 import { KenkoLink } from "@/components/KenkoLink";
+import { PlanStatusPanel } from "@/components/PlanStatusPanel";
 
 // 各パネルはタブを開いたときに初めて読み込む(初期表示の高速化)
 // タブの部品を読み込む間も、上端の進行バーを出す(LoadingCard が表示中に出す)
@@ -136,6 +137,8 @@ export function JimuDashboard({
         )}
       </Card>
 
+      {/* Web申込の企業のみ: 受検期間・受検者数(人数のみで個人の情報は含まない) */}
+      {(tab === null || tab === "配布URL・QR") && <PlanStatusPanel companyId={companyId} fiscalYear={year} canEdit />}
       {tab === null && <DashboardMenu
           items={MENU_ITEMS}
           onSelect={(k) => {

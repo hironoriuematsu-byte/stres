@@ -1,0 +1,47 @@
+import Link from "next/link";
+import { Card } from "@/components/ui";
+import { brand } from "@/lib/brand";
+import { SELLER } from "@/lib/org";
+import { MIN_TOTAL, MIN_TOTAL_SEATS, UNIT_PRICE } from "@/lib/plan";
+
+export const metadata = { title: "特定商取引法に基づく表記 | ストレスチェックWeb" };
+
+const rows: [string, string][] = [
+  ["販売事業者", SELLER.name],
+  ["運営責任者", SELLER.representative],
+  ["所在地", SELLER.address],
+  ["電話番号", "ご請求があれば遅滞なく開示します(下記メールアドレスまでご連絡ください)"],
+  ["メールアドレス", SELLER.email],
+  ["販売価格", `受検者1名あたり ${UNIT_PRICE}円(税込)、最低料金 ${MIN_TOTAL.toLocaleString()}円(税込・${MIN_TOTAL_SEATS}名まで)。お申込み画面に表示します`],
+  ["商品代金以外の必要料金", "なし(インターネットの通信料はお客さまのご負担となります)"],
+  ["支払方法", "クレジットカード"],
+  ["支払時期", "お申込み時に決済されます"],
+  ["サービスの提供時期", "決済完了後ただちにアカウントを開設し、お申込み時に指定した開始日から受検できます"],
+  ["キャンセル・返金", "受検期間の開始日の前日までにご連絡いただいた場合は全額を返金します。開始後の返金はいたしません(受検者数が申込人数に満たない場合を含みます)"],
+  ["動作環境", "最新の Google Chrome / Microsoft Edge / Safari(パソコン・スマートフォン)"],
+];
+
+export default function TokushohoPage() {
+  return (
+    <Card style={{ maxWidth: 820, margin: "0 auto" }}>
+      <h1 style={{ fontSize: 20, color: brand.ink, margin: "0 0 12px" }}>特定商取引法に基づく表記</h1>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 14 }}>
+          <tbody>
+            {rows.map(([k, v]) => (
+              <tr key={k} style={{ borderBottom: `1px solid ${brand.line}` }}>
+                <th style={{ textAlign: "left", padding: "8px 12px 8px 0", color: brand.ink, whiteSpace: "nowrap", verticalAlign: "top" }}>{k}</th>
+                <td style={{ padding: "8px 0", color: "#44534F", lineHeight: 1.7 }}>{v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <Link href="/plan" style={{ fontSize: 13, color: brand.tealDark, fontWeight: 700 }}>
+          ← サービスのご案内へ
+        </Link>
+      </div>
+    </Card>
+  );
+}

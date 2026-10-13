@@ -11,7 +11,7 @@ export const metadata = {
 // (外国にある事業者のサービス利用を含む「外的環境の把握」)を本人の知り得る状態に置くページ。
 // ログイン前でも読めるようにしている(受検前に確認できる必要があるため)。
 // 事業者や保存場所を変更したときは、ここと「最終改定」の日付を更新すること。
-const LAST_UPDATED = "2026年9月16日";
+const LAST_UPDATED = "2026年10月13日";
 const CONTACT_EMAIL = "support@mestate.jp";
 
 const h = { fontSize: 15, color: brand.tealDark, margin: "18px 0 6px", fontWeight: 700 } as const;
@@ -38,6 +38,8 @@ export default function PrivacyPage() {
         氏名、生年月日、性別、所属、メールアドレス、ストレスチェックの回答と結果、面接指導の申出と記録、閲覧記録
         （以前に登録された社員番号を含む）。健康管理Webではこれに加えて健康診断の結果と就業判定、面談記録。
         生年月日と性別は、結果票の素点換算と、健康診断の結果・面談の記録を本人と正しく結び付ける（同姓同名の方の区別）ために使います。
+        Web申込（クレジットカード決済）をご利用の企業については、申込担当者の氏名・連絡先、事業場の所在地・労働者数、お支払いの記録も取り扱います
+        （カード番号は決済事業者の画面で入力され、当事務所では受け取らず保存もしません）。
       </p>
 
       <h3 style={h}>3. 利用目的</h3>
@@ -86,6 +88,12 @@ export default function PrivacyPage() {
               <td style={td}>招待・パスワード再設定・通知メールの送信</td>
               <td style={td}>メールアドレスと企業名のみ。健康情報や結果は含めません</td>
               <td style={td}>米国</td>
+            </tr>
+            <tr style={{ borderTop: `1px solid ${brand.line}` }}>
+              <td style={td}>Stripe, Inc.（米国）</td>
+              <td style={td}>Web申込のクレジットカード決済・領収書の発行</td>
+              <td style={td}>申込企業名、申込担当者の氏名・メールアドレス、金額、カード情報（カード情報は Stripe のみが取り扱います）。従業員の情報や結果は含めません</td>
+              <td style={td}>米国ほか</td>
             </tr>
           </tbody>
         </table>

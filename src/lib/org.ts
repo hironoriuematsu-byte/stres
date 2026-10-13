@@ -15,6 +15,15 @@ export const IMPLEMENTER = {
   corporateName: "Mestate LLC",
 } as const;
 
+// Web申込(クレジットカード決済)の販売事業者。特定商取引法に基づく表記・領収書で使う
+export const SELLER = {
+  name: "メステート合同会社",
+  representative: "上松 弘典",
+  address: IMPLEMENTER.officeAddress,
+  email: "support@mestate.jp",
+  // 適格請求書発行事業者の登録番号(T+13桁)。Vercel の環境変数 INVOICE_REGISTRATION_NO で設定
+} as const;
+
 // 帳票フッターなどで使う発行者表記
 export const ISSUER_LINE = `実施者: ${IMPLEMENTER.full} / 実施事務局: ${IMPLEMENTER.officeName}`;
 

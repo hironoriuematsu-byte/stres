@@ -7,6 +7,7 @@ import { brand } from "@/lib/brand";
 import { getFiscalYear } from "@/lib/fiscal";
 import { ExamForm } from "./ExamForm";
 import { fetchBirthDate } from "@/lib/birth-date-db";
+import { formatJpDate, jstToday } from "@/lib/plan";
 
 export default async function ExamPage() {
   const { user, profile } = await getSessionProfile();
@@ -69,6 +70,21 @@ export default async function ExamPage() {
     );
   }
 
+  // Web申込の企業は、受検期間内かつ人数枠の範囲でのみ受検できる(データベース側でも同じ条件で止める: 0025)
+  const block = await examPlanBlock(supabase, profile.company_id!, fiscalYear);
+  if (block) {
+    return (
+      <Card style={{ maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
+        <Badge tone="orange">{block.badge}</Badge>
+        <h2 style={{ fontSize: 20, color: brand.ink, margin: "12px 0 8px" }}>{block.title}</h2>
+        <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.8, marginBottom: 16 }}>{block.text}</p>
+        <Link href="/my">
+          <Btn>マイページへ</Btn>
+        </Link>
+      </Card>
+    );
+  }
+
   return (
     <ExamForm
       profile={{
@@ -84,4 +100,43 @@ export default async function ExamPage() {
       questionnaire={company?.questionnaire === "80" ? "80" : "57"}
     />
   );
+}
+
+type PlanRow = { seats: number; used: number; exam_start: string; exam_end: string };
+
+async function examPlanBlock(
+  supabase: ReturnType<typeof createClient>,
+  companyId: string,
+  fiscalYear: number
+): Promise<{ badge: string; title: string; text: string } | null> {
+  const { data: plans, error } = await supabase.from("exam_plans").select("fiscal_year").eq("company_id", companyId);
+  if (error || !plans || plans.length === 0) return null; // これまでの契約企業(または SQL 0025 未実行)
+  const { data } = await supabase.rpc("exam_plan_status", { p_company: companyId, p_year: fiscalYear });
+  const row = (data as PlanRow[] | null)?.[0];
+  const today = jstToday();
+  if (!row) {
+    return { badge: "受検期間外", title: "現在は受検期間ではありません", text: "受検期間は、会社のストレスチェック担当者にご確認ください。" };
+  }
+  if (today < row.exam_start) {
+    return {
+      badge: "受検期間前",
+      title: `受検は${formatJpDate(row.exam_start)}からです`,
+      text: `受検期間は${formatJpDate(row.exam_start)}〜${formatJpDate(row.exam_end)}です。期間になってから、もう一度このページを開いてください。`,
+    };
+  }
+  if (today > row.exam_end) {
+    return {
+      badge: "受検期間終了",
+      title: "受検期間は終了しました",
+      text: `受検期間(${formatJpDate(row.exam_end)}まで)は終了しました。受検が必要な場合は、会社のストレスチェック担当者にご連絡ください。`,
+    };
+  }
+  if (row.used >= row.seats) {
+    return {
+      badge: "受検人数の上限",
+      title: "申込人数に達しています",
+      text: "会社がお申込みの受検人数に達したため、現在は受検できません。会社のストレスチェック担当者に、人数の追加をご依頼ください。",
+    };
+  }
+  return null;
 }

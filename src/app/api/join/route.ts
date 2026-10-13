@@ -4,6 +4,7 @@ import { cleanPersonName, isValidPersonName } from "@/lib/name";
 import { clientIpHeaders } from "@/lib/supabase/server";
 import { checkEmailDomain } from "@/lib/email-domain-check";
 import { birthDateError, isMissingBirthDateColumn } from "@/lib/birth-date";
+import { jstToday } from "@/lib/plan";
 
 export const runtime = "nodejs";
 
@@ -60,11 +61,24 @@ export async function POST(req: Request) {
   // トークン検証(有効なキャンペーンのみ)
   const { data: campaign } = await admin
     .from("campaigns")
-    .select("company_id, active")
+    .select("company_id, fiscal_year, active")
     .eq("token", token)
     .single();
   if (!campaign || !campaign.active) {
     return NextResponse.json({ error: "このURLは無効か、配布が終了しています" }, { status: 400 });
+  }
+  // Web申込の企業: 受検期間の終了後は新しく登録しない(SQL 0025 未実行なら何もしない)
+  const { data: plan } = await admin
+    .from("exam_plans")
+    .select("exam_end")
+    .eq("company_id", campaign.company_id)
+    .eq("fiscal_year", campaign.fiscal_year)
+    .maybeSingle();
+  if (plan && jstToday() > plan.exam_end) {
+    return NextResponse.json(
+      { error: "受検期間は終了しました。受検が必要な場合は、会社のストレスチェック担当者にご連絡ください。" },
+      { status: 400 }
+    );
   }
 
   // anonキーでサインアップ(標準の確認メールが送信される)。
