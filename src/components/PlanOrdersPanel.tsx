@@ -9,7 +9,7 @@ import { buildCsv, downloadCsv } from "@/lib/csv";
 
 type Order = {
   id: string;
-  kind: "new" | "add_seats";
+  kind: "new" | "add_seats" | "renew";
   status: string;
   company_id: string | null;
   fiscal_year: number;
@@ -162,9 +162,9 @@ export function PlanOrdersPanel() {
                     {o.contact_phone && <div style={{ color: "#5B6B6A" }}>{o.contact_phone}</div>}
                   </td>
                   <td style={cell}>
-                    {o.kind === "new" ? (
+                    {o.kind !== "add_seats" ? (
                       <>
-                        新規 {o.seats}名({o.fiscal_year}年度)
+                        {o.kind === "renew" ? "継続" : "新規"} {o.seats}名({o.fiscal_year}年度)
                         <div style={{ color: "#5B6B6A" }}>{interviewOptionLabel(o.interview_option)}</div>
                       </>
                     ) : (
@@ -186,7 +186,7 @@ export function PlanOrdersPanel() {
                       <>
                         {formatJpDate(plan.exam_start)}〜{formatJpDate(plan.exam_end)}
                         <div style={{ color: "#5B6B6A" }}>枠 {plan.seats}名</div>
-                        {o.kind === "new" && (
+                        {o.kind !== "add_seats" && (
                           <button
                             onClick={() => setEdit({ ...plan })}
                             style={{ background: "none", border: "none", padding: 0, color: brand.tealDark, fontWeight: 700, cursor: "pointer", fontSize: 12 }}

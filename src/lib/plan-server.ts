@@ -60,7 +60,7 @@ export async function sendMails(to: string[], subject: string, text: string): Pr
 
 export type OrderRow = {
   id: string;
-  kind: "new" | "add_seats";
+  kind: "new" | "add_seats" | "renew";
   status: string;
   company_id: string | null;
   fiscal_year: number;
@@ -84,12 +84,13 @@ export function orderSummary(o: OrderRow, seatsGranted: number): string {
   return [
     `会社名: ${o.company_name}${o.office_name ? ` ${o.office_name}` : ""}`,
     `ご担当者: ${o.contact_name} 様 (${o.contact_email}${o.contact_phone ? ` / ${o.contact_phone}` : ""})`,
-    o.kind === "new"
+    o.kind !== "add_seats"
       ? `受検期間: ${formatJpDate(o.exam_start)} 〜 ${formatJpDate(o.exam_end)}`
       : `追加人数: ${o.seats}名`,
-    o.kind === "new" ? `受検人数: ${seatsGranted}名まで(お申込み ${o.seats}名)` : null,
-    o.kind === "new" ? `調査票: ${o.questionnaire === "80" ? "80項目版" : "57項目版"}` : null,
-    o.kind === "new" ? `産業医面接指導: ${interviewOptionLabel(o.interview_option)}` : null,
+    o.kind !== "add_seats" ? `受検人数: ${seatsGranted}名まで(お申込み ${o.seats}名)` : null,
+    o.kind !== "add_seats" ? `年度: ${o.fiscal_year}年度${o.kind === "renew" ? "(継続のお申込み)" : ""}` : null,
+    o.kind !== "add_seats" ? `調査票: ${o.questionnaire === "80" ? "80項目版" : "57項目版"}` : null,
+    o.kind !== "add_seats" ? `産業医面接指導: ${interviewOptionLabel(o.interview_option)}` : null,
     `お支払い金額: ${o.amount.toLocaleString()}円(税込)`,
   ]
     .filter(Boolean)

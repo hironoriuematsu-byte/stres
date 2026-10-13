@@ -6,7 +6,7 @@ import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { formatJpDate, interviewOptionLabel, jstDate, jstToday, priceAdd, UNIT_PRICE } from "@/lib/plan";
 
-type Payment = { id: string; kind: "new" | "add_seats"; seats: number; amount: number; paid_at: string };
+type Payment = { id: string; kind: "new" | "add_seats" | "renew"; seats: number; amount: number; paid_at: string };
 
 export type PlanStatus = Status;
 
@@ -70,6 +70,9 @@ export function PlanStatusPanel({
     load();
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("plan") === "added") {
       setMsg({ ok: true, text: "お支払いを受け付けました。人数枠への反映まで1分ほどかかることがあります。" });
+    }
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("plan") === "renewed") {
+      setMsg({ ok: true, text: "次の年度のお申込みを受け付けました。受検期間の反映まで1分ほどかかることがあります。" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId, fiscalYear]);
@@ -227,7 +230,7 @@ export function PlanStatusPanel({
               {payments.map((p) => (
                 <tr key={p.id} style={{ borderBottom: `1px solid ${brand.line}` }}>
                   <td style={{ padding: "5px 12px 5px 0", whiteSpace: "nowrap" }}>{formatJpDate(jstDate(p.paid_at))}</td>
-                  <td style={{ padding: "5px 12px 5px 0", whiteSpace: "nowrap" }}>{p.kind === "new" ? "お申込み" : "人数の追加"} {p.seats}名</td>
+                  <td style={{ padding: "5px 12px 5px 0", whiteSpace: "nowrap" }}>{p.kind === "add_seats" ? "人数の追加" : "お申込み"} {p.seats}名</td>
                   <td style={{ padding: "5px 12px 5px 0", whiteSpace: "nowrap", textAlign: "right" }}>{p.amount.toLocaleString()}円</td>
                   <td style={{ padding: "5px 0", whiteSpace: "nowrap" }}>
                     <a

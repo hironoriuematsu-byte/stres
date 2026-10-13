@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   const { data: order } = await admin.from("plan_orders").select("*").eq("id", orderId).single<OrderRow>();
   if (!order) return NextResponse.json({ error: "order not found" }, { status: 404 });
 
-  const granted = order.kind === "new" ? seatsGranted(order.seats) : order.seats;
+  const granted = order.kind === "add_seats" ? order.seats : seatsGranted(order.seats);
   const maxEnd = order.exam_start ? maxEndOf(order.exam_start) : order.exam_end ?? "2000-01-01";
   const { data: rows, error } = await admin.rpc("provision_plan_order", {
     p_order: order.id,
@@ -118,6 +118,31 @@ export async function POST(req: Request) {
         `お問い合わせ: ${SELLER.email}`,
       ].join("\n")
     );
+  } else if (order.kind === "renew") {
+    // 継続申込: 同じ企業に新しい年度の受検期間と配布URLを追加した。担当者・従業員のアカウントはそのまま使える
+    await sendMails(
+      [order.contact_email],
+      `【ストレスチェックWeb】${order.fiscal_year}年度のお申込みありがとうございます`,
+      [
+        `${order.company_name}`,
+        `${order.contact_name} 様`,
+        "",
+        `${order.fiscal_year}年度のストレスチェックのお申込みを承りました。今年度もよろしくお願いいたします。`,
+        "",
+        orderSummary(order, granted),
+        "",
+        "■ このあとの流れ",
+        "1. 受検期間の前に、実施の目的・期間・結果の取扱いを従業員の皆さまへ周知してください。",
+        "2. 昨年度に受検した従業員の方は、これまでのアカウントでログインして受検できます(登録し直す必要はありません)。",
+        `3. 新しく入った方には、「配布URL・QR」の${order.fiscal_year}年度の受検用URL・QRコードをお知らせください。`,
+        "",
+        "■ 領収書",
+        "決済代行会社(Stripe)から領収書のメールが届きます。ログイン後の画面の「お支払いの記録」からも、いつでもダウンロードできます。",
+        "",
+        `${origin}/jimu`,
+        `お問い合わせ: ${SELLER.email}`,
+      ].join("\n")
+    );
   } else {
     await sendMails(
       [order.contact_email],
@@ -128,7 +153,11 @@ export async function POST(req: Request) {
 
   await sendMails(
     office,
-    order.kind === "new" ? "【ストレスチェックWeb】Web申込がありました" : "【ストレスチェックWeb】受検人数の追加購入がありました",
+    order.kind === "new"
+      ? "【ストレスチェックWeb】Web申込がありました"
+      : order.kind === "renew"
+        ? "【ストレスチェックWeb】Web申込の継続(次年度)がありました"
+        : "【ストレスチェックWeb】受検人数の追加購入がありました",
     `${orderSummary(order, granted)}\n企業コード: ${companyCode}${await sameNameNote(admin, order.company_name, companyId)}${note ? `\n\n要確認: ${note}` : ""}\n\n${origin}/office`
   );
 

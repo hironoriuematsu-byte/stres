@@ -29,6 +29,24 @@ export async function POST(req: Request) {
   const domain = await checkEmailDomain(v.contactEmail);
   if (!domain.ok) return NextResponse.json({ error: domain.message }, { status: 400 });
 
+  // 以前Web申込をした担当者が新規として申し込むと、別の企業が作られて従業員のアカウントや過去の結果が
+  // 引き継がれないため、ログイン後の画面からの継続申込へ案内する
+  const { data: prior } = await admin
+    .from("plan_orders")
+    .select("id")
+    .eq("contact_email", v.contactEmail)
+    .in("status", ["provisioned", "paid"])
+    .limit(1);
+  if (prior && prior.length > 0) {
+    return NextResponse.json(
+      {
+        error:
+          "このメールアドレスで以前お申込みいただいています。次年度以降のお申込みは、ログイン後の画面の「次の年度のお申込み」から行えます(従業員のアカウントや過去の結果がそのまま引き継がれます)。別の事業場として新しく申し込む場合は、support@mestate.jp までご連絡ください。",
+      },
+      { status: 409 }
+    );
+  }
+
   const price = priceNew(v.seats);
   const fiscalYear = fiscalYearOf(v.examStart);
 

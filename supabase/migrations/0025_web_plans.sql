@@ -23,7 +23,7 @@
 -- ------------------------------------------------------------
 create table if not exists public.plan_orders (
   id                    uuid primary key default gen_random_uuid(),
-  kind                  text not null check (kind in ('new', 'add_seats')),
+  kind                  text not null check (kind in ('new', 'add_seats', 'renew')), -- renew: 次年度以降の継続申込
   status                text not null default 'pending'
                         check (status in ('pending', 'paid', 'provisioned', 'failed', 'expired')),
   company_id            uuid references public.companies(id) on delete set null, -- 新規申込は開設後に入る
@@ -48,6 +48,10 @@ create table if not exists public.plan_orders (
   paid_at               timestamptz,
   provisioned_at        timestamptz
 );
+
+-- 継続申込(renew)を加える(以前の版を実行済みの場合に備えて、制約を作り直す)
+alter table public.plan_orders drop constraint if exists plan_orders_kind_check;
+alter table public.plan_orders add constraint plan_orders_kind_check check (kind in ('new', 'add_seats', 'renew'));
 
 -- 領収書(Stripe の請求書・領収書)を後から取り出すための請求書ID
 alter table public.plan_orders add column if not exists stripe_invoice_id text;
@@ -233,7 +237,7 @@ begin
     return;
   end if;
 
-  if v_order.kind = 'new' then
+  if v_order.kind in ('new', 'renew') then  -- renew は既存の企業(company_id 指定済み)に新しい年度を追加する
     v_company := v_order.company_id;
     if v_company is null then
       -- 企業コード: W + 申込日(YYMMDD) + 英数字3文字(重複しないものを選ぶ)

@@ -3,7 +3,7 @@ import type { ReceiptData } from "@/components/ReceiptSheet";
 
 type ReceiptOrder = {
   id: string;
-  kind: "new" | "add_seats";
+  kind: "new" | "add_seats" | "renew";
   company_name: string;
   fiscal_year: number;
   seats: number;

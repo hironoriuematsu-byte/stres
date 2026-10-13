@@ -236,7 +236,7 @@ export function parseApplyInput(
 
 export type SalesOrder = {
   id: string;
-  kind: "new" | "add_seats";
+  kind: "new" | "add_seats" | "renew";
   status: string;
   company_name: string;
   office_name: string | null;
@@ -282,7 +282,7 @@ export function salesRows(orders: SalesOrder[], from = "", to = ""): (string | n
       const tax = taxIncluded(o.amount);
       return [
         day,
-        o.kind === "new" ? "新規申込" : "人数追加",
+        o.kind === "new" ? "新規申込" : o.kind === "renew" ? "継続申込" : "人数追加",
         o.company_name,
         o.office_name ?? "",
         o.contact_name,
