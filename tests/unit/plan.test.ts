@@ -191,7 +191,7 @@ describe("年度の申込", () => {
     seats: "28",
     examStart: "2026-10-20",
     examEnd: "2026-11-16",
-    interviewOption: "sanpo",
+    interviewOption: "own",
     agreeTerms: true,
     agreeProcedure: true,
   };
@@ -214,9 +214,10 @@ describe("年度の申込", () => {
     expect(parseOrderInput({ ...base, workers: "500", seats: "300", interviewOption: "own" }, "2026-10-13").ok).toBe(true);
     expect(priceNew(300).total).toBe(99000);
   });
-  it("50人以上の事業場は地域産業保健センターを選べない", () => {
-    const r = parseOrderInput({ ...base, workers: "60" }, "2026-10-13");
-    expect(!r.ok && r.error).toMatch(/50人未満/);
+  it("医師面接指導の担当は「自社で依頼」か「当事務所に依頼」の2択", () => {
+    expect(parseOrderInput({ ...base, interviewOption: "mestate" }, "2026-10-13").ok).toBe(true);
+    const r = parseOrderInput({ ...base, interviewOption: "sanpo" }, "2026-10-13"); // 以前の選択肢は受け付けない
+    expect(!r.ok && r.error).toMatch(/医師面接指導の担当/);
   });
   it("同意・人数", () => {
     expect(parseOrderInput({ ...base, agreeTerms: false }, "2026-10-13").ok).toBe(false);
@@ -233,11 +234,11 @@ describe("面接指導の担当", () => {
     expect(interviewNotifiesOffice(true, null)).toBe(true); // 申込がない場合は念のため通知
     expect(interviewNotifiesOffice(false, "own")).toBe(true); // 選任・顧問の企業はこれまで通り
   });
-  it("地域産業保健センターは50人未満の事業場だけ", () => {
-    expect(interviewOptionError("sanpo", 49)).toBeNull();
-    expect(interviewOptionError("sanpo", 50)).toMatch(/50人未満/);
-    expect(interviewOptionError("own", 500)).toBeNull();
-    expect(interviewOptionError("other", 10)).toMatch(/選んでください/);
+  it("選べるのは2つだけ", () => {
+    expect(interviewOptionError("own")).toBeNull();
+    expect(interviewOptionError("mestate")).toBeNull();
+    expect(interviewOptionError("sanpo")).toMatch(/選んでください/);
+    expect(interviewOptionError(null)).toMatch(/選んでください/);
   });
 });
 

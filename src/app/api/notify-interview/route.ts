@@ -107,8 +107,8 @@ export async function POST(req: Request) {
     "面接指導の申出が1件あります。システムにログインして確認してください。",
     "",
     `企業名: ${company?.name ?? "(不明)"}`,
-    ...(webSignup ? [`面接指導の担当: ${interviewDoctorLabel(option)}`] : []),
-    ...(webSignup && option === "own" ? ["", "自社の産業医と面接指導の日程を調整してください(当事務所には通知されていません)。"] : []),
+    ...(webSignup ? [`医師面接指導の担当: ${interviewDoctorLabel(option)}`] : []),
+    ...(webSignup && option === "own" ? ["", "依頼する医師(自社の産業医や地域産業保健センターなど)と面接指導の日程を調整してください(当事務所には通知されていません)。"] : []),
     ...(webSignup && option === "sanpo"
       ? [
           "",
@@ -152,7 +152,7 @@ export async function POST(req: Request) {
       "産業医面接指導の申出を受け付けました。",
       toOffice
         ? `実施者(${IMPLEMENTER.full})および会社の実施事務従事者へ通知済みです。`
-        : `会社の実施事務従事者へ通知済みです(面接指導の担当: ${interviewDoctorLabel(option)})。`,
+        : `会社の実施事務従事者へ通知済みです(医師面接指導の担当: ${interviewDoctorLabel(option)})。`,
       "日程等について連絡がありますので、しばらくお待ちください。",
       "",
       `申出日時: ${new Date(request.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`,

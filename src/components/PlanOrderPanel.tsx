@@ -106,7 +106,6 @@ export function PlanOrderPanel({
   const quote = Number.isInteger(seatsN) && seatsN > WEB_MAX_SEATS;
   const pricing = pricingFor(prices, nextYear); // 受検開始日の年度の料金
   const price = Number.isInteger(seatsN) && seatsN >= 1 && !quote ? priceNew(seatsN, pricing) : null;
-  const large = Number.isInteger(workersN) && workersN >= 50;
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const input = { padding: "7px 10px", fontSize: 14, border: `1px solid ${brand.line}`, borderRadius: 8 } as const;
   const small = { fontSize: 12, color: "#5B6B6A", lineHeight: 1.7 } as const;
@@ -116,7 +115,7 @@ export function PlanOrderPanel({
     if (preview) return setErr("(デモ)実際の画面では、ここから決済画面に進みます。");
     const pe = periodError(f.examStart, f.examEnd, today);
     if (pe) return setErr(pe);
-    if (!f.interviewOption) return setErr("産業医面接指導の担当を選んでください");
+    if (!f.interviewOption) return setErr("医師面接指導の担当を選んでください");
     setBusy(true);
     try {
       const res = await fetch("/api/plan/order", {
@@ -219,17 +218,15 @@ export function PlanOrderPanel({
             ))}
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>産業医面接指導の担当</div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>医師面接指導の担当</div>
             <div style={{ ...small, marginBottom: 6 }}>お申込みの後も、この画面(受検期間の欄)からいつでも変更できます。</div>
             {INTERVIEW_OPTIONS.map((o) => {
-              const disabled = o.value === "sanpo" && large;
               return (
-                <label key={o.value} style={{ display: "block", fontSize: 13, color: disabled ? "#AAB6B4" : brand.ink, marginBottom: 4 }}>
+                <label key={o.value} style={{ display: "block", fontSize: 13, color: brand.ink, marginBottom: 4 }}>
                   <input
                     type="radio"
                     name="renew-iv"
-                    disabled={disabled}
-                    checked={f.interviewOption === o.value}
+                                        checked={f.interviewOption === o.value}
                     onChange={() => set("interviewOption", o.value)}
                     style={{ marginRight: 6 }}
                   />

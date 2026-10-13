@@ -88,13 +88,13 @@ export function InterviewPanel({
       </h3>
       {plans && (
         <div style={{ fontSize: 13, color: brand.ink, background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 8, padding: "10px 12px", lineHeight: 1.7, marginBottom: 12 }}>
-          面接指導の担当: <strong>{interviewDoctorLabel(currentOption)}</strong>
+          医師面接指導の担当: <strong>{interviewDoctorLabel(currentOption)}</strong>
           <div style={{ fontSize: 12, color: "#5B6B6A" }}>
             {currentOption === "mestate"
               ? "申出は、うえまつ産業医事務所(実施者)と会社の担当者に通知されます。日程は当事務所からご連絡します。"
               : currentOption === "sanpo"
                 ? "申出は会社の担当者にだけ通知されます。最寄りの地域産業保健センターに面接指導をお申し込みください。"
-                : "申出は会社の担当者にだけ通知されます。自社の産業医と日程を調整してください。"}
+                : "申出は会社の担当者にだけ通知されます。依頼する医師(自社の産業医や地域産業保健センターなど)と日程を調整してください。"}
             担当の変更は、メニュー画面の受検期間の欄からできます。
           </div>
         </div>

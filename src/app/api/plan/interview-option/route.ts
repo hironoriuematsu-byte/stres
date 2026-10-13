@@ -60,7 +60,7 @@ export async function POST(req: Request) {
   // 実施者(当事務所)にも変更を知らせる(当事務所の医師が担当になる・担当から外れるのを把握するため)
   await sendMails(
     await officeEmails(admin),
-    "【ストレスチェックWeb】面接指導の担当が変更されました",
+    "【ストレスチェックWeb】医師面接指導の担当が変更されました",
     `企業: ${co.name}\n年度: ${fiscalYear}年度\n変更: ${interviewDoctorLabel(plan.interview_option as string | null)} → ${interviewDoctorLabel(option)}\n変更した担当者: ${me.name ?? ""}`
   );
   return NextResponse.json({ ok: true });

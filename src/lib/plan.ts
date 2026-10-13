@@ -48,43 +48,37 @@ export const DEFAULT_PERIOD_DAYS = 28; // 受検期間の標準(4週間)
 export const MAX_PERIOD_MONTHS = 3; // 締切を延ばせるのは開始から3か月まで(年度末を超えない)
 export const MAX_START_AHEAD_DAYS = 180; // 開始日は申込日から半年先まで
 
+// 医師面接指導の担当。申込時に選べるのは「自社で医師を探して依頼」か「うえまつ産業医事務所に依頼」の2つ
+// ("sanpo" = 地域産業保健センターは以前の選択肢。過去の申込の表示のためだけに残す)
 export type InterviewOption = "own" | "mestate" | "sanpo";
 export const INTERVIEW_OPTIONS: { value: InterviewOption; label: string; desc: string }[] = [
   {
-    value: "mestate",
-    label: "うえまつ産業医事務所の医師が行う(有料)",
-    desc: `申出があった方ごとに1回 ${INTERVIEW_FEE.toLocaleString()}円(税込)。オンライン可・意見書込み。実施後にご請求します。申出があったときは、当事務所(実施者)と会社の担当者に通知が届きます。`,
-  },
-  {
     value: "own",
-    label: "自社の産業医が行う",
-    desc: "申出があったときは会社の担当者に通知が届きます。自社の産業医と日程を調整してください。",
+    label: "自社で医師を探して依頼する",
+    desc: "申出の通知は会社の担当者だけに届きます。自社の産業医や、地域産業保健センター(50人未満の事業場は無料)などの医師にご依頼ください。",
   },
   {
-    value: "sanpo",
-    label: "地域産業保健センター(無料)を利用する(50人未満の事業場)",
-    desc: "申出があったときは、最寄りの地域産業保健センターへの申込方法をご案内します。",
+    value: "mestate",
+    label: `うえまつ産業医事務所に依頼する(1回 ${INTERVIEW_FEE.toLocaleString()}円・税込)`,
+    desc: "オンライン可・意見書込み。申出の通知は当事務所(実施者)と会社の担当者に届き、日程は当事務所からご連絡します。料金は面接指導の実施後に、請求書をメールでお送りします。",
   },
 ];
 
 export const interviewOptionLabel = (v: string | null | undefined): string =>
-  INTERVIEW_OPTIONS.find((o) => o.value === v)?.label ?? "未選択";
+  INTERVIEW_OPTIONS.find((o) => o.value === v)?.label ?? (v === "sanpo" ? "地域産業保健センターを利用する" : "未選択");
 
 // 面接指導を行う医師(申出一覧などでの短い表示)
 export const interviewDoctorLabel = (v: string | null | undefined): string =>
-  v === "mestate" ? "うえまつ産業医事務所の医師" : v === "own" ? "自社の産業医" : v === "sanpo" ? "地域産業保健センターの医師" : "未選択";
+  v === "mestate" ? "うえまつ産業医事務所の医師" : v === "own" ? "自社で依頼する医師" : v === "sanpo" ? "地域産業保健センターの医師" : "未選択";
 
 // 面接指導の申出を実施者(うえまつ産業医事務所)にも知らせるか。
-// Web申込の企業は「うえまつ産業医事務所の医師」を選んだときだけ。それ以外(自社の産業医・地域産業保健センター)は会社の担当者のみ
+// Web申込の企業は「うえまつ産業医事務所に依頼」を選んだときだけ。「自社で医師を探して依頼」のときは会社の担当者のみ
 export const interviewNotifiesOffice = (webSignup: boolean, option: string | null | undefined): boolean =>
   !webSignup || option === "mestate" || !option;
 
-// 面接指導の担当の選び方のチェック(申込時・変更時の共通)
-export function interviewOptionError(option: string | null | undefined, workers: number | null | undefined): string | null {
-  if (!option || !INTERVIEW_OPTIONS.some((o) => o.value === option)) return "産業医面接指導の担当を選んでください";
-  if (option === "sanpo" && (workers ?? 0) >= 50) {
-    return "地域産業保健センターは50人未満の事業場が対象です。50人以上の事業場は、自社の産業医または当事務所をお選びください";
-  }
+// 医師面接指導の担当の選び方のチェック(申込時・変更時の共通)。workers は以前の選択肢の名残で、今は使わない
+export function interviewOptionError(option: string | null | undefined, _workers?: number | null): string | null {
+  if (!option || !INTERVIEW_OPTIONS.some((o) => o.value === option)) return "医師面接指導の担当を選んでください";
   return null;
 }
 
@@ -300,7 +294,7 @@ export function parseOrderInput(
     seats: int(raw.seats),
     examStart: str(raw.examStart, 10),
     examEnd: str(raw.examEnd, 10),
-    interviewOption: (["own", "mestate", "sanpo"] as const).find((o) => o === raw.interviewOption) as InterviewOption,
+    interviewOption: (["own", "mestate"] as const).find((o) => o === raw.interviewOption) as InterviewOption,
     questionnaire: (raw.questionnaire === "80" ? "80" : "57") as Questionnaire,
   };
   if (!(v.workers >= 1 && v.workers <= 100000)) return { ok: false, error: "事業場の労働者数を入力してください" };

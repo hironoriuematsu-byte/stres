@@ -288,7 +288,7 @@ export function PlanStatusPanel({
           {st.used > 0 && <div style={small}>受検が始まったため、今年度は変更できません。</div>}
         </div>
         <div>
-          <div style={small}>産業医面接指導の担当</div>
+          <div style={small}>医師面接指導の担当</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink, lineHeight: 1.6 }}>{interviewOptionLabel(st.interview_option)}</div>
           <div style={small}>
             {st.interview_option === "mestate"
@@ -306,13 +306,11 @@ export function PlanStatusPanel({
           {canEdit && ivOpen && (
             <div style={{ marginTop: 6, padding: 10, border: `1px solid ${brand.line}`, borderRadius: 8, background: "#FAFCFC" }}>
               {INTERVIEW_OPTIONS.map((o) => {
-                const disabled = o.value === "sanpo" && (st.workers ?? 0) >= 50;
                 return (
-                  <label key={o.value} style={{ display: "block", fontSize: 13, color: disabled ? "#AAB6B4" : brand.ink, marginBottom: 6 }}>
+                  <label key={o.value} style={{ display: "block", fontSize: 13, color: brand.ink, marginBottom: 6 }}>
                     <input
                       type="radio"
                       name="status-iv"
-                      disabled={disabled}
                       checked={iv === o.value}
                       onChange={() => setIv(o.value)}
                       style={{ marginRight: 6 }}
