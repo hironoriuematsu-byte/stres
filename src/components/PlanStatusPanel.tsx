@@ -380,6 +380,7 @@ export function PlanStatusPanel({
               {addOk ? `${priceAdd(addN, pricing).total.toLocaleString()}円を支払って追加` : "追加する"}
             </Btn>
             {phase === "closed" && <div style={small}>受検期間の終了後は追加できません。締切を延ばしてから追加してください。</div>}
+            <div style={small}>追加しても、受検用のURL・QRコードはそのまま使えます(配り直しは不要です)。</div>
           </div>
         </div>
       )}

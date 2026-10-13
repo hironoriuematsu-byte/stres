@@ -46,7 +46,7 @@ export const priceExamples = (pr: Pricing) =>
   }));
 export const priceNotes = (pr: Pricing) => [
   `受検者1名 ${pr.unitPrice}円・最低料金 ${pr.minTotal.toLocaleString()}円(${minSeats(pr)}名まで)。集団分析・結果の5年保存込み(税込)`,
-  `人数を追加したい場合は1名から追加できます。${WEB_MAX_SEATS}名を超える場合はお見積り(割引あり)`,
+  `人数を追加したい場合は1名から追加できます(QRコードはそのまま使えます)。${WEB_MAX_SEATS}名を超える場合はお見積り(割引あり)`,
   `面接指導を当事務所の医師が行う場合は、申出があった方のみ1回 ${INTERVIEW_FEE.toLocaleString()}円(税込)`,
   "お申込み後のお客さまのご都合によるキャンセル・返金はお受けできません",
 ];
