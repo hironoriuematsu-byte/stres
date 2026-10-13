@@ -164,7 +164,7 @@ export default function DemoTopPage({ searchParams }: { searchParams: { q?: stri
 
       <Card>
         <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8, margin: 0 }}>
-          導入のご相談・お見積りは、
+          料金の確認とお申込みは「サービスのご案内」から、Webでその場で行えます。産業医契約のご相談や、300名を超える場合のお見積りは、
           <a
             href="https://mestate.jp/contact.html"
             target="_blank"
@@ -176,12 +176,12 @@ export default function DemoTopPage({ searchParams }: { searchParams: { q?: stri
           までお問い合わせください。
         </p>
         <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <a href="https://mestate.jp/contact.html" target="_blank" rel="noopener noreferrer">
-            <Btn tone="orange">お問い合わせページへ</Btn>
-          </a>
-          <Link href="/">
-            <Btn tone="ghost">トップページへ</Btn>
+          <Link href="/plan">
+            <Btn tone="orange">料金・お申込み(サービスのご案内)</Btn>
           </Link>
+          <a href="https://mestate.jp/contact.html" target="_blank" rel="noopener noreferrer">
+            <Btn tone="ghost">お問い合わせ</Btn>
+          </a>
         </div>
       </Card>
     </div>
