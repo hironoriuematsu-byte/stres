@@ -50,12 +50,16 @@ export async function POST(req: Request) {
   if (err) return NextResponse.json({ error: err }, { status: 400 });
   if (plan.interview_option === option) return NextResponse.json({ ok: true, unchanged: true });
 
-  const { error } = await admin
+  const { data: updated, error } = await admin
     .from("exam_plans")
-    .update({ interview_option: option })
+    .update({ interview_option: option, updated_at: new Date().toISOString() })
     .eq("company_id", me.company_id)
-    .eq("fiscal_year", fiscalYear);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    .eq("fiscal_year", fiscalYear)
+    .select("interview_option");
+  if (error) return NextResponse.json({ error: `変更できませんでした: ${error.message}` }, { status: 500 });
+  if (!updated || updated.length === 0) {
+    return NextResponse.json({ error: "変更できませんでした(対象の年度のお申込みが見つかりません)。support@mestate.jp までご連絡ください" }, { status: 500 });
+  }
 
   // 実施者(当事務所)にも変更を知らせる(当事務所の医師が担当になる・担当から外れるのを把握するため)
   await sendMails(

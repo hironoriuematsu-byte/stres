@@ -50,6 +50,7 @@ export function PlanStatusPanel({
   const pricing = { ...pricingFor(prices, fiscalYear), ...(orderUnit ? { unitPrice: orderUnit } : {}) };
   const [iv, setIv] = useState(preview?.interview_option ?? ""); // 面接指導の担当(変更用)
   const [ivOpen, setIvOpen] = useState(false);
+  const [ivMsg, setIvMsg] = useState<{ ok: boolean; text: string } | null>(null); // 担当の変更の結果(変更欄のすぐ下に出す)
   const [q, setQ] = useState<string>("57"); // 調査票(57項目版/80項目版)
   const [qOpen, setQOpen] = useState(false);
 
@@ -141,20 +142,22 @@ export function PlanStatusPanel({
       return;
     }
     setBusy(true);
-    setMsg(null);
+    setIvMsg(null);
     try {
       const res = await fetch("/api/plan/interview-option", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fiscalYear, option: iv }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({ error: `通信エラー(${res.status})。時間をおいてもう一度お試しください。` }));
       if (!res.ok) throw new Error(json.error ?? "変更できませんでした");
-      setMsg({ ok: true, text: `面接指導の担当を「${interviewOptionLabel(iv)}」に変更しました。これから届く申出に適用されます。` });
+      // 画面の表示をすぐに切り替える(そのあと最新の状態を読み直す)
+      setSt((p) => (p ? { ...p, interview_option: iv } : p));
+      setIvMsg({ ok: true, text: `「${interviewOptionLabel(iv)}」に変更しました。これから届く申出に適用されます。` });
       setIvOpen(false);
       load();
     } catch (e) {
-      setMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
+      setIvMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });
     }
     setBusy(false);
   };
@@ -297,7 +300,10 @@ export function PlanStatusPanel({
           </div>
           {canEdit && !ivOpen && (
             <button
-              onClick={() => setIvOpen(true)}
+              onClick={() => {
+                setIvOpen(true);
+                setIvMsg(null);
+              }}
               style={{ background: "none", border: 0, padding: 0, marginTop: 2, color: brand.tealDark, fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
             >
               担当を変更する
@@ -322,7 +328,7 @@ export function PlanStatusPanel({
               })}
               <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
                 <Btn onClick={saveInterview} disabled={busy || !iv || iv === st.interview_option} style={{ padding: "6px 14px", fontSize: 13 }}>
-                  変更する
+                  {busy ? "変更しています…" : "変更する"}
                 </Btn>
                 <Btn
                   tone="ghost"
@@ -335,17 +341,10 @@ export function PlanStatusPanel({
                   やめる
                 </Btn>
               </div>
+              {ivMsg && !ivMsg.ok && <div style={{ fontSize: 12.5, color: "#B02A2A", marginTop: 6, lineHeight: 1.6 }}>{ivMsg.text}</div>}
             </div>
           )}
-          {st.interview_option === "sanpo" && (
-            <div style={small}>
-              申出があったときは、最寄りの地域産業保健センターに面接指導をお申し込みください(連絡先は
-              <a href="https://www.johas.go.jp/" target="_blank" rel="noreferrer" style={{ color: brand.tealDark }}>
-                労働者健康安全機構
-              </a>
-              の各都道府県の産業保健総合支援センターのページに掲載されています)。
-            </div>
-          )}
+          {ivMsg?.ok && !ivOpen && <div style={{ fontSize: 12.5, color: brand.tealDark, marginTop: 4, lineHeight: 1.6 }}>{ivMsg.text}</div>}
         </div>
       </div>
 
