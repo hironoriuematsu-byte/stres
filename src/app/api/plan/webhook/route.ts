@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyStripeSignature } from "@/lib/stripe";
+import { constructWebhookEvent } from "@/lib/stripe";
 import { maxEndOf, seatsGranted } from "@/lib/plan";
 import { adminClient, officeEmails, orderSummary, OrderRow, sendMails } from "@/lib/plan-server";
 import { IMPLEMENTER, SELLER } from "@/lib/org";
@@ -12,20 +12,22 @@ export const maxDuration = 60;
 // Stripe は同じ通知を再送することがあるため、開設処理は二重に行わない(DB関数 provision_plan_order)
 export async function POST(req: Request) {
   const payload = await req.text();
-  const secret = process.env.STRIPE_WEBHOOK_SECRET ?? "";
-  if (!verifyStripeSignature(payload, req.headers.get("stripe-signature"), secret)) {
-    return NextResponse.json({ error: "invalid signature" }, { status: 400 });
+  const event = constructWebhookEvent(payload, req.headers.get("stripe-signature"), process.env.STRIPE_WEBHOOK_SECRET ?? "");
+  if (!event) return NextResponse.json({ error: "invalid signature" }, { status: 400 });
+
+  // 受け取るのは決済画面(Checkout Session)のイベントだけ
+  if (
+    event.type !== "checkout.session.completed" &&
+    event.type !== "checkout.session.async_payment_succeeded" &&
+    event.type !== "checkout.session.async_payment_failed" &&
+    event.type !== "checkout.session.expired"
+  ) {
+    return NextResponse.json({ ignored: true });
   }
 
   const admin = adminClient();
   if (!admin) return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY が未設定です" }, { status: 500 });
 
-  const event = JSON.parse(payload) as {
-    type: string;
-    data: {
-      object: { id: string; payment_status?: string; payment_intent?: string | null; invoice?: string | null; metadata?: Record<string, string> };
-    };
-  };
   const session = event.data.object;
   const orderId = session.metadata?.order_id;
   if (!orderId) return NextResponse.json({ ignored: true });
@@ -34,9 +36,33 @@ export async function POST(req: Request) {
     await admin.from("plan_orders").update({ status: "expired" }).eq("id", orderId).eq("status", "pending");
     return NextResponse.json({ ok: true });
   }
-  if (event.type !== "checkout.session.completed" && event.type !== "checkout.session.async_payment_succeeded") {
-    return NextResponse.json({ ignored: true });
+  if (event.type === "checkout.session.async_payment_failed") {
+    // コンビニ・銀行振込などで、期限までに入金がなかった。開設はせず、申込を「期限切れ」にしてお知らせする
+    const { data: failed } = await admin
+      .from("plan_orders")
+      .update({ status: "expired", error: "期限までにお支払いが確認できませんでした" })
+      .eq("id", orderId)
+      .eq("status", "pending")
+      .select("*")
+      .maybeSingle<OrderRow>();
+    if (failed) {
+      await sendMails(
+        [failed.contact_email],
+        "【ストレスチェックWeb】お支払いが確認できませんでした",
+        [
+          `${failed.company_name}`,
+          `${failed.contact_name} 様`,
+          "",
+          "お支払い期限までに入金が確認できなかったため、このお申込みは取り消しとなりました(ご請求はありません)。",
+          "引き続きご利用の場合は、ログイン後の画面からもう一度お申込みください。",
+          "",
+          `お問い合わせ: ${SELLER.email}`,
+        ].join("\n")
+      );
+    }
+    return NextResponse.json({ ok: true });
   }
+  // 完了イベントでも、コンビニ・銀行振込は入金前(unpaid)。入金されると async_payment_succeeded が届く
   if (session.payment_status !== "paid") return NextResponse.json({ waiting: true });
 
   const { data: order } = await admin.from("plan_orders").select("*").eq("id", orderId).single<OrderRow>();
@@ -46,7 +72,7 @@ export async function POST(req: Request) {
   const maxEnd = order.exam_start ? maxEndOf(order.exam_start) : order.exam_end ?? "2000-01-01";
   const { data: rows, error } = await admin.rpc("provision_plan_order", {
     p_order: order.id,
-    p_payment_intent: session.payment_intent ?? null,
+    p_payment_intent: typeof session.payment_intent === "string" ? session.payment_intent : (session.payment_intent?.id ?? null),
     p_seats_granted: granted,
     p_max_end: maxEnd,
   });
@@ -63,7 +89,8 @@ export async function POST(req: Request) {
     already: boolean;
   };
   // 領収書を後から取り出せるよう、請求書IDを記録する(再送の場合も上書きして構わない)
-  if (session.invoice) await admin.from("plan_orders").update({ stripe_invoice_id: session.invoice }).eq("id", order.id);
+  const invoiceId = typeof session.invoice === "string" ? session.invoice : (session.invoice?.id ?? null);
+  if (invoiceId) await admin.from("plan_orders").update({ stripe_invoice_id: invoiceId }).eq("id", order.id);
   if (already) return NextResponse.json({ ok: true, already: true });
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;

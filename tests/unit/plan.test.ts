@@ -20,7 +20,7 @@ import {
   seatsGranted,
   taxIncluded,
 } from "@/lib/plan";
-import { encodeForm, verifyStripeSignature } from "@/lib/stripe";
+import { constructWebhookEvent } from "@/lib/stripe";
 
 describe("料金", () => {
   it("人数×330円。3,300円(10名分)に満たないときは最低料金", () => {
@@ -193,19 +193,17 @@ describe("年度の申込", () => {
 });
 
 describe("Stripe", () => {
-  it("form-encoded の入れ子", () => {
-    const s = encodeForm({ a: 1, line_items: [{ quantity: 2, price_data: { currency: "jpy" } }], m: ["card"] }).join("&");
-    expect(decodeURIComponent(s)).toBe("a=1&line_items[0][quantity]=2&line_items[0][price_data][currency]=jpy&m[0]=card");
-  });
   it("Webhook の署名を確かめる", () => {
     const secret = "whsec_test";
-    const payload = '{"id":"evt_1"}';
-    const t = 1_800_000_000;
+    const payload = '{"id":"evt_1","object":"event","type":"checkout.session.completed","data":{"object":{}}}';
+    const t = Math.floor(Date.now() / 1000);
     const sig = createHmac("sha256", secret).update(`${t}.${payload}`).digest("hex");
-    expect(verifyStripeSignature(payload, `t=${t},v1=${sig}`, secret, 300, t + 10)).toBe(true);
-    expect(verifyStripeSignature(payload + " ", `t=${t},v1=${sig}`, secret, 300, t + 10)).toBe(false);
-    expect(verifyStripeSignature(payload, `t=${t},v1=${sig}`, "whsec_other", 300, t + 10)).toBe(false);
-    expect(verifyStripeSignature(payload, `t=${t},v1=${sig}`, secret, 300, t + 1000)).toBe(false);
-    expect(verifyStripeSignature(payload, null, secret)).toBe(false);
+    expect(constructWebhookEvent(payload, `t=${t},v1=${sig}`, secret)?.id).toBe("evt_1");
+    expect(constructWebhookEvent(payload + " ", `t=${t},v1=${sig}`, secret)).toBeNull();
+    expect(constructWebhookEvent(payload, `t=${t},v1=${sig}`, "whsec_other")).toBeNull();
+    const old = t - 1000;
+    const oldSig = createHmac("sha256", secret).update(`${old}.${payload}`).digest("hex");
+    expect(constructWebhookEvent(payload, `t=${old},v1=${oldSig}`, secret)).toBeNull();
+    expect(constructWebhookEvent(payload, null, secret)).toBeNull();
   });
 });

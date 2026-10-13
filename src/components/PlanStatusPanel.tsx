@@ -73,10 +73,10 @@ export function PlanStatusPanel({
     setMsg(null);
     load();
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("plan") === "added") {
-      setMsg({ ok: true, text: "お支払いを受け付けました。人数枠への反映まで1分ほどかかることがあります。" });
+      setMsg({ ok: true, text: "お手続きを受け付けました。お支払いが確認でき次第、人数枠に反映します(カードは1分ほど、コンビニ・銀行振込は入金後)。" });
     }
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("plan") === "ordered") {
-      setMsg({ ok: true, text: "次の年度のお申込みを受け付けました。受検期間の反映まで1分ほどかかることがあります。" });
+      setMsg({ ok: true, text: "次の年度のお申込みを受け付けました。お支払いが確認でき次第、受検期間を反映します(カードは1分ほど、コンビニ・銀行振込は入金後)。" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId, fiscalYear]);

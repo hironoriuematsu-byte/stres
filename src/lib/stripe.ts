@@ -1,79 +1,44 @@
-import { createHmac, timingSafeEqual } from "crypto";
+import Stripe from "stripe";
 
 // ============================================================
-// Stripe(クレジットカード決済)。SDKは使わず REST API を直接呼ぶ(依存を増やさない)。
+// Stripe(クレジットカード等の決済)。公式SDKのクライアントを1つ作って使う。
 // カード番号は Stripe の決済画面(Checkout)で入力され、このシステムのサーバーには届かない。
 //
-// 環境変数(Vercel):
-//   STRIPE_SECRET_KEY      … シークレットキー(sk_test_… / sk_live_…)
+// 環境変数(Vercel。値は「Sensitive」にして画面やログに出ないようにする):
+//   STRIPE_SECRET_KEY      … 制限付きAPIキー(rk_test_… / rk_live_…)を推奨。必要な権限は
+//                            Checkout Sessions: 書き込み / Invoices: 読み取り のみ(シークレットキー sk_ でも動く)
 //   STRIPE_WEBHOOK_SECRET  … Webhook の署名シークレット(whsec_…)
+//   STRIPE_AUTOMATIC_TAX   … "1" のときだけ Stripe Tax で消費税を計算する(日本の登録を Stripe に追加してから)
 //   INVOICE_REGISTRATION_NO … (任意)登録番号を変えるときだけ。通常は lib/org.ts の SELLER の値を使う
 // どちらかのキーが無い間は、申込ページは「準備中」と表示して決済を受け付けない。
 // ============================================================
 
+// API のバージョンはSDKに合わせて固定する(Stripe側の既定の変更で動きが変わらないように)
+export const STRIPE_API_VERSION = "2026-08-26.dahlia" as const;
+// ダッシュボードでこの申込の流れの決済を見分けるための印(末尾は任意の8文字)
+const INTEGRATION_ID = "stres-web-plan-kqzvmbtr";
+
 export const stripeConfigured = (): boolean =>
   Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET);
 
-// Stripe の form-encoded 形式(a[b][0][c]=…)に変換する
-export function encodeForm(obj: Record<string, unknown>, prefix = ""): string[] {
-  const out: string[] = [];
-  for (const [k, v] of Object.entries(obj)) {
-    if (v === undefined || v === null) continue;
-    const key = prefix ? `${prefix}[${k}]` : k;
-    if (Array.isArray(v)) {
-      v.forEach((item, i) => {
-        if (item !== null && typeof item === "object") out.push(...encodeForm(item as Record<string, unknown>, `${key}[${i}]`));
-        else out.push(`${encodeURIComponent(`${key}[${i}]`)}=${encodeURIComponent(String(item))}`);
-      });
-    } else if (typeof v === "object") {
-      out.push(...encodeForm(v as Record<string, unknown>, key));
-    } else {
-      out.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(v))}`);
-    }
+let client: Stripe | null = null;
+export function stripeClient(): Stripe {
+  if (!client) {
+    client = new Stripe(process.env.STRIPE_SECRET_KEY ?? "", {
+      apiVersion: STRIPE_API_VERSION,
+      maxNetworkRetries: 2,
+      appInfo: { name: "stres-web-plan" },
+    });
   }
-  return out;
-}
-
-async function stripeGet<T>(path: string): Promise<T> {
-  const res = await fetch(`https://api.stripe.com/v1/${path}`, {
-    headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
-  });
-  const json = (await res.json()) as T & { error?: { message?: string } };
-  if (!res.ok) throw new Error(`Stripe: ${json.error?.message ?? res.status}`);
-  return json;
-}
-
-// 領収書のページ(請求書・領収書のPDFをダウンロードできる Stripe のページ)のURLを、その都度取り出す。
-// 請求書IDが未記録の古い申込は、決済画面(Checkout Session)から請求書をたどる
-export async function receiptPageUrl(opts: { invoiceId?: string | null; sessionId?: string | null }): Promise<string | null> {
-  let invoiceId = opts.invoiceId ?? null;
-  if (!invoiceId && opts.sessionId) {
-    const s = await stripeGet<{ invoice: string | null }>(`checkout/sessions/${encodeURIComponent(opts.sessionId)}`);
-    invoiceId = s.invoice;
-  }
-  if (!invoiceId) return null;
-  const inv = await stripeGet<{ hosted_invoice_url: string | null }>(`invoices/${encodeURIComponent(invoiceId)}`);
-  return inv.hosted_invoice_url;
-}
-
-async function stripePost<T>(path: string, params: Record<string, unknown>, idempotencyKey?: string): Promise<T> {
-  const res = await fetch(`https://api.stripe.com/v1/${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
-    },
-    body: encodeForm(params).join("&"),
-  });
-  const json = (await res.json()) as T & { error?: { message?: string } };
-  if (!res.ok) throw new Error(`Stripe: ${json.error?.message ?? res.status}`);
-  return json;
+  return client;
 }
 
 export type CheckoutLine = { name: string; unitAmount: number; quantity: number };
 
-// 決済画面(Checkout Session)を作る。支払い完了は Webhook(checkout.session.completed)で受け取る
+// 決済画面(Checkout Session)を作る。支払い完了は Webhook で受け取る
+//   - 支払い方法は指定しない(ダッシュボードで有効にした方法が自動で表示される)。コンビニ・銀行振込など
+//     後から入金される方法は checkout.session.async_payment_succeeded で開設する
+//   - 金額は税込(tax_behavior: inclusive)。STRIPE_AUTOMATIC_TAX=1 のときは Stripe Tax が消費税額を計算する
 export async function createCheckoutSession(opts: {
   orderId: string;
   email: string;
@@ -84,56 +49,59 @@ export async function createCheckoutSession(opts: {
   invoiceCustomFields?: { name: string; value: string }[]; // 上部の項目(宛名・登録番号・適用税率。4つまで)
   invoiceDescription: string;
 }): Promise<{ id: string; url: string }> {
-  return stripePost<{ id: string; url: string }>(
-    "checkout/sessions",
-    {
-      mode: "payment",
-      locale: "ja",
-      payment_method_types: ["card"],
-      customer_email: opts.email,
-      client_reference_id: opts.orderId,
-      success_url: opts.successUrl,
-      cancel_url: opts.cancelUrl,
-      line_items: opts.lines.map((l) => ({
-        quantity: l.quantity,
-        price_data: { currency: "jpy", unit_amount: l.unitAmount, product_data: { name: l.name } },
-      })),
-      metadata: { order_id: opts.orderId },
-      payment_intent_data: { metadata: { order_id: opts.orderId } },
-      // 支払い後に領収書(請求書PDF)をメールで送る
-      invoice_creation: {
-        enabled: true,
-        invoice_data: {
-          description: opts.invoiceDescription,
-          footer: opts.invoiceFooter,
-          custom_fields: opts.invoiceCustomFields?.slice(0, 4),
-          metadata: { order_id: opts.orderId },
-        },
+  const automaticTax = process.env.STRIPE_AUTOMATIC_TAX === "1";
+  const params: Stripe.Checkout.SessionCreateParams & { integration_identifier?: string } = {
+    mode: "payment",
+    locale: "ja",
+    customer_email: opts.email,
+    client_reference_id: opts.orderId,
+    success_url: opts.successUrl,
+    cancel_url: opts.cancelUrl,
+    line_items: opts.lines.map((l) => ({
+      quantity: l.quantity,
+      price_data: { currency: "jpy", unit_amount: l.unitAmount, tax_behavior: "inclusive", product_data: { name: l.name } },
+    })),
+    automatic_tax: automaticTax ? { enabled: true } : undefined,
+    metadata: { order_id: opts.orderId },
+    payment_intent_data: { metadata: { order_id: opts.orderId } },
+    // 支払い後に領収書(請求書PDF)をメールで送る
+    invoice_creation: {
+      enabled: true,
+      invoice_data: {
+        description: opts.invoiceDescription,
+        footer: opts.invoiceFooter,
+        custom_fields: opts.invoiceCustomFields?.slice(0, 4),
+        metadata: { order_id: opts.orderId },
       },
     },
-    `checkout-${opts.orderId}`
-  );
+    integration_identifier: INTEGRATION_ID,
+  };
+  const session = await stripeClient().checkout.sessions.create(params, { idempotencyKey: `checkout-${opts.orderId}` });
+  if (!session.url) throw new Error("Stripe: 決済画面のURLがありません");
+  return { id: session.id, url: session.url };
 }
 
-// Webhook の署名(Stripe-Signature: t=…,v1=…)を確かめる。
-// 他人が「支払い済み」を装って企業を開設させることを防ぐ
-export function verifyStripeSignature(
-  payload: string,
-  header: string | null,
-  secret: string,
-  toleranceSec = 300,
-  nowSec: number = Math.floor(Date.now() / 1000)
-): boolean {
-  if (!header || !secret) return false;
-  const parts = header.split(",").map((p) => p.split("=") as [string, string]);
-  const t = parts.find(([k]) => k === "t")?.[1];
-  const sigs = parts.filter(([k]) => k === "v1").map(([, v]) => v);
-  if (!t || sigs.length === 0 || !/^\d+$/.test(t)) return false;
-  if (Math.abs(nowSec - Number(t)) > toleranceSec) return false;
-  const expected = createHmac("sha256", secret).update(`${t}.${payload}`, "utf8").digest("hex");
-  const e = Buffer.from(expected, "hex");
-  return sigs.some((s) => {
-    const b = Buffer.from(s, "hex");
-    return b.length === e.length && timingSafeEqual(b, e);
-  });
+// 領収書のページ(請求書・領収書のPDFをダウンロードできる Stripe のページ)のURLを、その都度取り出す。
+// 請求書IDが未記録の申込は、決済画面(Checkout Session)から請求書をたどる
+export async function receiptPageUrl(opts: { invoiceId?: string | null; sessionId?: string | null }): Promise<string | null> {
+  const stripe = stripeClient();
+  let invoiceId = opts.invoiceId ?? null;
+  if (!invoiceId && opts.sessionId) {
+    const s = await stripe.checkout.sessions.retrieve(opts.sessionId);
+    invoiceId = typeof s.invoice === "string" ? s.invoice : (s.invoice?.id ?? null);
+  }
+  if (!invoiceId) return null;
+  const inv = await stripe.invoices.retrieve(invoiceId);
+  return inv.hosted_invoice_url ?? null;
+}
+
+// Webhook の署名(Stripe-Signature)を確かめて、イベントを取り出す。
+// 他人が「支払い済み」を装って開設させることを防ぐ。署名が合わなければ null
+export function constructWebhookEvent(payload: string, header: string | null, secret: string): Stripe.Event | null {
+  if (!header || !secret) return null;
+  try {
+    return Stripe.webhooks.constructEvent(payload, header, secret);
+  } catch {
+    return null;
+  }
 }
