@@ -6,6 +6,8 @@ import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { formatJpDate, interviewOptionLabel, jstToday, priceAdd, UNIT_PRICE } from "@/lib/plan";
 
+export type PlanStatus = Status;
+
 type Status = {
   seats: number;
   used: number;
@@ -18,15 +20,26 @@ type Status = {
 
 // Web申込の企業向け: 受検期間・受検者数の確認、締切の変更、人数の追加購入。
 // 受検期間の登録がない企業(これまでの契約企業)では何も表示しない
-export function PlanStatusPanel({ companyId, fiscalYear, canEdit }: { companyId: string; fiscalYear: number; canEdit: boolean }) {
-  const [st, setSt] = useState<Status | null>(null);
-  const [end, setEnd] = useState("");
+export function PlanStatusPanel({
+  companyId,
+  fiscalYear,
+  canEdit,
+  preview,
+}: {
+  companyId: string;
+  fiscalYear: number;
+  canEdit: boolean;
+  preview?: Status; // 紹介用(デモ): データベースを読まずにこの内容を表示し、操作は保存しない
+}) {
+  const [st, setSt] = useState<Status | null>(preview ?? null);
+  const [end, setEnd] = useState(preview?.exam_end ?? "");
   const [add, setAdd] = useState("5");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [showNotice, setShowNotice] = useState(false);
 
   const load = async () => {
+    if (preview) return;
     const supabase = createClient();
     const { data } = await supabase.rpc("exam_plan_status", { p_company: companyId, p_year: fiscalYear });
     const row = (data as Status[] | null)?.[0] ?? null;
@@ -35,6 +48,7 @@ export function PlanStatusPanel({ companyId, fiscalYear, canEdit }: { companyId:
   };
 
   useEffect(() => {
+    if (preview) return;
     setSt(null);
     setMsg(null);
     load();
@@ -54,6 +68,10 @@ export function PlanStatusPanel({ companyId, fiscalYear, canEdit }: { companyId:
   const addOk = Number.isInteger(addN) && addN >= 1 && addN <= 10000;
 
   const saveEnd = async () => {
+    if (preview) {
+      setMsg({ ok: true, text: `(デモ)締切日を${formatJpDate(end)}に変更しました。実際の画面では保存されます。` });
+      return;
+    }
     setBusy(true);
     setMsg(null);
     const supabase = createClient();
@@ -67,6 +85,10 @@ export function PlanStatusPanel({ companyId, fiscalYear, canEdit }: { companyId:
   };
 
   const buySeats = async () => {
+    if (preview) {
+      setMsg({ ok: true, text: "(デモ)実際の画面では、ここからクレジットカードの決済画面に進みます。" });
+      return;
+    }
     setBusy(true);
     setMsg(null);
     try {
