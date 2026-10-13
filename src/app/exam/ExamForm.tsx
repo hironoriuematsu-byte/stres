@@ -114,6 +114,11 @@ export function ExamForm({
   };
   const fillExt = () => setExt((p) => p.map((v) => (v == null ? 1 + Math.floor(Math.random() * 4) : v)));
 
+  // 受検の画面の動作は待たせない(送れなくても受検には影響しない)
+  const notifySeatAlert = () => {
+    fetch("/api/plan/seat-alert", { method: "POST", keepalive: true }).catch(() => {});
+  };
+
   const submit = async () => {
     const scores = calcScores(ans);
 
@@ -180,10 +185,14 @@ export function ExamForm({
         setStep(7);
         return;
       }
+      // Web申込の人数枠に達して登録できなかった: 担当者へのお知らせを依頼する
+      if (error.hint === "exam_plan_full") notifySeatAlert();
       setSaveError(error.message);
       return;
     }
 
+    // Web申込の企業: 人数枠の8割・満員に達したら担当者にお知らせする(それ以外の企業では何もしない)
+    notifySeatAlert();
     setSubmittedAt(new Date().toISOString());
     setResult(scores);
     setStep(6);

@@ -90,6 +90,10 @@ drop policy if exists "members read own-company exam plan" on public.exam_plans;
 create policy "members read own-company exam plan" on public.exam_plans
   for select using (company_id = my_company() or my_role() = 'office');
 
+-- 人数枠の8割・満員のお知らせメールを送ったときの人数枠(人数を追加すると枠が変わり、再び送れる)
+alter table public.exam_plans add column if not exists alert80_seats int;
+alter table public.exam_plans add column if not exists alert_full_seats int;
+
 revoke all on table public.exam_plans from anon;
 revoke insert, update, delete on table public.exam_plans from authenticated;
 grant select on table public.exam_plans to authenticated;

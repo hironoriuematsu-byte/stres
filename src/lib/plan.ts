@@ -73,6 +73,14 @@ export function priceAdd(seats: number): { total: number; lines: PriceLine[] } {
   };
 }
 
+// 人数枠のお知らせ: 8割に達したら "near"、満員なら "full"
+export function seatAlertLevel(used: number, seats: number): "near" | "full" | null {
+  if (seats <= 0) return null;
+  if (used >= seats) return "full";
+  if (used >= Math.ceil(seats * 0.8)) return "near";
+  return null;
+}
+
 // 税込金額に含まれる消費税(10%)
 export const taxIncluded = (total: number): number => Math.floor((total * 10) / 110);
 

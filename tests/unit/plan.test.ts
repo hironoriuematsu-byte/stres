@@ -12,6 +12,7 @@ import {
   periodError,
   priceAdd,
   priceNew,
+  seatAlertLevel,
   seatsGranted,
   taxIncluded,
 } from "@/lib/plan";
@@ -41,6 +42,19 @@ describe("料金", () => {
   it("税込金額に含まれる消費税", () => {
     expect(taxIncluded(3300)).toBe(300);
     expect(taxIncluded(33000)).toBe(3000);
+  });
+});
+
+describe("人数枠のお知らせ", () => {
+  it("8割で near、満員で full", () => {
+    expect(seatAlertLevel(7, 10)).toBeNull();
+    expect(seatAlertLevel(8, 10)).toBe("near");
+    expect(seatAlertLevel(9, 10)).toBe("near");
+    expect(seatAlertLevel(10, 10)).toBe("full");
+    expect(seatAlertLevel(23, 30)).toBeNull();
+    expect(seatAlertLevel(24, 30)).toBe("near");
+    expect(seatAlertLevel(17, 21)).toBe("near"); // 21×0.8=16.8 → 17名で
+    expect(seatAlertLevel(0, 0)).toBeNull();
   });
 });
 
