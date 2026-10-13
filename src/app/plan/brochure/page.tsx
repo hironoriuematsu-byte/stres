@@ -57,7 +57,7 @@ export default async function BrochurePage() {
             <strong>結果はその場で本人へ</strong>: レーダーチャート・アドバイス付きの結果票を受検直後に表示します。
           </li>
           <li>
-            <strong>集団分析が標準</strong>: 部署別集計・仕事のストレス判定図・健康リスクの報告書(10名未満の集団は除外)。
+            <strong>集団分析が標準</strong>: 部署別集計・仕事のストレス判定図・健康リスクの報告書。受検者が10名以上になれば、受検直後から自動で集計されます(10名未満の集団は除外)。
           </li>
         </ul>
 
@@ -118,7 +118,7 @@ export default async function BrochurePage() {
             実施者: {IMPLEMENTER.full}({IMPLEMENTER.officeName})
             {IMPLEMENTER_PROFILE.career.length > 0 && <> ・ {IMPLEMENTER_PROFILE.career.join(" / ")}</>}
             <br />
-            運営: {SELLER.name}({SELLER.address})
+            運営: {SELLER.name}{IMPLEMENTER.officeName}({SELLER.address})
           </p>
         </div>
         <ul style={{ ...t, paddingLeft: 18 }}>

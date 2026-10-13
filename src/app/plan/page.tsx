@@ -221,7 +221,7 @@ export default async function PlanPage() {
           <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: brand.ink }}>実施者: {IMPLEMENTER.full}</div>
             <div style={{ fontSize: 13, color: "#44534F", lineHeight: 1.8 }}>
-              {IMPLEMENTER.officeName}({SELLER.name})/ {SELLER.address}
+              運営: {SELLER.name}{IMPLEMENTER.officeName} / {SELLER.address}
             </div>
             {IMPLEMENTER_PROFILE.career.length > 0 && (
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
