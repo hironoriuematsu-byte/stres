@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requestUser } from "@/lib/supabase/server";
 import { getFiscalYear } from "@/lib/fiscal";
 import { questionnaireLabel } from "@/lib/plan";
 import { adminClient } from "@/lib/plan-server";
@@ -9,10 +9,7 @@ export const runtime = "nodejs";
 // Web申込の企業の担当者(実施事務従事者)が、調査票(57項目版/80項目版)を変更する。
 // 同じ年度の中で調査票が混ざらないよう、今年度まだ誰も受検していないときだけ変更できる
 export async function POST(req: Request) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requestUser(req);
   if (!user) return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
 
   const admin = adminClient();

@@ -41,3 +41,17 @@ export function createClient(options?: { headers?: Record<string, string> }) {
     }
   );
 }
+
+// APIでログイン中の利用者を取り出す。Cookie で確認できないときは、ブラウザが送ったアクセストークン(Authorization: Bearer)で確認する
+export async function requestUser(req: Request) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) return user;
+  const auth = req.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+  if (!token) return null;
+  const { data } = await supabase.auth.getUser(token);
+  return data.user ?? null;
+}

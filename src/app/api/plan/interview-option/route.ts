@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requestUser } from "@/lib/supabase/server";
 import { interviewDoctorLabel, interviewOptionError } from "@/lib/plan";
 import { adminClient, officeEmails, sendMails } from "@/lib/plan-server";
 
@@ -8,10 +8,7 @@ export const runtime = "nodejs";
 // Web申込の企業の担当者(実施事務従事者)が、その年度の「産業医面接指導の担当」を変更する。
 // 変更後に届いた申出から、通知先が変わる(当事務所の医師を選んだときだけ実施者にも通知)
 export async function POST(req: Request) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requestUser(req);
   if (!user) return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
 
   const admin = adminClient();

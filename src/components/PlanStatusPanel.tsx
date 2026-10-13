@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { EmployeeNotice } from "@/components/EmployeeNotice";
 import { brand } from "@/lib/brand";
+import { postJson } from "@/lib/api-client";
 import { formatJpDate, INTERVIEW_OPTIONS, interviewOptionLabel, QUESTIONNAIRE_OPTIONS, questionnaireLabel, jstDate, jstToday, priceAdd, pricingFor } from "@/lib/plan";
 import { usePlanPrices } from "@/components/usePlanPrices";
 
@@ -144,13 +145,8 @@ export function PlanStatusPanel({
     setBusy(true);
     setIvMsg(null);
     try {
-      const res = await fetch("/api/plan/interview-option", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fiscalYear, option: iv }),
-      });
-      const json = await res.json().catch(() => ({ error: `通信エラー(${res.status})。時間をおいてもう一度お試しください。` }));
-      if (!res.ok) throw new Error(json.error ?? "変更できませんでした");
+      const { ok: resOk, json } = await postJson<{ url?: string }>("/api/plan/interview-option", { fiscalYear, option: iv });
+      if (!resOk) throw new Error(json.error ?? "変更できませんでした");
       // 画面の表示をすぐに切り替える(そのあと最新の状態を読み直す)
       setSt((p) => (p ? { ...p, interview_option: iv } : p));
       setIvMsg({ ok: true, text: `「${interviewOptionLabel(iv)}」に変更しました。これから届く申出に適用されます。` });
@@ -172,13 +168,8 @@ export function PlanStatusPanel({
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/plan/questionnaire", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionnaire: next }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "変更できませんでした");
+      const { ok: resOk, json } = await postJson<{ url?: string }>("/api/plan/questionnaire", { questionnaire: next });
+      if (!resOk) throw new Error(json.error ?? "変更できませんでした");
       setQ(next);
       setQOpen(false);
       setMsg({ ok: true, text: `調査票を${questionnaireLabel(next)}に変更しました。` });
@@ -204,13 +195,8 @@ export function PlanStatusPanel({
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/plan/add-seats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seats: addN, fiscalYear }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.url) throw new Error(json.error ?? "決済画面を開けませんでした");
+      const { ok: resOk, json } = await postJson<{ url?: string }>("/api/plan/add-seats", { seats: addN, fiscalYear });
+      if (!resOk || !json.url) throw new Error(json.error ?? "決済画面を開けませんでした");
       window.location.href = json.url;
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : String(e) });

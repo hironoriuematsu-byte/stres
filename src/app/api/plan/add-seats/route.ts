@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requestUser } from "@/lib/supabase/server";
 import { MAX_SEATS, priceAdd } from "@/lib/plan";
 import { loadPricing } from "@/lib/plan-prices";
 import { adminClient, invoiceFields } from "@/lib/plan-server";
@@ -13,10 +13,7 @@ export async function POST(req: Request) {
   if (!stripeConfigured()) {
     return NextResponse.json({ error: "現在、オンラインでの追加購入は準備中です。実施者にご連絡ください。" }, { status: 503 });
   }
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requestUser(req);
   if (!user) return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
 
   const admin = adminClient();

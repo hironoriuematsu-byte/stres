@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
+import { postJson } from "@/lib/api-client";
 import { usePlanPrices } from "@/components/usePlanPrices";
 import {
   addDays,
@@ -118,13 +119,8 @@ export function PlanOrderPanel({
     if (!f.interviewOption) return setErr("医師面接指導の担当を選んでください");
     setBusy(true);
     try {
-      const res = await fetch("/api/plan/order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(f),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.url) throw new Error(json.error ?? "お申込みを受け付けられませんでした");
+      const { ok: resOk, json } = await postJson<{ url?: string }>("/api/plan/order", f);
+      if (!resOk || !json.url) throw new Error(json.error ?? "お申込みを受け付けられませんでした");
       window.location.href = json.url;
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
