@@ -74,7 +74,8 @@ export async function POST(req: Request) {
     .eq("company_id", campaign.company_id)
     .eq("fiscal_year", campaign.fiscal_year)
     .maybeSingle();
-  if (plan && jstToday() > plan.exam_end) {
+  const { data: co } = await admin.from("companies").select("web_signup").eq("id", campaign.company_id).maybeSingle();
+  if (plan && co?.web_signup && jstToday() > plan.exam_end) {
     return NextResponse.json(
       { error: "受検期間は終了しました。受検が必要な場合は、会社のストレスチェック担当者にご連絡ください。" },
       { status: 400 }

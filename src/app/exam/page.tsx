@@ -114,7 +114,9 @@ async function examPlanBlock(
     supabase.from("companies").select("web_signup").eq("id", companyId).maybeSingle(),
   ]);
   const web = Boolean((company as { web_signup?: boolean } | null)?.web_signup);
-  if (error || ((!plans || plans.length === 0) && !web)) return null; // これまでの契約企業(または SQL 0025 未実行)
+  // 選任・顧問契約の企業(Web申込から切り替えた企業を含む)は制限しない。SQL 0025 未実行のときも制限しない
+  if (error || !web) return null;
+  void plans;
   const { data } = await supabase.rpc("exam_plan_status", { p_company: companyId, p_year: fiscalYear });
   const row = (data as PlanRow[] | null)?.[0];
   const today = jstToday();

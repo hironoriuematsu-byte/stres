@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
   const [{ data: plan }, { data: company }, { data: firstOrder }] = await Promise.all([
     admin.from("exam_plans").select("exam_end, max_end").eq("company_id", me.company_id).eq("fiscal_year", fiscalYear).maybeSingle(),
-    admin.from("companies").select("name").eq("id", me.company_id).single(),
+    admin.from("companies").select("name, web_signup").eq("id", me.company_id).single(),
     admin
       .from("plan_orders")
       .select("office_name, address, contact_phone, workers")
@@ -52,6 +52,9 @@ export async function POST(req: Request) {
       .maybeSingle(),
   ]);
   if (!plan) return NextResponse.json({ error: "この年度のWeb申込が見つかりません" }, { status: 404 });
+  if (!company?.web_signup) {
+    return NextResponse.json({ error: "顧問契約の企業は人数の上限がないため、追加は不要です" }, { status: 400 });
+  }
 
   const price = priceAdd(seats);
   const email = user.email ?? "";

@@ -46,8 +46,12 @@ export function PlanStatusPanel({
   const load = async () => {
     if (preview) return;
     const supabase = createClient();
-    const { data } = await supabase.rpc("exam_plan_status", { p_company: companyId, p_year: fiscalYear });
-    const row = (data as Status[] | null)?.[0] ?? null;
+    const [{ data }, { data: co }] = await Promise.all([
+      supabase.rpc("exam_plan_status", { p_company: companyId, p_year: fiscalYear }),
+      supabase.from("companies").select("web_signup").eq("id", companyId).maybeSingle(),
+    ]);
+    // 顧問契約に切り替えた企業では、受検期間・人数枠の欄を出さない(制限なし)
+    const row = (co as { web_signup?: boolean } | null)?.web_signup ? ((data as Status[] | null)?.[0] ?? null) : null;
     setSt(row);
     if (row) setEnd(row.exam_end);
     // お支払いの記録(領収書のダウンロード用)

@@ -27,6 +27,8 @@ export async function POST(req: Request) {
   const companyId = me.company_id as string;
   const fiscalYear = getFiscalYear();
 
+  const { data: co } = await admin.from("companies").select("web_signup").eq("id", companyId).maybeSingle();
+  if (!co?.web_signup) return NextResponse.json({ skipped: "not web" }); // 顧問契約の企業は人数枠なし
   const { data: plan, error: planErr } = await admin
     .from("exam_plans")
     .select("seats, exam_start, exam_end, alert80_seats, alert_full_seats")

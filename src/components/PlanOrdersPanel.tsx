@@ -64,7 +64,7 @@ export function PlanOrdersPanel() {
     const [o, p, c] = await Promise.all([
       supabase.from("plan_orders").select("*").order("created_at", { ascending: false }).limit(300),
       supabase.from("exam_plans").select("company_id, fiscal_year, seats, exam_start, exam_end, max_end"),
-      supabase.from("companies").select("id, name, code").order("name"),
+      supabase.from("companies").select("id, name, code, web_signup").order("name"),
     ]);
     setCompanies((c.data as Company[]) ?? []);
     setOrders((o.data as Order[]) ?? []);
@@ -91,6 +91,22 @@ export function PlanOrdersPanel() {
       setEdit(null);
       load();
     }
+  };
+
+  const isWeb = (id: string | null) => Boolean(id && (companies.find((c) => c.id === id) as (Company & { web_signup?: boolean }) | undefined)?.web_signup);
+  const setWeb = async (id: string, name: string, web: boolean) => {
+    if (
+      !window.confirm(
+        web
+          ? `「${name}」をWeb申込(カード決済・受検期間と人数枠あり)に戻します。よろしいですか？`
+          : `「${name}」を顧問契約に切り替えます。以降は年度の申込(支払い)が不要になり、受検期間・人数枠の制限なく無料で使えます。\n担当者・従業員・過去の結果・支払いの記録はそのまま残ります。よろしいですか？`
+      )
+    )
+      return;
+    const supabase = createClient();
+    const { error } = await supabase.rpc("office_set_web_signup", { p_company: id, p_web: web });
+    setMsg(error ? `切り替えできませんでした: ${error.message}` : web ? `「${name}」をWeb申込に戻しました。` : `「${name}」を顧問契約(無料・制限なし)に切り替えました。`);
+    if (!error) load();
   };
 
   const runMerge = async () => {
@@ -178,6 +194,26 @@ export function PlanOrdersPanel() {
                     <strong>{o.company_name}</strong>
                     {o.office_name && <div>{o.office_name}</div>}
                     {o.company_id && codes[o.company_id] && <div style={{ color: "#8A9694" }}>企業コード {codes[o.company_id]}</div>}
+                    {o.kind !== "add_seats" && o.company_id && codes[o.company_id] && (
+                      isWeb(o.company_id) ? (
+                        <button
+                          onClick={() => setWeb(o.company_id!, o.company_name, false)}
+                          style={{ display: "block", background: "none", border: "none", padding: 0, color: brand.tealDark, fontWeight: 700, cursor: "pointer", fontSize: 12 }}
+                        >
+                          顧問契約に切り替え
+                        </button>
+                      ) : (
+                        <div style={{ fontSize: 12 }}>
+                          <span style={{ color: brand.tealDark, fontWeight: 700 }}>顧問契約(無料)</span>{" "}
+                          <button
+                            onClick={() => setWeb(o.company_id!, o.company_name, true)}
+                            style={{ background: "none", border: "none", padding: 0, color: "#8A9694", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}
+                          >
+                            Web申込に戻す
+                          </button>
+                        </div>
+                      )
+                    )}
                     {o.kind === "new" && o.company_id && codes[o.company_id] && (
                       <button
                         onClick={() =>

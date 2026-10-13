@@ -202,15 +202,16 @@ declare
   v_used  int;
   v_today date := jst_today();
 begin
+  -- 制限するのは、Web申込(カード決済)で利用中の企業だけ。
+  -- 選任・顧問契約の企業、Web申込から顧問契約に切り替えた企業(web_signup = false)は制限しない
+  if not exists (select 1 from companies c where c.id = new.company_id and c.web_signup) then
+    return new;
+  end if;
   select * into v_plan from exam_plans where company_id = new.company_id and fiscal_year = new.fiscal_year;
   if not found then
-    -- Web申込の企業で、この年度の申込がない(申込前・来年度の申込で今年度のうちに受検しようとした など)
-    if exists (select 1 from companies c where c.id = new.company_id and c.web_signup)
-       or exists (select 1 from exam_plans p where p.company_id = new.company_id) then
-      raise exception '現在は受検期間ではありません。受検期間は会社の担当者にご確認ください'
-        using errcode = 'P0001', hint = 'exam_plan_none';
-    end if;
-    return new; -- これまでの契約企業(受検期間の登録なし)は制限しない
+    -- この年度の申込がない(申込前・来年度の申込で今年度のうちに受検しようとした など)
+    raise exception '現在は受検期間ではありません。受検期間は会社の担当者にご確認ください'
+      using errcode = 'P0001', hint = 'exam_plan_none';
   end if;
   if v_today < v_plan.exam_start then
     raise exception '受検期間は % からです。期間になってから受検してください', v_plan.exam_start
@@ -308,6 +309,30 @@ create table if not exists public.plan_reminders (
 );
 alter table public.plan_reminders enable row level security;
 revoke all on table public.plan_reminders from anon, authenticated;
+
+-- ------------------------------------------------------------
+-- 5-2. 顧問契約への切り替え(実施者のみ)
+--    Web申込の企業が顧問契約(選任)になったら web_signup を外す。以降は受検期間・人数枠の制限も
+--    年度の申込(支払い)も無く、これまでの契約企業と同じく無料で使える。
+--    企業・担当者・従業員・過去の結果・支払いの記録はそのまま残る。契約が終わったら Web申込に戻せる
+-- ------------------------------------------------------------
+create or replace function public.office_set_web_signup(p_company uuid, p_web boolean)
+returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(my_role(), '') <> 'office' then
+    raise exception '契約の切り替えができるのは実施者のみです';
+  end if;
+  update companies set web_signup = p_web where id = p_company;
+  if not found then
+    raise exception '企業が見つかりません';
+  end if;
+  insert into access_logs (user_id, role, action, target, company_id)
+  values (auth.uid(), 'office', 'set_web_signup',
+          case when p_web then 'Web申込(カード決済)に切り替え' else '顧問契約(無料・制限なし)に切り替え' end, p_company);
+end $$;
+
+grant execute on function public.office_set_web_signup(uuid, boolean) to authenticated;
 
 -- ------------------------------------------------------------
 -- 6. 企業の統合(リカバリ用・実施者のみ)
