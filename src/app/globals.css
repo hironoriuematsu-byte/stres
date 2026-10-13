@@ -173,3 +173,9 @@ a {
     print-color-adjust: exact !important;
   }
 }
+
+/* 宣伝ページの画面サンプル: スマホ幅では1列に並べる */
+@media (max-width: 640px) {
+  .plan-samples { grid-template-columns: 1fr !important; }
+  .plan-samples figure:first-child img { max-width: 260px; margin: 0 auto; display: block; }
+}

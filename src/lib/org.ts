@@ -15,6 +15,13 @@ export const IMPLEMENTER = {
   corporateName: "Mestate LLC",
 } as const;
 
+// 宣伝ページ・社内検討用資料に載せる実施者の紹介。経歴・資格は1行ずつ。空の場合は表示しない
+// (photo: public/ に置いた顔写真のパス。例 "/plan/doctor.jpg")
+export const IMPLEMENTER_PROFILE: { career: string[]; photo: string } = {
+  career: [],
+  photo: "",
+};
+
 // Web申込(クレジットカード決済)の販売事業者。特定商取引法に基づく表記・領収書で使う
 export const SELLER = {
   name: "メステート合同会社",

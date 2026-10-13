@@ -36,6 +36,10 @@ export function upcomingPriceChange(rows: PlanPriceRow[] | null | undefined, cur
 }
 export const MAX_SEATS = 10000; // 人数の追加購入の上限
 export const WEB_MAX_SEATS = 300; // Web申込(カード決済)は300名(99,000円)まで。超える場合は個別のお見積り(割引あり)
+// 導入前のご相談(オンライン説明)の申込メール
+export const CONSULT_MAILTO = `mailto:support@mestate.jp?subject=${encodeURIComponent("ストレスチェックWeb オンライン説明(15分)の希望")}&body=${encodeURIComponent("会社名:\nご担当者名:\n事業場の労働者数:\nご希望の日時(候補を2〜3つ):\nご質問など:\n")}`;
+// 宣伝ページ・社内検討用資料に載せる料金の例(受検予定人数)
+export const PRICE_EXAMPLES = [5, 10, 30, 50, 100, 300];
 export const QUOTE_MAILTO = `mailto:support@mestate.jp?subject=${encodeURIComponent("ストレスチェック 300名を超える場合のお見積り")}`;
 // 産業医面接指導(うえまつ産業医事務所が担当する場合。1回・オンライン可・意見書込み・税込)
 export const INTERVIEW_FEE = 22000;
