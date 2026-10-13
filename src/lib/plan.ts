@@ -55,7 +55,7 @@ export const INTERVIEW_OPTIONS: { value: InterviewOption; label: string; desc: s
   {
     value: "own",
     label: "自社で医師を探して依頼する",
-    desc: "申出の通知は会社の担当者だけに届きます。自社の産業医や、地域産業保健センター(50人未満の事業場は無料)などの医師にご依頼ください。",
+    desc: "申出の通知は会社の担当者だけに届きます。自社の産業医など、会社で手配した医師に面接指導をご依頼ください。",
   },
   {
     value: "mestate",
