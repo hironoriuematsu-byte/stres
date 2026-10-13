@@ -153,25 +153,7 @@ export function periodError(start: string, end: string, today: string = jstToday
   return null;
 }
 
-// ---- 申込フォームの入力 ----
-
-export type ApplyInput = {
-  companyName: string;
-  officeName: string;
-  address: string;
-  contactName: string;
-  contactEmail: string;
-  contactPhone: string;
-  workers: number; // 事業場の労働者数
-  seats: number; // 受検予定人数
-  questionnaire: "57" | "80";
-  examStart: string;
-  examEnd: string;
-  interviewOption: InterviewOption;
-  agreeTerms: boolean; // 利用規約(業務委託の内容を含む)への同意
-  agreeProcedure: boolean; // 実施方法の決定・周知を事業者が行うことの確認
-  firstTime: boolean; // このサービスの利用が初めてであること(2年目以降は継続申込)
-};
+// ---- 入力のそろえ方 ----
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.normalize("NFKC").trim().slice(0, max) : "");
 const int = (v: unknown) => {
@@ -179,40 +161,93 @@ const int = (v: unknown) => {
   return Number.isInteger(n) ? n : NaN;
 };
 
-export function parseApplyInput(
-  raw: Record<string, unknown>,
-  today: string = jstToday()
-): { ok: true; value: ApplyInput } | { ok: false; error: string } {
-  const v: ApplyInput = {
+// 登録番号(インボイス。T+13桁)または法人番号(13桁)を、比較用の13桁にそろえる。
+// 法人の登録番号は「T + 法人番号」なので、どちらで入力されても同じ会社として見分けられる。
+// 空なら null、形式が違えば "invalid"
+export function normalizeBizId(raw: unknown): string | null | "invalid" {
+  const s = typeof raw === "string" ? raw.normalize("NFKC").replace(/[\s\-ー－]/g, "").toUpperCase() : "";
+  if (!s) return null;
+  const m = /^T?(\d{13})$/.exec(s);
+  return m ? m[1] : "invalid";
+}
+
+// 事業場名を比較用にそろえる(空白・全角半角・大文字小文字の違いを無視)
+export const officeKey = (name: string): string => name.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
+
+// ---- 会社の登録(宣伝ページから。支払いはログイン後の画面で行う) ----
+
+export type SignupInput = {
+  companyName: string;
+  bizId: string | null; // 13桁(登録番号のTは除く)。どちらも無い場合は null
+  officeName: string;
+  address: string;
+  workers: number;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  password: string;
+};
+
+export function parseSignupInput(raw: Record<string, unknown>): { ok: true; value: SignupInput } | { ok: false; error: string } {
+  const biz = normalizeBizId(raw.bizId);
+  const v: SignupInput = {
     companyName: str(raw.companyName, 100),
+    bizId: biz === "invalid" ? null : biz,
     officeName: str(raw.officeName, 100),
     address: str(raw.address, 200),
+    workers: int(raw.workers),
     contactName: str(raw.contactName, 60),
     contactEmail: str(raw.contactEmail, 200).toLowerCase(),
     contactPhone: str(raw.contactPhone, 30),
-    workers: int(raw.workers),
-    seats: int(raw.seats),
-    questionnaire: raw.questionnaire === "80" ? "80" : "57",
-    examStart: str(raw.examStart, 10),
-    examEnd: str(raw.examEnd, 10),
-    interviewOption: (["own", "mestate", "sanpo"] as const).find((o) => o === raw.interviewOption) as InterviewOption,
-    agreeTerms: raw.agreeTerms === true,
-    agreeProcedure: raw.agreeProcedure === true,
-    firstTime: raw.firstTime === true,
+    password: typeof raw.password === "string" ? raw.password : "",
   };
   if (!v.companyName) return { ok: false, error: "会社名を入力してください" };
+  if (biz === "invalid") {
+    return { ok: false, error: "登録番号(インボイス)は「T」と数字13桁、法人番号は数字13桁で入力してください" };
+  }
+  if (!biz && raw.noBizId !== true) {
+    return {
+      ok: false,
+      error: "登録番号(インボイス)または法人番号を入力してください(どちらもお持ちでない場合は「どちらも持っていない」にチェック)",
+    };
+  }
+  if (!v.officeName) return { ok: false, error: "事業場名を入力してください(事業場が1つの場合は「本社」など)" };
   if (!v.address) return { ok: false, error: "事業場の所在地を入力してください" };
+  if (!(v.workers >= 1 && v.workers <= 100000)) return { ok: false, error: "事業場の労働者数を入力してください" };
   if (!v.contactName) return { ok: false, error: "ご担当者の氏名を入力してください" };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.contactEmail)) return { ok: false, error: "メールアドレスを正しく入力してください" };
   if (!/^[0-9+\-() ]{10,}$/.test(v.contactPhone)) return { ok: false, error: "電話番号を正しく入力してください" };
+  if (v.password.length < 8) return { ok: false, error: "パスワードは8文字以上で入力してください" };
+  if (raw.agreeTerms !== true) return { ok: false, error: "利用規約と個人情報の取扱いへの同意が必要です" };
+  return { ok: true, value: v };
+}
+
+// ---- 年度の申込(ログイン後の画面から。初年度も2年目以降も同じ) ----
+
+export type OrderInput = {
+  workers: number;
+  seats: number;
+  examStart: string;
+  examEnd: string;
+  interviewOption: InterviewOption;
+};
+
+export function parseOrderInput(
+  raw: Record<string, unknown>,
+  today: string = jstToday()
+): { ok: true; value: OrderInput } | { ok: false; error: string } {
+  const v = {
+    workers: int(raw.workers),
+    seats: int(raw.seats),
+    examStart: str(raw.examStart, 10),
+    examEnd: str(raw.examEnd, 10),
+    interviewOption: (["own", "mestate", "sanpo"] as const).find((o) => o === raw.interviewOption) as InterviewOption,
+  };
   if (!(v.workers >= 1 && v.workers <= 100000)) return { ok: false, error: "事業場の労働者数を入力してください" };
   if (!(v.seats >= 1)) return { ok: false, error: "受検予定人数を入力してください" };
   // 桁の打ち間違い(30名を300名など)を防ぐ: 受検するのは事業場で働く方なので、労働者数を超えることはない
   if (v.seats > v.workers) {
-    return {
-      ok: false,
-      error: `受検予定人数(${v.seats}名)が事業場の労働者数(${v.workers}名)を超えています。人数をご確認ください`,
-    };
+    return { ok: false, error: `受検予定人数(${v.seats}名)が事業場の労働者数(${v.workers}名)を超えています。人数をご確認ください` };
   }
   if (v.seats > WEB_MAX_SEATS) {
     return {
@@ -229,14 +264,8 @@ export function parseApplyInput(
       error: "地域産業保健センターは50人未満の事業場が対象です。50人以上の事業場は、自社の産業医または当事務所をお選びください",
     };
   }
-  if (!v.firstTime) {
-    return {
-      ok: false,
-      error: "2年目以降のお申込みは、ご担当者さまのログイン後の画面の「次の年度のお申込み」から行ってください(/plan/continue)",
-    };
-  }
-  if (!v.agreeTerms) return { ok: false, error: "利用規約への同意が必要です" };
-  if (!v.agreeProcedure) return { ok: false, error: "実施方法の決定と従業員への周知についてご確認ください" };
+  if (raw.agreeProcedure !== true) return { ok: false, error: "実施方法の決定と従業員への周知についてご確認ください" };
+  if (raw.agreeTerms !== true) return { ok: false, error: "利用規約への同意が必要です" };
   return { ok: true, value: v };
 }
 
@@ -290,7 +319,7 @@ export function salesRows(orders: SalesOrder[], from = "", to = ""): (string | n
       const tax = taxIncluded(o.amount);
       return [
         day,
-        o.kind === "new" ? "新規申込" : o.kind === "renew" ? "継続申込" : "人数追加",
+        o.kind === "new" ? "初年度" : o.kind === "renew" ? "継続" : "人数追加",
         o.company_name,
         o.office_name ?? "",
         o.contact_name,

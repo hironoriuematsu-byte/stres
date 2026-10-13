@@ -46,7 +46,7 @@ export function UserAdminPanel({
   defaultCompanyId,
 }: {
   companies?: Company[];
-  fixedCompany?: { code: string; name: string };
+  fixedCompany?: { code: string; name: string; webSignup?: boolean }; // webSignup: Web申込の企業(担当者も追加できる)
   defaultCompanyId?: string; // 画面上部で企業を選んでいる場合は、それを初期値にする
 }) {
   const jimuMode = Boolean(fixedCompany);
@@ -247,7 +247,7 @@ export function UserAdminPanel({
       <p style={{ fontSize: 13, color: "#5B6B6A", margin: "0 0 14px", lineHeight: 1.7 }}>
         招待メールが本人に送信され、本人がパスワードを設定するとログインできるようになります。
         氏名はここで入力できます(空欄の場合は本人が初回のパスワード設定時に入力します)。社員番号・部署は本人が受検時に入力します。
-        {jimuMode && "招待できるのは自社の従業員のみです。"}
+        {jimuMode && "招待できるのは自社の方のみです。"}
       </p>
 
       <form onSubmit={submitSingle} style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
@@ -260,6 +260,20 @@ export function UserAdminPanel({
           <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={input} />
           <EmailTypoHint email={form.email} onFix={(v) => setForm({ ...form, email: v })} />
         </div>
+        {jimuMode && fixedCompany?.webSignup && (
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: brand.ink }}>招待する方</label>
+            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as InvitePayload["role"] })} style={input}>
+              <option value="employee">従業員(受検する方)</option>
+              <option value="jimu">ストレスチェックの担当者(実施事務従事者)</option>
+            </select>
+            {form.role === "jimu" && (
+              <p style={{ fontSize: 11.5, color: "#8A6B2E", margin: "4px 0 0", lineHeight: 1.6 }}>
+                担当者は個人の結果を扱うため、人事権(解雇・昇進・異動の決定権)のない方に限ります。担当者の交代や、複数人での担当に使えます。
+              </p>
+            )}
+          </div>
+        )}
         {!jimuMode && (
           <>
             <div>

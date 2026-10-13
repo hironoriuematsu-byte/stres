@@ -72,10 +72,13 @@ export async function POST(req: Request) {
 
   for (const inv of invites) {
     try {
-      // jimuは従業員ロールのみ招待可(jimu/officeの発行は実施者に限定)
+      // jimuは従業員ロールのみ招待可(jimu/officeの発行は実施者に限定)。
+      // ただしWeb申込の企業では、担当者の交代・複数化に備えて担当者(jimu)も招待できる(下で企業を確認)
       const role =
         callerRole === "jimu"
-          ? "employee"
+          ? inv.role === "jimu"
+            ? "jimu"
+            : "employee"
           : inv.role && ALLOWED_ROLES.has(inv.role)
             ? inv.role
             : "employee";
@@ -88,7 +91,7 @@ export async function POST(req: Request) {
 
       const { data: company } = await admin
         .from("companies")
-        .select("id, hm_enabled")
+        .select("id, hm_enabled, web_signup")
         .eq("code", inv.company_code)
         .single();
       if (!company) throw new Error(`企業コード「${inv.company_code}」が見つかりません`);
@@ -103,6 +106,9 @@ export async function POST(req: Request) {
       // jimuは自社以外の企業へ招待できない
       if (callerRole === "jimu" && company.id !== callerProfile?.company_id) {
         throw new Error("実施事務従事者は自社の従業員のみ招待できます");
+      }
+      if (callerRole === "jimu" && role === "jimu" && !company.web_signup) {
+        throw new Error("担当者(実施事務従事者)の追加は実施者にご依頼ください");
       }
 
       // 氏名の指定があれば登録し、無ければ「未設定」にして本人が初回のパスワード設定時に入力する

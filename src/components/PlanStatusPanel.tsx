@@ -71,7 +71,7 @@ export function PlanStatusPanel({
     if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("plan") === "added") {
       setMsg({ ok: true, text: "お支払いを受け付けました。人数枠への反映まで1分ほどかかることがあります。" });
     }
-    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("plan") === "renewed") {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("plan") === "ordered") {
       setMsg({ ok: true, text: "次の年度のお申込みを受け付けました。受検期間の反映まで1分ほどかかることがあります。" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

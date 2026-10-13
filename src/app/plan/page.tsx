@@ -30,7 +30,7 @@ export default function PlanPage() {
         </p>
         <p style={p}>
           産業医を選任していない事業場、産業医と顧問契約のない企業さま向けのプランです。
-          受検予定人数と受検期間を入れてクレジットカードでお支払いいただくと、すぐに受検の準備が整います。
+          会社を登録(無料)したあと、受検予定人数と受検期間を入れてクレジットカードでお支払いいただくと、すぐに受検の準備が整います。2年目以降はログインして同じ画面から申し込めます。
           少人数の事業場でも、人数分だけのご負担で実施できます。
         </p>
         <p style={{ ...p, fontSize: 13, background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 10, padding: "10px 12px", marginTop: 12 }}>
@@ -38,15 +38,15 @@ export default function PlanPage() {
           実施をご希望の際は、いつもの窓口までご連絡ください。
         </p>
         <p style={{ ...p, fontSize: 13, background: "#FBF3E3", border: "1px solid #EFD9A8", borderRadius: 10, padding: "10px 12px" }}>
-          <strong>昨年度以前にこのサービスをご利用の企業さまへ：</strong>2年目以降は新規のお申込みではなく、
-          <Link href="/plan/continue" style={{ color: brand.tealDark, fontWeight: 700 }}>
-            継続利用のお申込み
+          <strong>すでにご登録の企業さま(2年目以降)：</strong>
+          <Link href="/login?next=/jimu" style={{ color: brand.tealDark, fontWeight: 700 }}>
+            ログイン
           </Link>
-          からお進みください(従業員の皆さまの登録し直しは不要です)。
+          して、ログイン後の画面からお申し込みください(会社の登録は最初の1回だけです)。
         </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
-          <Link href="/plan/apply" style={{ background: brand.orange, color: "#fff", borderRadius: 10, padding: "11px 22px", fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
-            申し込む
+          <Link href="/plan/signup" style={{ background: brand.orange, color: "#fff", borderRadius: 10, padding: "11px 22px", fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
+            会社を登録して申し込む
           </Link>
           <Link href="/demo" style={{ background: "#fff", color: brand.tealDark, border: `1px solid ${brand.teal}`, borderRadius: 10, padding: "10px 22px", fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
             デモを体験する
@@ -220,10 +220,10 @@ export default function PlanPage() {
       <Card>
         <h2 style={h2}>ご利用の流れ</h2>
         <ol style={{ margin: 0, paddingLeft: 20 }}>
-          <li style={li}>このページから、受検予定人数・受検期間を入力してクレジットカードでお支払い</li>
-          <li style={li}>ご担当者さまに招待メールが届くので、パスワードを設定してログイン</li>
+          <li style={li}>会社(事業場)とご担当者さまを登録(無料)。確認メールのリンクからログイン</li>
+          <li style={li}>ログイン後の画面で、受検予定人数・受検期間を入れてクレジットカードでお支払い</li>
           <li style={li}>受検用のURL・QRコードを従業員の皆さまにお知らせ</li>
-          <li style={li}>従業員の皆さまが受検（結果はその場で本人に表示されます）</li>
+          <li style={li}>従業員の皆さまが受検(結果はその場で本人に表示されます)</li>
           <li style={li}>締切後、集団分析報告書をご覧いただけます</li>
         </ol>
       </Card>
@@ -249,7 +249,7 @@ export default function PlanPage() {
           ["受検しない従業員の分も払う必要がありますか？", "お申込み時の受検予定人数分のお支払いです。足りなくなった場合は1名から追加でき、余った分の返金はありません。少なめにお申込みいただき、必要に応じて追加する方法もおすすめです。"],
           ["50人以上の事業場でも申し込めますか？", "はい。産業医を選任している事業場は、自社の産業医に面接指導を担当いただくこともできます。なお、50人以上の事業場には産業医の選任義務があります。選任がお済みでない場合はご相談ください。"],
           [`${WEB_MAX_SEATS}名を超える場合は？`, `${WEB_MAX_SEATS}名を超える場合は個別にお見積りします（割引があります）。複数の事業場をまとめたご依頼もご相談ください。`],
-          ["翌年度も続けて使えますか？", "はい。2年目以降は、ご担当者さまのログイン後の画面から次の年度をお申し込みいただけます。従業員の皆さまのアカウントと過去の結果はそのまま引き継がれ、前年度との比較もできます。"],
+          ["翌年度も続けて使えますか？", "はい。2年目以降は、ログイン後の画面から同じ操作でお申し込みいただけます(会社の登録は最初の1回だけ)。更新の時期が近づくと、ご担当者さまにご案内メールをお送りします。従業員の皆さまのアカウントと過去の結果はそのまま引き継がれ、前年度との比較もできます。"],
           ["請求書払いはできますか？", "Web申込はクレジットカードのみです。請求書払いをご希望の場合はお問い合わせください。"],
         ].map(([q, a]) => (
           <div key={q} style={{ marginBottom: 10 }}>
@@ -260,8 +260,8 @@ export default function PlanPage() {
       </Card>
 
       <div style={{ textAlign: "center", display: "grid", gap: 10, justifyItems: "center" }}>
-        <Link href="/plan/apply" style={{ background: brand.orange, color: "#fff", borderRadius: 10, padding: "12px 28px", fontWeight: 700, fontSize: 16, textDecoration: "none" }}>
-          申し込む
+        <Link href="/plan/signup" style={{ background: brand.orange, color: "#fff", borderRadius: 10, padding: "12px 28px", fontWeight: 700, fontSize: 16, textDecoration: "none" }}>
+          会社を登録して申し込む
         </Link>
         <div style={{ fontSize: 12, color: "#5B6B6A" }}>
           <Link href="/plan/terms" style={{ color: brand.tealDark }}>利用規約</Link>

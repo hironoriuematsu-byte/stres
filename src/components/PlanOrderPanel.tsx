@@ -24,10 +24,20 @@ import {
 
 type PlanRow = { fiscal_year: number; seats: number; exam_end: string; interview_option: string | null; workers: number | null };
 
-// Web申込の企業の継続申込(次年度以降)。今年度の申込がない、または今年度の受検期間が終わったときに表示する。
+// Web申込の企業の「年度の申込」(初年度も2年目以降も同じ)。
+// 今年度の申込がない、または今年度の受検期間が終わったときに表示する。
 // 同じ企業に新しい年度を追加するので、従業員のアカウントと過去の結果がそのまま引き継がれる
-export function PlanRenewPanel({ companyId, currentYear }: { companyId: string; currentYear: number }) {
+export function PlanOrderPanel({
+  companyId,
+  currentYear,
+  preview,
+}: {
+  companyId: string;
+  currentYear: number;
+  preview?: { workers: number }; // 紹介用(デモ): データベースを読まず、初年度の申込画面を表示する(支払いには進まない)
+}) {
   const [plans, setPlans] = useState<PlanRow[] | null>(null);
+  const [web, setWeb] = useState(false);
   const today = jstToday();
   const firstStart = addDays(today, 1);
   const [f, setF] = useState({
@@ -44,28 +54,39 @@ export function PlanRenewPanel({ companyId, currentYear }: { companyId: string; 
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
+    if (preview) {
+      setPlans([]);
+      setWeb(true);
+      setF((p) => ({ ...p, workers: String(preview.workers), seats: String(preview.workers) }));
+      setOpen(true);
+      return;
+    }
     const supabase = createClient();
-    supabase
-      .from("exam_plans")
-      .select("fiscal_year, seats, exam_end, interview_option, workers")
-      .eq("company_id", companyId)
-      .order("fiscal_year", { ascending: false })
-      .then(({ data, error }) => {
-        const rows = error ? [] : ((data as PlanRow[]) ?? []);
-        setPlans(rows);
-        const last = rows[0];
-        if (last) {
-          setF((p) => ({
-            ...p,
-            workers: last.workers ? String(last.workers) : "",
-            seats: String(last.seats),
-            interviewOption: (last.interview_option as InterviewOption) ?? "",
-          }));
-        }
-      });
+    Promise.all([
+      supabase
+        .from("exam_plans")
+        .select("fiscal_year, seats, exam_end, interview_option, workers")
+        .eq("company_id", companyId)
+        .order("fiscal_year", { ascending: false }),
+      supabase.from("companies").select("web_signup, workers").eq("id", companyId).maybeSingle(),
+    ]).then(([{ data, error }, { data: c }]) => {
+      const rows = error ? [] : ((data as PlanRow[]) ?? []);
+      setPlans(rows);
+      setWeb(Boolean((c as { web_signup?: boolean } | null)?.web_signup));
+      const last = rows[0];
+      const workers = (c as { workers?: number | null } | null)?.workers ?? last?.workers ?? null;
+      setF((p) => ({
+        ...p,
+        workers: workers ? String(workers) : "",
+        seats: last ? String(last.seats) : workers ? String(workers) : "",
+        interviewOption: (last?.interview_option as InterviewOption) ?? "",
+      }));
+      if (rows.length === 0) setOpen(true); // 初年度は最初から入力欄を開く
+    });
   }, [companyId]);
 
-  if (!plans || plans.length === 0) return null; // Web申込の企業ではない
+  if (!plans || !web) return null; // Web申込の企業ではない(産業医契約のある企業など)
+  const firstYear = plans.length === 0;
   const cur = plans.find((p) => p.fiscal_year === currentYear);
   const nextYear = fiscalYearOf(f.examStart || firstStart);
   // 今年度の申込があり、まだ受検期間中(または開始前)なら出さない
@@ -84,12 +105,13 @@ export function PlanRenewPanel({ companyId, currentYear }: { companyId: string; 
 
   const submit = async () => {
     setErr(null);
+    if (preview) return setErr("(デモ)実際の画面では、ここからクレジットカードの決済画面に進みます。");
     const pe = periodError(f.examStart, f.examEnd, today);
     if (pe) return setErr(pe);
     if (!f.interviewOption) return setErr("産業医面接指導の担当を選んでください");
     setBusy(true);
     try {
-      const res = await fetch("/api/plan/renew", {
+      const res = await fetch("/api/plan/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(f),
@@ -107,10 +129,11 @@ export function PlanRenewPanel({ companyId, currentYear }: { companyId: string; 
     <Card>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div>
-          <h3 style={{ fontSize: 16, color: brand.ink, margin: 0 }}>次の年度のお申込み</h3>
+          <h3 style={{ fontSize: 16, color: brand.ink, margin: 0 }}>{firstYear ? "ストレスチェックのお申込み" : "次の年度のお申込み"}</h3>
           <p style={{ ...small, margin: "4px 0 0" }}>
-            {cur ? `${currentYear}年度の受検期間は終了しました。` : `${currentYear}年度のお申込みはまだありません。`}
-            同じ画面から次の年度を申し込めます。従業員の皆さまのアカウントと過去の結果は、そのまま引き継がれます。
+            {firstYear
+              ? "会社のご登録ありがとうございます。受検予定人数と受検期間を入れてお支払いいただくと、受検用のURL・QRコードが使えるようになります。"
+              : `${cur ? `${currentYear}年度の受検期間は終了しました。` : `${currentYear}年度のお申込みはまだありません。`}毎年この画面から申し込めます。従業員の皆さまのアカウントと過去の結果は、そのまま引き継がれます。`}
           </p>
         </div>
         {!open && (

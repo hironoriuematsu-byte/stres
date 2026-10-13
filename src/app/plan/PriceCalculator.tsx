@@ -50,10 +50,10 @@ export function PriceCalculator() {
       </div>
       <div style={{ marginTop: 12, display: quote ? "none" : "block" }}>
         <Link
-          href={valid ? `/plan/apply?seats=${n}` : "/plan/apply"}
+          href="/plan/signup"
           style={{ display: "inline-block", background: brand.orange, color: "#fff", borderRadius: 10, padding: "10px 20px", fontWeight: 700, fontSize: 15, textDecoration: "none" }}
         >
-          この人数で申し込む
+          会社を登録して申し込む
         </Link>
       </div>
     </div>

@@ -10,7 +10,7 @@ import { fiscalYearOptions, getFiscalYear } from "@/lib/fiscal";
 import { DashboardMenu, MenuItem } from "@/components/DashboardMenu";
 import { KenkoLink } from "@/components/KenkoLink";
 import { PlanStatusPanel } from "@/components/PlanStatusPanel";
-import { PlanRenewPanel } from "@/components/PlanRenewPanel";
+import { PlanOrderPanel } from "@/components/PlanOrderPanel";
 
 // 各パネルはタブを開いたときに初めて読み込む(初期表示の高速化)
 // タブの部品を読み込む間も、上端の進行バーを出す(LoadingCard が表示中に出す)
@@ -47,11 +47,13 @@ export function JimuDashboard({
   companyName,
   companyCode,
   hmEnabled,
+  webSignup = false,
 }: {
   companyId: string;
   companyName: string;
   companyCode: string;
   hmEnabled?: boolean; // 健康管理Webを併用する企業のみ導線を出す
+  webSignup?: boolean; // Web申込で登録した企業(年度の申込・担当者の追加ができる)
 }) {
   const years = fiscalYearOptions();
   const [year, setYear] = useState(getFiscalYear());
@@ -140,8 +142,8 @@ export function JimuDashboard({
 
       {/* Web申込の企業のみ: 受検期間・受検者数(人数のみで個人の情報は含まない) */}
       {(tab === null || tab === "配布URL・QR") && <PlanStatusPanel companyId={companyId} fiscalYear={year} canEdit />}
-      {/* Web申込の企業のみ: 次の年度の申込(今年度の申込がない・受検期間が終わったとき) */}
-      {tab === null && <PlanRenewPanel companyId={companyId} currentYear={getFiscalYear()} />}
+      {/* Web申込の企業のみ: 年度の申込(初年度・今年度の申込がない・受検期間が終わったとき) */}
+      {tab === null && webSignup && <PlanOrderPanel companyId={companyId} currentYear={getFiscalYear()} />}
       {tab === null && <DashboardMenu
           items={MENU_ITEMS}
           onSelect={(k) => {
@@ -156,7 +158,7 @@ export function JimuDashboard({
       {tab === "配布URL・QR" && (
         <CampaignPanel companyId={companyId} companyName={companyName} fiscalYear={year} manage={false} />
       )}
-      {tab === "従業員招待" && <UserAdminPanel fixedCompany={{ code: companyCode, name: companyName }} />}
+      {tab === "従業員招待" && <UserAdminPanel fixedCompany={{ code: companyCode, name: companyName, webSignup }} />}
       {tab === "部署管理" && <DeptAdminPanel companyId={companyId} companyName={companyName} />}
     </div>
   );

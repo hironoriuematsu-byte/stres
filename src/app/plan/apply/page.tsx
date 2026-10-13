@@ -1,16 +1,6 @@
-import { stripeConfigured } from "@/lib/stripe";
-import { ApplyForm } from "./ApplyForm";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "お申込み | ストレスチェックWeb" };
-export const dynamic = "force-dynamic";
-
-export default function ApplyPage({ searchParams }: { searchParams: { seats?: string; canceled?: string } }) {
-  const seats = Number(searchParams.seats);
-  return (
-    <ApplyForm
-      enabled={stripeConfigured()}
-      initialSeats={Number.isInteger(seats) && seats > 0 ? String(seats) : ""}
-      canceled={searchParams.canceled === "1"}
-    />
-  );
+// 旧URL(その場で支払う申込)。会社を先に登録する方式に変わったため、会社の登録へ移す
+export default function ApplyPage() {
+  redirect("/plan/signup");
 }

@@ -109,8 +109,12 @@ async function examPlanBlock(
   companyId: string,
   fiscalYear: number
 ): Promise<{ badge: string; title: string; text: string } | null> {
-  const { data: plans, error } = await supabase.from("exam_plans").select("fiscal_year").eq("company_id", companyId);
-  if (error || !plans || plans.length === 0) return null; // これまでの契約企業(または SQL 0025 未実行)
+  const [{ data: plans, error }, { data: company }] = await Promise.all([
+    supabase.from("exam_plans").select("fiscal_year").eq("company_id", companyId),
+    supabase.from("companies").select("web_signup").eq("id", companyId).maybeSingle(),
+  ]);
+  const web = Boolean((company as { web_signup?: boolean } | null)?.web_signup);
+  if (error || ((!plans || plans.length === 0) && !web)) return null; // これまでの契約企業(または SQL 0025 未実行)
   const { data } = await supabase.rpc("exam_plan_status", { p_company: companyId, p_year: fiscalYear });
   const row = (data as PlanRow[] | null)?.[0];
   const today = jstToday();

@@ -8,7 +8,10 @@ import {
   defaultEndOf,
   fiscalYearOf,
   maxEndOf,
-  parseApplyInput,
+  normalizeBizId,
+  officeKey,
+  parseOrderInput,
+  parseSignupInput,
   periodError,
   priceAdd,
   priceNew,
@@ -108,66 +111,84 @@ describe("受検期間", () => {
   });
 });
 
-describe("申込フォームの入力", () => {
+describe("会社の登録", () => {
   const base = {
     companyName: "株式会社テスト",
+    bizId: "T7130003006446",
     officeName: "本社",
     address: "京都市中京区",
+    workers: "30",
     contactName: "山田 太郎",
     contactEmail: "Taro@Example.co.jp",
     contactPhone: "075-000-0000",
+    password: "password1",
+    agreeTerms: true,
+  };
+  it("正しい入力。登録番号はTを除いた13桁にそろえる", () => {
+    const r = parseSignupInput(base);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value.bizId).toBe("7130003006446");
+      expect(r.value.contactEmail).toBe("taro@example.co.jp");
+    }
+  });
+  it("法人番号(13桁)と登録番号(T+13桁)は同じ番号として扱う", () => {
+    expect(normalizeBizId("7130003006446")).toBe("7130003006446");
+    expect(normalizeBizId("Ｔ７１３０-００３０-０６４４６")).toBe("7130003006446");
+    expect(normalizeBizId("t 7130003006446")).toBe("7130003006446");
+    expect(normalizeBizId("")).toBeNull();
+    expect(normalizeBizId("T12345")).toBe("invalid");
+  });
+  it("番号がない場合は「どちらも持っていない」のチェックが必要", () => {
+    expect(parseSignupInput({ ...base, bizId: "" }).ok).toBe(false);
+    const r = parseSignupInput({ ...base, bizId: "", noBizId: true });
+    expect(r.ok && r.value.bizId).toBeNull();
+    expect(parseSignupInput({ ...base, bizId: "T123" }).ok).toBe(false);
+  });
+  it("事業場名・パスワード・同意", () => {
+    expect(parseSignupInput({ ...base, officeName: "" }).ok).toBe(false);
+    expect(parseSignupInput({ ...base, password: "short" }).ok).toBe(false);
+    expect(parseSignupInput({ ...base, agreeTerms: false }).ok).toBe(false);
+  });
+  it("事業場名は表記ゆれをそろえて比べる", () => {
+    expect(officeKey("京都 工場")).toBe(officeKey("京都工場"));
+    expect(officeKey("ＡＢＣ工場")).toBe(officeKey("abc工場"));
+  });
+});
+
+describe("年度の申込", () => {
+  const base = {
     workers: "30",
     seats: "28",
-    questionnaire: "57",
     examStart: "2026-10-20",
     examEnd: "2026-11-16",
     interviewOption: "sanpo",
     agreeTerms: true,
     agreeProcedure: true,
-    firstTime: true,
   };
-  it("正しい入力", () => {
-    const r = parseApplyInput(base, "2026-10-13");
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.value.seats).toBe(28);
-      expect(r.value.contactEmail).toBe("taro@example.co.jp");
-    }
-  });
-  it("全角数字も受け付ける", () => {
-    const r = parseApplyInput({ ...base, seats: "２８" }, "2026-10-13");
+  it("正しい入力(全角数字も可)", () => {
+    expect(parseOrderInput(base, "2026-10-13").ok).toBe(true);
+    const r = parseOrderInput({ ...base, seats: "２８" }, "2026-10-13");
     expect(r.ok && r.value.seats).toBe(28);
   });
-  it("50人以上の事業場は地域産業保健センターを選べない", () => {
-    const r = parseApplyInput({ ...base, workers: "60" }, "2026-10-13");
-    expect(r.ok).toBe(false);
-    expect(!r.ok && r.error).toMatch(/50人未満/);
-  });
   it("受検予定人数が労働者数を超えると申し込めない(桁の打ち間違い対策)", () => {
-    const r = parseApplyInput({ ...base, workers: "30", seats: "300" }, "2026-10-13");
-    expect(r.ok).toBe(false);
+    const r = parseOrderInput({ ...base, workers: "30", seats: "300" }, "2026-10-13");
     expect(!r.ok && r.error).toMatch(/労働者数\(30名\)を超えています/);
-    expect(parseApplyInput({ ...base, workers: "30", seats: "30" }, "2026-10-13").ok).toBe(true);
   });
   it("300名まではWeb申込、301名以上はお見積り", () => {
-    const r = parseApplyInput({ ...base, workers: "500", seats: "301", interviewOption: "own" }, "2026-10-13");
-    expect(r.ok).toBe(false);
+    const r = parseOrderInput({ ...base, workers: "500", seats: "301", interviewOption: "own" }, "2026-10-13");
     expect(!r.ok && r.error).toMatch(/300名を超える場合は、個別にお見積り/);
-    expect(parseApplyInput({ ...base, workers: "500", seats: "300", interviewOption: "own" }, "2026-10-13").ok).toBe(true);
+    expect(parseOrderInput({ ...base, workers: "500", seats: "300", interviewOption: "own" }, "2026-10-13").ok).toBe(true);
     expect(priceNew(300).total).toBe(99000);
   });
-  it("2年目以降(初めてでない)は新規として申し込めない", () => {
-    const r = parseApplyInput({ ...base, firstTime: false }, "2026-10-13");
-    expect(r.ok).toBe(false);
-    expect(!r.ok && r.error).toMatch(/次の年度のお申込み/);
+  it("50人以上の事業場は地域産業保健センターを選べない", () => {
+    const r = parseOrderInput({ ...base, workers: "60" }, "2026-10-13");
+    expect(!r.ok && r.error).toMatch(/50人未満/);
   });
-  it("同意が無いと申し込めない", () => {
-    expect(parseApplyInput({ ...base, agreeTerms: false }, "2026-10-13").ok).toBe(false);
-    expect(parseApplyInput({ ...base, agreeProcedure: false }, "2026-10-13").ok).toBe(false);
-  });
-  it("人数・メールの誤り", () => {
-    expect(parseApplyInput({ ...base, seats: "0" }, "2026-10-13").ok).toBe(false);
-    expect(parseApplyInput({ ...base, contactEmail: "abc" }, "2026-10-13").ok).toBe(false);
+  it("同意・人数", () => {
+    expect(parseOrderInput({ ...base, agreeTerms: false }, "2026-10-13").ok).toBe(false);
+    expect(parseOrderInput({ ...base, agreeProcedure: false }, "2026-10-13").ok).toBe(false);
+    expect(parseOrderInput({ ...base, seats: "0" }, "2026-10-13").ok).toBe(false);
   });
 });
 

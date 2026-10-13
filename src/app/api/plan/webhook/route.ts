@@ -7,8 +7,8 @@ import { IMPLEMENTER, SELLER } from "@/lib/org";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// Stripe からの支払い通知(Webhook)。署名を確かめてから、企業・受検期間・配布URLを開設し、
-// 担当者(実施事務従事者)へ招待メールを送る。
+// Stripe からの支払い通知(Webhook)。署名を確かめてから、登録済みの企業にその年度の受検期間・人数枠・
+// 配布URLを追加し(人数の追加購入は人数枠を加算)、担当者と実施者にお知らせする。
 // Stripe は同じ通知を再送することがあるため、開設処理は二重に行わない(DB関数 provision_plan_order)
 export async function POST(req: Request) {
   const payload = await req.text();
@@ -67,59 +67,10 @@ export async function POST(req: Request) {
   if (already) return NextResponse.json({ ok: true, already: true });
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin;
-  let note = "";
-
-  if (order.kind === "new") {
-    // 担当者を実施事務従事者として招待する(パスワード設定のメールが届く)
-    const { data: invited, error: invErr } = await admin.auth.admin.inviteUserByEmail(order.contact_email, {
-      redirectTo: `${origin}/auth/callback?next=/account/update-password`,
-      data: { full_name: order.contact_name },
-    });
-    if (invErr || !invited?.user) {
-      note = /already|registered|exists/i.test(invErr?.message ?? "")
-        ? "担当者のメールアドレスは既に登録済みのため、招待メールを送れませんでした。実施者の「ユーザー管理」で所属・ロールを確認してください。"
-        : `担当者の招待に失敗しました: ${invErr?.message ?? "不明なエラー"}`;
-    } else {
-      const { error: profErr } = await admin.from("profiles").upsert({
-        user_id: invited.user.id,
-        role: "jimu",
-        name: order.contact_name,
-        emp_id: null,
-        dept: null,
-        company_id: companyId,
-      });
-      if (profErr) note = `担当者のプロフィール登録に失敗しました: ${profErr.message}`;
-    }
-    if (note) await admin.from("plan_orders").update({ error: note }).eq("id", order.id);
-
-    await sendMails(
-      [order.contact_email],
-      "【ストレスチェックWeb】お申込みありがとうございます(受検の準備のご案内)",
-      [
-        `${order.company_name}`,
-        `${order.contact_name} 様`,
-        "",
-        "ストレスチェックWebにお申込みいただき、ありがとうございます。お支払いを確認し、受検の準備が整いました。",
-        "",
-        orderSummary(order, granted),
-        "",
-        "■ このあとの流れ",
-        "1. 別のメール「招待」から、ログイン用のパスワードを設定してください。",
-        `   (届かない場合は ${origin}/login の「パスワードを忘れた方」から設定できます)`,
-        "2. ログイン後、実施事務従事者としての誓約(人事権を持たないことの確認)を行ってください。",
-        "3. 「配布URL・QR」から受検用のURL・QRコードを従業員の皆さまにお知らせください。",
-        "   受検期間の前に、実施の目的・期間・結果の取扱いを従業員の皆さまへ周知してください。",
-        "4. 締切後に「集団分析」で集団分析報告書をご覧いただけます。",
-        "",
-        "■ 領収書",
-        "決済代行会社(Stripe)から領収書のメールが届きます。ログイン後の画面の「お支払いの記録」からも、いつでもダウンロードできます。",
-        "",
-        `実施者: ${IMPLEMENTER.full}(${IMPLEMENTER.officeName})`,
-        `お問い合わせ: ${SELLER.email}`,
-      ].join("\n")
-    );
-  } else if (order.kind === "renew") {
-    // 継続申込: 同じ企業に新しい年度の受検期間と配布URLを追加した。担当者・従業員のアカウントはそのまま使える
+  if (order.kind === "new" || order.kind === "renew") {
+    // 年度の申込(初年度・2年目以降): 登録済みの企業に、その年度の受検期間・人数枠・配布URLを追加した。
+    // 担当者・従業員のアカウントはそのまま使える(担当者は会社登録のときに作成済み)
+    const first = order.kind === "new";
     await sendMails(
       [order.contact_email],
       `【ストレスチェックWeb】${order.fiscal_year}年度のお申込みありがとうございます`,
@@ -127,19 +78,23 @@ export async function POST(req: Request) {
         `${order.company_name}`,
         `${order.contact_name} 様`,
         "",
-        `${order.fiscal_year}年度のストレスチェックのお申込みを承りました。今年度もよろしくお願いいたします。`,
+        `${order.fiscal_year}年度のストレスチェックのお申込みを承りました。お支払いを確認し、受検の準備が整いました。`,
         "",
         orderSummary(order, granted),
         "",
         "■ このあとの流れ",
         "1. 受検期間の前に、実施の目的・期間・結果の取扱いを従業員の皆さまへ周知してください。",
-        "2. 昨年度に受検した従業員の方は、これまでのアカウントでログインして受検できます(登録し直す必要はありません)。",
-        `3. 新しく入った方には、「配布URL・QR」の${order.fiscal_year}年度の受検用URL・QRコードをお知らせください。`,
+        "   (ログイン後の画面に、お知らせ文の例があります)",
+        `2. 「配布URL・QR」から${order.fiscal_year}年度の受検用URL・QRコードを従業員の皆さまにお知らせください。`,
+        first
+          ? "3. 締切後に「集団分析」で集団分析報告書をご覧いただけます。"
+          : "3. 昨年度に受検した従業員の方は、これまでのアカウントでログインして受検できます(登録し直す必要はありません)。",
         "",
         "■ 領収書",
         "決済代行会社(Stripe)から領収書のメールが届きます。ログイン後の画面の「お支払いの記録」からも、いつでもダウンロードできます。",
         "",
         `${origin}/jimu`,
+        `実施者: ${IMPLEMENTER.full}(${IMPLEMENTER.officeName})`,
         `お問い合わせ: ${SELLER.email}`,
       ].join("\n")
     );
@@ -154,20 +109,13 @@ export async function POST(req: Request) {
   await sendMails(
     office,
     order.kind === "new"
-      ? "【ストレスチェックWeb】Web申込がありました"
+      ? `【ストレスチェックWeb】Web申込(${order.fiscal_year}年度・初年度)がありました`
       : order.kind === "renew"
-        ? "【ストレスチェックWeb】Web申込の継続(次年度)がありました"
+        ? `【ストレスチェックWeb】Web申込(${order.fiscal_year}年度・継続)がありました`
         : "【ストレスチェックWeb】受検人数の追加購入がありました",
-    `${orderSummary(order, granted)}\n企業コード: ${companyCode}${await sameNameNote(admin, order.company_name, companyId)}${note ? `\n\n要確認: ${note}` : ""}\n\n${origin}/office`
+    `${orderSummary(order, granted)}\n企業コード: ${companyCode}\n\n${origin}/office`
   );
 
   return NextResponse.json({ ok: true });
 }
 
-// 同じ名前の企業がすでにある場合の注記(企業は内部IDで区別しているため混ざらないが、実施者が画面で取り違えないように知らせる)
-async function sameNameNote(admin: NonNullable<ReturnType<typeof adminClient>>, name: string, companyId: string): Promise<string> {
-  const { data } = await admin.from("companies").select("code").eq("name", name).neq("id", companyId);
-  if (!data || data.length === 0) return "";
-  return `\n\n※ 同じ名前の企業がすでに登録されています(企業コード: ${data.map((c) => c.code).join("、")})。別の企業として開設しました。` +
-    "同じ会社が継続利用を誤って新規で申し込んだ場合は、実施者の画面「Web申込」の「既存の企業に統合」で元の企業にまとめられます。別の会社であれば、画面では企業コードで見分けてください。";
-}

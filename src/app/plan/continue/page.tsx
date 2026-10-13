@@ -3,26 +3,20 @@ import { Badge, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { SELLER } from "@/lib/org";
 
-export const metadata = { title: "継続してご利用の企業さま | ストレスチェックWeb" };
+export const metadata = { title: "ご登録済みの企業さま | ストレスチェックWeb" };
 
-// 2年目以降(継続利用)の企業向けの案内。新規の申込から入ると別の企業として作られてしまうため、
-// 宣伝ページ・申込フォームの目立つ位置からここへ案内する
+// 2年目以降(ご登録済み)の企業向けの案内。お申込みはログイン後の画面で、毎年同じ操作で行う
 export default function ContinuePage() {
   const p = { fontSize: 14, color: "#44534F", lineHeight: 1.9, margin: "0 0 8px" } as const;
   const li = { fontSize: 14, color: "#44534F", lineHeight: 1.9 } as const;
   return (
     <Card style={{ maxWidth: 680, margin: "0 auto" }}>
-      <Badge>継続してご利用の企業さま</Badge>
+      <Badge>ご登録済みの企業さま</Badge>
       <h1 style={{ fontSize: 21, color: brand.ink, margin: "12px 0 8px" }}>2年目以降のお申込み</h1>
       <p style={p}>
-        以前このサービスをご利用いただいた企業さまは、<strong>新規のお申込みではなく、ご担当者さまのログイン後の画面から</strong>
-        お申し込みください。従業員の皆さまのアカウントと過去の結果がそのまま引き継がれ、従業員の皆さまの登録し直しも不要です。
+        会社の登録は最初の1回だけです。2年目以降は、ご担当者さまがログインして、1年目と同じ画面からお申し込みください。
+        従業員の皆さまのアカウントと過去の結果はそのまま引き継がれます。更新の時期が近づくと、ご案内メールもお送りします。
       </p>
-      <ol style={{ margin: "0 0 12px", paddingLeft: 20 }}>
-        <li style={li}>ご担当者さまのメールアドレスとパスワードでログインします</li>
-        <li style={li}>メニュー画面の「次の年度のお申込み」から、人数・受検期間を入れてお支払いください</li>
-        <li style={li}>昨年度受検した従業員の皆さまは、これまでのアカウントでそのまま受検できます</li>
-      </ol>
       <Link
         href="/login?next=/jimu"
         style={{ display: "inline-block", background: brand.teal, color: "#fff", borderRadius: 10, padding: "10px 22px", fontWeight: 700, textDecoration: "none" }}
@@ -36,12 +30,11 @@ export default function ContinuePage() {
           <strong>パスワードを忘れた：</strong>ログイン画面の「パスワードを忘れた方」から設定し直せます。
         </li>
         <li style={li}>
-          <strong>ご担当者さまが変わった・退職した：</strong>{SELLER.email} までご連絡ください。新しいご担当者さまをお招きします
-          (会社名と、新しいご担当者さまのお名前・メールアドレスをお知らせください)。
+          <strong>ご担当者さまが変わる：</strong>今のご担当者さまが、ログイン後の画面の「従業員招待」から新しいご担当者さまを追加できます。
         </li>
         <li style={li}>
-          <strong>間違えて新規で申し込んでしまった：</strong>{SELLER.email} までご連絡ください。こちらで元の企業にまとめます
-          (お支払いはそのまま有効で、従業員の皆さまの受検結果も元の企業に移ります)。
+          <strong>ログインできる方がいない(前任者が退職した など)：</strong>{SELLER.email} までご連絡ください。新しいご担当者さまをお招きします
+          (会社名・事業場名と、新しいご担当者さまのお名前・メールアドレスをお知らせください)。
         </li>
       </ul>
     </Card>

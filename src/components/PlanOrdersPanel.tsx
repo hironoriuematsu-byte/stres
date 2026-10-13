@@ -198,7 +198,7 @@ export function PlanOrdersPanel() {
                   <td style={cell}>
                     {o.kind !== "add_seats" ? (
                       <>
-                        {o.kind === "renew" ? "継続" : "新規"} {o.seats}名({o.fiscal_year}年度)
+                        {o.kind === "renew" ? "継続" : "初年度"} {o.seats}名({o.fiscal_year}年度)
                         <div style={{ color: "#5B6B6A" }}>{interviewOptionLabel(o.interview_option)}</div>
                       </>
                     ) : (

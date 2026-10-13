@@ -1,13 +1,18 @@
 -- ============================================================
 -- 0025: Web申込(顧問契約のない企業向けのクレジットカード決済プラン)
 --
--- 宣伝ページ(/plan)から企業が受検予定人数・受検期間を入れて申し込み、
--- クレジットカード(Stripe)で支払うと、企業・受検期間・人数枠・配布URLが自動で作られ、
--- 担当者(実施事務従事者)に招待メールが届く。
+-- 「会社を先に登録 → ログイン後の画面で年度ごとに申し込む」方式。
+--   1) 宣伝ページ(/plan)から会社(事業場)と担当者を登録する(メール確認)。同じ会社の二重登録は、
+--      メールアドレスと「登録番号(インボイス)または法人番号 + 事業場名」で見分けて止める
+--   2) 担当者がログイン後の画面で「今年度を申し込む」→ クレジットカード(Stripe)で支払うと、
+--      その年度の受検期間・人数枠・配布URLが作られる。2年目以降もまったく同じ操作
+--   3) 更新の時期(前年の受検開始日の約1か月半前・2週間前)に担当者へ案内メールを送る
 --
---   plan_orders : 申込と支払いの記録(新規申込 / 人数の追加購入)。書き込みはサーバー(service_role)のみ
---   exam_plans  : 企業×年度の受検期間と人数枠。行がある企業だけ、期間外・人数超過の受検を止める
---                 (これまでの契約企業には行が無いので、従来どおり制限なし)
+--   companies.web_signup : Web申込で登録した企業(受検期間・人数枠の範囲でのみ受検できる)
+--   plan_orders : 申込と支払いの記録(初年度 / 継続 / 人数の追加購入)。書き込みはサーバー(service_role)のみ
+--   exam_plans  : 企業×年度の受検期間と人数枠
+--   plan_reminders : 更新の案内メールの送信記録
+--   (これまでの契約企業は web_signup = false で受検期間の登録も無いので、従来どおり制限なし)
 --
 -- 権限:
 --   - office: すべて閲覧。受検期間・人数枠の手動変更(office_update_exam_plan)
@@ -15,15 +20,30 @@
 --   - 自社のメンバー: 受検期間・受検者数の確認(exam_plan_status)
 --
 -- 実行方法: Supabase SQL Editor に全文を貼り付けて Run。再実行しても問題ない。
--- 既存の企業・受検には影響しない(exam_plans に行がある企業だけが対象)。
+-- 既存の企業・受検には影響しない(Web申込で登録した企業だけが対象)。
 -- ============================================================
+
+-- ------------------------------------------------------------
+-- 0. Web申込で登録した企業の情報
+-- ------------------------------------------------------------
+alter table public.companies add column if not exists web_signup boolean not null default false;
+alter table public.companies add column if not exists biz_id text;        -- 登録番号(インボイス)または法人番号の13桁(先頭のTは除く)
+alter table public.companies add column if not exists office_name text;   -- 事業場名
+alter table public.companies add column if not exists office_key text;    -- 事業場名を比較用にそろえたもの(空白・表記ゆれを除く)
+alter table public.companies add column if not exists address text;
+alter table public.companies add column if not exists workers int;
+alter table public.companies add column if not exists contact_phone text;
+-- 同じ番号・同じ事業場の二重登録を防ぐ(番号が同じでも事業場が違えば別に登録できる)
+create unique index if not exists uq_companies_web_biz_office
+  on public.companies (biz_id, coalesce(office_key, ''))
+  where web_signup and biz_id is not null;
 
 -- ------------------------------------------------------------
 -- 1. 申込・支払いの記録
 -- ------------------------------------------------------------
 create table if not exists public.plan_orders (
   id                    uuid primary key default gen_random_uuid(),
-  kind                  text not null check (kind in ('new', 'add_seats', 'renew')), -- renew: 次年度以降の継続申込
+  kind                  text not null check (kind in ('new', 'add_seats', 'renew')), -- new: 初年度 / renew: 2年目以降 / add_seats: 人数の追加
   status                text not null default 'pending'
                         check (status in ('pending', 'paid', 'provisioned', 'failed', 'expired')),
   company_id            uuid references public.companies(id) on delete set null, -- 新規申込は開設後に入る
@@ -184,8 +204,9 @@ declare
 begin
   select * into v_plan from exam_plans where company_id = new.company_id and fiscal_year = new.fiscal_year;
   if not found then
-    -- Web申込の企業で、この年度の申込がない(例: 来年度の申込で、今年度のうちに受検しようとした)
-    if exists (select 1 from exam_plans p where p.company_id = new.company_id) then
+    -- Web申込の企業で、この年度の申込がない(申込前・来年度の申込で今年度のうちに受検しようとした など)
+    if exists (select 1 from companies c where c.id = new.company_id and c.web_signup)
+       or exists (select 1 from exam_plans p where p.company_id = new.company_id) then
       raise exception '現在は受検期間ではありません。受検期間は会社の担当者にご確認ください'
         using errcode = 'P0001', hint = 'exam_plan_none';
     end if;
@@ -237,20 +258,13 @@ begin
     return;
   end if;
 
-  if v_order.kind in ('new', 'renew') then  -- renew は既存の企業(company_id 指定済み)に新しい年度を追加する
+  if v_order.kind in ('new', 'renew') then
+    -- 企業は会社登録の時点で作られている(年度の申込は必ず登録済みの企業に対して行う)
     v_company := v_order.company_id;
     if v_company is null then
-      -- 企業コード: W + 申込日(YYMMDD) + 英数字3文字(重複しないものを選ぶ)
-      loop
-        v_code := 'W' || to_char(jst_today(), 'YYMMDD') || upper(substr(md5(random()::text), 1, 3));
-        exit when not exists (select 1 from companies c where c.code = v_code);
-      end loop;
-      insert into companies (name, code, questionnaire)
-      values (v_order.company_name, v_code, v_order.questionnaire)
-      returning id into v_company;
-    else
-      select c.code into v_code from companies c where c.id = v_company;
+      raise exception '申込に企業が指定されていません: %', p_order;
     end if;
+    select c.code into v_code from companies c where c.id = v_company;
 
     insert into exam_plans (company_id, fiscal_year, seats, exam_start, exam_end, max_end, interview_option, workers)
     values (v_company, v_order.fiscal_year, p_seats_granted, v_order.exam_start, v_order.exam_end,
@@ -283,7 +297,20 @@ revoke all on function public.provision_plan_order(uuid, text, int, date) from p
 grant execute on function public.provision_plan_order(uuid, text, int, date) to service_role;
 
 -- ------------------------------------------------------------
--- 5. 企業の統合(リカバリ用・実施者のみ)
+-- 5. 更新の案内メールの送信記録(同じ案内を二重に送らない)
+-- ------------------------------------------------------------
+create table if not exists public.plan_reminders (
+  company_id  uuid not null references public.companies(id) on delete cascade,
+  fiscal_year int  not null,                 -- 案内する年度
+  kind        text not null check (kind in ('45d', '14d')),
+  sent_at     timestamptz not null default now(),
+  primary key (company_id, fiscal_year, kind)
+);
+alter table public.plan_reminders enable row level security;
+revoke all on table public.plan_reminders from anon, authenticated;
+
+-- ------------------------------------------------------------
+-- 6. 企業の統合(リカバリ用・実施者のみ)
 --    継続利用の企業が誤って「新規」で申し込み、別の企業として開設された場合などに、
 --    その企業(p_from)のデータをすべて元の企業(p_to)に移し、p_from を削除する。
 --    移すもの: 受検期間・人数枠(同じ年度があれば人数を合算)、配布URL(元の企業に同じ年度が無ければ
@@ -373,11 +400,22 @@ begin
   end if;
   delete from company_report_info where company_id = p_from;
 
+  delete from plan_reminders where company_id = p_from;
+  -- 統合先にWeb申込の登録情報が無ければ引き継ぐ
+  update companies c
+     set web_signup = c.web_signup or v_from.web_signup,
+         address = coalesce(c.address, v_from.address),
+         workers = coalesce(c.workers, v_from.workers),
+         contact_phone = coalesce(c.contact_phone, v_from.contact_phone)
+   where c.id = p_to;
+
   -- 統合元の企業を削除する。健康管理Webなど他の機能のデータが残っていて削除できない場合は、名前に印を付けて残す
   begin
     delete from companies where id = p_from;
   exception when foreign_key_violation then
-    update companies set name = '【統合済み→' || v_to.code || '】' || v_from.name where id = p_from;
+    update companies
+       set name = '【統合済み→' || v_to.code || '】' || v_from.name, web_signup = false, biz_id = null
+     where id = p_from;
     v_note := v_note || '統合元の企業は他のデータが残っているため削除せず、名前に【統合済み】を付けました。';
   end;
 
