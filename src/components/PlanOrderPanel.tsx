@@ -8,7 +8,6 @@ import { brand } from "@/lib/brand";
 import { postJson } from "@/lib/api-client";
 import { usePlanPrices } from "@/components/usePlanPrices";
 import {
-  addDays,
   defaultEndOf,
   fiscalYearOf,
   formatJpDate,
@@ -45,7 +44,7 @@ export function PlanOrderPanel({
   const prices = usePlanPrices();
   const [web, setWeb] = useState(false);
   const today = jstToday();
-  const firstStart = addDays(today, 1);
+  const firstStart = today; // 受検期間の開始日の初期値は申込日当日(支払い後すぐに受検できる)
   const [f, setF] = useState({
     workers: "",
     seats: "",
