@@ -115,10 +115,12 @@ export default async function BrochurePage() {
             <img src={IMPLEMENTER_PROFILE.photo} alt={`実施者 ${IMPLEMENTER.name}`} width={56} height={70} style={{ borderRadius: 6, objectFit: "cover" }} />
           )}
           <p style={t}>
-            実施者: {IMPLEMENTER.full}({IMPLEMENTER.officeName})
+            実施者: {IMPLEMENTER.full}
             {IMPLEMENTER_PROFILE.career.length > 0 && <> ・ {IMPLEMENTER_PROFILE.career.join(" / ")}</>}
             <br />
-            運営: {SELLER.name}{IMPLEMENTER.officeName}({SELLER.address})
+            運営: {SELLER.name}{IMPLEMENTER.officeName}
+            <br />
+            {SELLER.address}
           </p>
         </div>
         <ul style={{ ...t, paddingLeft: 18 }}>
