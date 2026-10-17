@@ -171,7 +171,7 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
             <ResultsPanel companyId={company.id} companyName={company.name} fiscalYear={year} questionnaire={company.questionnaire ?? "57"} formHref={`/stress-report/${company.id}/${year}`} />
           )}
           {tab === "面接指導申出" && company && (
-            <InterviewPanel companyId={company.id} companyName={company.name} />
+            <InterviewPanel companyId={company.id} companyName={company.name} isOffice />
           )}
           {tab === "集団分析" && company && (
             <GroupReportView companyId={company.id} companyName={company.name} fiscalYear={year} embedded formHref={`/stress-report/${company.id}/${year}`} />

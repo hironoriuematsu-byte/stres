@@ -8,6 +8,7 @@ import { Badge, Btn, Card, ScoreBar } from "@/components/ui";
 import { KenkoLink } from "@/components/KenkoLink";
 import { brand } from "@/lib/brand";
 import { InterviewRequest, ResultRow, STATUS_LABEL } from "@/lib/types";
+import { IntakeCta } from "@/components/IntakeCta";
 import { getFiscalYear } from "@/lib/fiscal";
 import { LoadingCard } from "@/components/LoadingCard";
 
@@ -285,6 +286,7 @@ export function MyPage({
                   >
                     面接指導の申出済み({new Date(req.created_at).toLocaleDateString("ja-JP")})/ 状況:{" "}
                     <strong>{STATUS_LABEL[req.status]}</strong>
+                    <IntakeCta requestId={req.id} />
                   </div>
                 ) : showForm === r.id ? (
                   <div style={{ border: `1px solid ${brand.line}`, borderRadius: 10, padding: 14 }}>
