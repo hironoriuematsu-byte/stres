@@ -150,6 +150,22 @@ export default function DemoTopPage({ searchParams }: { searchParams: { q?: stri
       </Card>
 
       <Card>
+        <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 8px" }}>💬 面接指導の事前ヒアリング(AI)</h3>
+        <p style={{ fontSize: 13.5, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 12px" }}>
+          申出のあと、本人が任意でAIの質問に答えると、医師(実施者)に要約と返信の下書きが届きます。医師は事前に状況を把握できるので、面談の時間を相談に使えます。
+          デモでは、決まった質問の流れで体験できます(実際のAIは本人の答えに合わせて質問を変えます)。
+        </p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Link href="/demo/intake">
+            <Btn tone="orange">本人の画面を体験する</Btn>
+          </Link>
+          <Link href="/demo/intake/doctor">
+            <Btn tone="ghost">医師の画面を見る</Btn>
+          </Link>
+        </div>
+      </Card>
+
+      <Card>
         <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 8px" }}>📊 集団分析報告書(事業者へお渡しするもの)</h3>
         <p style={{ fontSize: 13.5, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 12px" }}>
           部署別の高ストレス率、仕事のストレス判定図(健康リスク・全国平均との比較)、職場のストレスプロフィール、

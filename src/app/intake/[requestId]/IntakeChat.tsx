@@ -7,12 +7,15 @@ import { postJson } from "@/lib/api-client";
 import { Badge, Btn, Card } from "@/components/ui";
 import { LoadingCard } from "@/components/LoadingCard";
 import { brand } from "@/lib/brand";
-import { CRISIS_CONTACTS, INTAKE_MAX_CHARS, type IntakeMessage, type IntakeStatus, type RiskLevel } from "@/lib/intake";
+import { CRISIS_CONTACTS, CRISIS_MESSAGE, INTAKE_FIRST_MESSAGE, INTAKE_MAX_CHARS, detectCrisis, type IntakeMessage, type IntakeStatus, type RiskLevel } from "@/lib/intake";
 
 type Intake = { id: string; status: IntakeStatus; messages: IntakeMessage[]; risk_level: RiskLevel; reply: string | null; reply_sent_at: string | null };
 
+// 紹介用デモの台本(AIを使わず、決まった質問を順に出す)
+export type IntakeDemo = { steps: { reply: string; sample: string }[]; doctorReply: string; doctorHref: string };
+
 // 面接指導の事前ヒアリング(本人の画面)。AI が状況を聞き取り、終わると医師に要約が届く
-export function IntakeChat({ requestId }: { requestId: string }) {
+export function IntakeChat({ requestId, demo }: { requestId: string; demo?: IntakeDemo }) {
   const [available, setAvailable] = useState<boolean | null>(null);
   const [intake, setIntake] = useState<Intake | null>(null);
   const [agree, setAgree] = useState(false);
@@ -23,6 +26,10 @@ export function IntakeChat({ requestId }: { requestId: string }) {
   const bottom = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
+    if (demo) {
+      setAvailable(true);
+      return;
+    }
     const supabase = createClient();
     const {
       data: { session },
@@ -45,6 +52,7 @@ export function IntakeChat({ requestId }: { requestId: string }) {
       setIntake((data as Intake | null) ?? null);
     }
     setAvailable(Boolean(json.available) || Boolean(json.intake));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestId]);
 
   useEffect(() => {
@@ -55,6 +63,17 @@ export function IntakeChat({ requestId }: { requestId: string }) {
   }, [intake?.messages.length, busy]);
 
   const start = async () => {
+    if (demo) {
+      setIntake({
+        id: "demo",
+        status: "in_progress",
+        messages: [{ role: "assistant", content: INTAKE_FIRST_MESSAGE, at: new Date().toISOString() }],
+        risk_level: "none",
+        reply: null,
+        reply_sent_at: null,
+      });
+      return;
+    }
     setBusy("start");
     setErr(null);
     const { ok, json } = await postJson("/api/intake/start", { requestId, consent: true });
@@ -71,6 +90,23 @@ export function IntakeChat({ requestId }: { requestId: string }) {
     setText("");
     setBusy("send");
     setErr(null);
+    if (demo) {
+      // デモ: 台本の次の質問を少し待ってから出す
+      const idx = intake.messages.filter((m) => m.role === "user").length;
+      const crisis = detectCrisis(sent);
+      const last = idx >= demo.steps.length - 1;
+      const reply = crisis ? CRISIS_MESSAGE : (demo.steps[idx]?.reply ?? demo.steps[demo.steps.length - 1].reply);
+      setTimeout(() => {
+        setBusy("");
+        setIntake((p) =>
+          p
+            ? { ...p, risk_level: crisis ? "high" : p.risk_level, messages: [...p.messages, { role: "assistant", content: reply, at: new Date().toISOString() }] }
+            : p
+        );
+        if (crisis || last) setDone(true);
+      }, 900);
+      return;
+    }
     const { ok, json } = await postJson<{ reply: string; done: boolean; risk_level: RiskLevel }>("/api/intake/message", {
       intakeId: intake.id,
       text: sent,
@@ -89,6 +125,10 @@ export function IntakeChat({ requestId }: { requestId: string }) {
 
   const finish = async () => {
     if (!intake) return;
+    if (demo) {
+      setIntake({ ...intake, status: "completed", reply: demo.doctorReply, reply_sent_at: new Date().toISOString() });
+      return;
+    }
     setBusy("finish");
     setErr(null);
     const { ok, json } = await postJson("/api/intake/finish", { intakeId: intake.id });
@@ -204,6 +244,15 @@ export function IntakeChat({ requestId }: { requestId: string }) {
                 />
                 <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <Btn onClick={send} disabled={busy !== "" || !text.trim()}>送信</Btn>
+                  {demo && (
+                    <Btn
+                      tone="ghost"
+                      disabled={busy !== ""}
+                      onClick={() => setText(demo.steps[intake.messages.filter((m) => m.role === "user").length]?.sample ?? "")}
+                    >
+                      (デモ)答えの例を入れる
+                    </Btn>
+                  )}
                   <button
                     onClick={finish}
                     disabled={busy !== "" || !intake.messages.some((m) => m.role === "user")}
@@ -231,13 +280,24 @@ export function IntakeChat({ requestId }: { requestId: string }) {
           <p style={{ fontSize: 14, color: "#44534F", lineHeight: 1.8, margin: "6px 0 0" }}>
             ご協力ありがとうございました。医師が内容を確認し、面談の日程と医師からの返信をお送りします。返信が届くとメールでお知らせします。
           </p>
+          {demo && intake.reply && (
+            <p style={{ fontSize: 12, color: "#8A6B2E", margin: "8px 0 0" }}>
+              (デモ)実際には、医師が要約を確認し、返信の下書きを直してから送ります。下は返信の例です。
+            </p>
+          )}
           {intake.reply && (
             <div style={{ marginTop: 12, background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 10, padding: "12px 14px" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink }}>医師からの返信{intake.reply_sent_at && `(${new Date(intake.reply_sent_at).toLocaleDateString("ja-JP")})`}</div>
               <div style={{ fontSize: 14, color: "#2C3B39", lineHeight: 1.9, whiteSpace: "pre-wrap", marginTop: 6 }}>{intake.reply}</div>
             </div>
           )}
-          <Link href="/my" style={{ display: "inline-block", marginTop: 12, color: brand.tealDark, fontWeight: 700 }}>マイページへ戻る</Link>
+          {demo ? (
+            <Link href={demo.doctorHref} style={{ display: "inline-block", marginTop: 12, color: brand.tealDark, fontWeight: 700 }}>
+              医師(産業医)の画面のサンプルを見る →
+            </Link>
+          ) : (
+            <Link href="/my" style={{ display: "inline-block", marginTop: 12, color: brand.tealDark, fontWeight: 700 }}>マイページへ戻る</Link>
+          )}
         </Card>
       )}
     </div>

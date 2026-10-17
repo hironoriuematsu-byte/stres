@@ -25,7 +25,7 @@ export const riskTone = (r: RiskLevel): "red" | "orange" | "teal" | "gray" =>
   r === "high" ? "red" : r === "moderate" ? "orange" : r === "low" ? "teal" : "gray";
 
 // 実施者(医師)向け: 事前ヒアリングの要約・会話記録・本人への返信
-export function IntakeReview({ intake, personName, onChanged }: { intake: IntakeRecord; personName: string; onChanged: () => void }) {
+export function IntakeReview({ intake, personName, onChanged, demo }: { intake: IntakeRecord; personName: string; onChanged: () => void; demo?: boolean }) {
   const [reply, setReply] = useState(intake.reply ?? intake.reply_draft ?? "");
   const [showLog, setShowLog] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -33,6 +33,7 @@ export function IntakeReview({ intake, personName, onChanged }: { intake: Intake
   const s = intake.summary;
 
   const send = async () => {
+    if (demo) return setMsg({ ok: true, text: "(デモ)実際の画面では、本人のマイページに返信が表示され、お知らせメールが届きます。" });
     if (!window.confirm(`${personName}さんに、この返信を送りますか？(本人のマイページに表示され、お知らせメールが届きます)`)) return;
     setBusy(true);
     setMsg(null);
@@ -43,6 +44,7 @@ export function IntakeReview({ intake, personName, onChanged }: { intake: Intake
     onChanged();
   };
   const resummarize = async () => {
+    if (demo) return setMsg({ ok: true, text: "(デモ)実際の画面では、AIが要約と返信の下書きを作り直します。" });
     setBusy(true);
     setMsg(null);
     const { ok, json } = await postJson("/api/intake/finish", { intakeId: intake.id });
@@ -53,7 +55,7 @@ export function IntakeReview({ intake, personName, onChanged }: { intake: Intake
   };
   const openLog = () => {
     setShowLog((v) => !v);
-    if (!showLog) logAccess(createClient(), "view_intake_log", intake.id, intake.company_id);
+    if (!showLog && !demo) logAccess(createClient(), "view_intake_log", intake.id, intake.company_id);
   };
 
   const row = (label: string, value?: string) => (
