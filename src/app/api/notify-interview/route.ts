@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { IMPLEMENTER } from "@/lib/org";
 import { sendViaResend, sleep } from "@/lib/mail";
 import { fiscalYearOf, interviewDoctorLabel, interviewNotifiesOffice, jstDate } from "@/lib/plan";
+import { intakeConfigured, intakeEligible } from "@/lib/intake-server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 宛先数分の送信間隔・再試行に耐えられるようにする
@@ -147,6 +148,16 @@ export async function POST(req: Request) {
 
   // 申出した本人への受付確認メール(本人宛のため申出内容を含めてよい)
   let sentRequester = false;
+  // 事前ヒアリング(AI)を使える申出なら、受付確認メールに案内を入れる
+  const intakeLink =
+    intakeConfigured() && (await intakeEligible(admin, request))
+      ? [
+          "",
+          "■ 面談前の事前ヒアリング(任意・約10分)",
+          "医師との面談の前に、AIがいまの状況を伺います。医師が事前に確認するので、面談の時間を相談に使えます(受けなくても申出は有効です)。",
+          `${origin}/intake/${request.id}`,
+        ]
+      : [];
   if (user.email) {
     const selfText = [
       "産業医面接指導の申出を受け付けました。",
@@ -154,6 +165,7 @@ export async function POST(req: Request) {
         ? `実施者(${IMPLEMENTER.full})および会社の実施事務従事者へ通知済みです。`
         : `会社の実施事務従事者へ通知済みです(医師面接指導の担当: ${interviewDoctorLabel(option)})。`,
       "日程等について連絡がありますので、しばらくお待ちください。",
+      ...intakeLink,
       "",
       `申出日時: ${new Date(request.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`,
       `相談したいこと・連絡事項: ${request.message || "(記載なし)"}`,

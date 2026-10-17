@@ -27,6 +27,7 @@ export function MyPage({
 }) {
   const [results, setResults] = useState<ResultRow[] | null>(null);
   const [requests, setRequests] = useState<InterviewRequest[]>([]);
+  const [justRequested, setJustRequested] = useState<string | null>(null); // 申出の直後: 事前ヒアリングの案内を目立たせる
   const [showForm, setShowForm] = useState<string | null>(null); // result_id
   const [message, setMessage] = useState("");
   // 申出に伴う事業者への結果提供同意(告示によるみなし同意)の確認チェック
@@ -142,6 +143,7 @@ export function MyPage({
           : "面接指導の申出を送信し、面接指導の担当者へ通知しました。連絡があるまでお待ちください。"
         : "面接指導の申出は受け付けられました(通知メールの送信に失敗した可能性があります。実施者は画面上で申出を確認できます)。"
     );
+    setJustRequested(inserted.id);
     setShowForm(null);
     setMessage("");
     setConsentAgree(false);
@@ -222,6 +224,7 @@ export function MyPage({
             {notice}
           </div>
         )}
+        {justRequested && <IntakeCta requestId={justRequested} prominent />}
       </Card>
 
       {results.length === 0 && (
