@@ -234,6 +234,11 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
           <div style={{ marginTop: 14, borderTop: `1px solid ${brand.line}`, paddingTop: 12 }}>
             {!done && (
               <>
+                {demo && (
+                  <div style={{ fontSize: 12, color: "#8A6B2E", background: "#FBF3E3", border: "1px solid #EFD9A8", borderRadius: 8, padding: "8px 10px", lineHeight: 1.7, marginBottom: 8 }}>
+                    (デモ)決まった順番の質問を出しているだけで、答えの内容は読み取りません。実際のAIは、答えに合わせて次の質問を変え、すでに伺ったことは繰り返しません。
+                  </div>
+                )}
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value.slice(0, INTAKE_MAX_CHARS))}
