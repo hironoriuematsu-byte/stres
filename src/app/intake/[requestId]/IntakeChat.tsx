@@ -191,7 +191,20 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
           {err && <div style={{ fontSize: 13, color: "#B02A2A", marginTop: 8 }}>{err}</div>}
           <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
             <Btn onClick={start} disabled={!agree || busy !== ""}>{busy === "start" ? "準備しています…" : "事前ヒアリングを始める"}</Btn>
-            <Link href="/my"><Btn tone="ghost">今回は受けない</Btn></Link>
+            {demo ? (
+              <Link href="/demo"><Btn tone="ghost">今回は受けない</Btn></Link>
+            ) : (
+              <Btn
+                tone="ghost"
+                disabled={busy !== ""}
+                onClick={async () => {
+                  await postJson("/api/intake/decline", { requestId });
+                  window.location.href = "/my";
+                }}
+              >
+                今回は受けない
+              </Btn>
+            )}
           </div>
         </Card>
       </div>

@@ -11,6 +11,7 @@ import { fiscalYearOf, interviewDoctorLabel, jstDate } from "@/lib/plan";
 import { getFiscalYear } from "@/lib/fiscal";
 import { IntakeReview, riskTone, type IntakeRecord } from "@/components/IntakeReview";
 import { RISK_LABEL } from "@/lib/intake";
+import { postJson } from "@/lib/api-client";
 
 const NEXT_STATUS: Record<string, InterviewRequest["status"][]> = {
   pending: ["scheduled", "cancelled"],
@@ -36,6 +37,10 @@ export function InterviewPanel({
   const [plans, setPlans] = useState<{ fiscal_year: number; interview_option: string | null }[] | null>(null);
   const [intakes, setIntakes] = useState<Record<string, IntakeRecord>>({});
   const [openIntake, setOpenIntake] = useState<string | null>(null);
+  // 事前ヒアリングの案内・催促の記録(実施者のみ)
+  const [invites, setInvites] = useState<Record<string, { last_sent_at: string | null; sent_count: number; declined_at: string | null }>>({});
+  const [inviteMsg, setInviteMsg] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
 
   const supabase = createClient();
 
@@ -59,6 +64,15 @@ export function InterviewPanel({
       const map: Record<string, IntakeRecord> = {};
       ((ins as IntakeRecord[] | null) ?? []).forEach((i) => (map[i.request_id] = i));
       setIntakes(map);
+      const { data: invs } = await supabase
+        .from("interview_intake_invites")
+        .select("request_id, last_sent_at, sent_count, declined_at")
+        .eq("company_id", companyId);
+      const imap: Record<string, { last_sent_at: string | null; sent_count: number; declined_at: string | null }> = {};
+      ((invs as { request_id: string; last_sent_at: string | null; sent_count: number; declined_at: string | null }[] | null) ?? []).forEach(
+        (i) => (imap[i.request_id] = i)
+      );
+      setInvites(imap);
     }
     setPlans(web ? ((eps as { fiscal_year: number; interview_option: string | null }[] | null) ?? []) : null);
     if (e1) {
@@ -91,6 +105,24 @@ export function InterviewPanel({
 
   if (rows === null) return <LoadingCard />;
 
+  // 事前ヒアリングの案内を送る(この機能の前に申出をした人への案内・個別の再送)
+  const sendInvites = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    if (!window.confirm(`${ids.length}件の申出者に、事前ヒアリングの案内メールを送りますか？`)) return;
+    setInviting(true);
+    setInviteMsg(null);
+    const { ok, json } = await postJson<{ sent: number; skipped: string[] }>("/api/intake/invite", { requestIds: ids });
+    setInviting(false);
+    if (!ok) return setInviteMsg(json.error ?? "送れませんでした");
+    const skipped = (json.skipped ?? []).length;
+    setInviteMsg(`${json.sent}件に案内を送りました。${skipped > 0 ? `送らなかった申出: ${skipped}件(${[...new Set(json.skipped)].join("・")})` : ""}`);
+    reload();
+  };
+  // まだ一度も案内していない、受付中の申出(事前ヒアリング未開始・「受けない」未選択)
+  const notInvited = isOffice
+    ? rows.filter((r) => (r.status === "pending" || r.status === "scheduled") && !intakes[r.id] && !invites[r.id]?.sent_count && !invites[r.id]?.declined_at)
+    : [];
+
   // 申出の年度の担当(その年度の申込がなければ直近の年度)
   const optionOf = (createdAt: string): string | null =>
     plans?.find((p) => p.fiscal_year <= fiscalYearOf(jstDate(createdAt)))?.interview_option ?? null;
@@ -115,6 +147,20 @@ export function InterviewPanel({
         </div>
       )}
       {err && <div style={{ fontSize: 13, color: "#B02A2A", marginBottom: 10 }}>{err}</div>}
+      {isOffice && (notInvited.length > 0 || inviteMsg) && (
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+          {notInvited.length > 0 && (
+            <button
+              onClick={() => sendInvites(notInvited.map((r) => r.id))}
+              disabled={inviting}
+              style={{ background: "#fff", border: `1px solid ${brand.teal}`, color: brand.tealDark, borderRadius: 8, padding: "6px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+            >
+              {inviting ? "送っています…" : `事前ヒアリングの案内をまとめて送る(未案内 ${notInvited.length}件)`}
+            </button>
+          )}
+          {inviteMsg && <span style={{ fontSize: 13, color: brand.tealDark }}>{inviteMsg}</span>}
+        </div>
+      )}
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
@@ -155,7 +201,22 @@ export function InterviewPanel({
                         <span style={{ color: brand.tealDark, fontSize: 12, fontWeight: 700 }}>{openIntake === r.id ? "閉じる" : "確認"}</span>
                       </button>
                     ) : (
-                      <span style={{ color: "#8A9694" }}>—</span>
+                      <div style={{ fontSize: 12, color: "#5B6B6A", lineHeight: 1.6 }}>
+                        {invites[r.id]?.declined_at
+                          ? "本人が「受けない」を選択"
+                          : invites[r.id]?.sent_count
+                            ? `未実施(案内済み${invites[r.id].sent_count > 1 ? `・催促${invites[r.id].sent_count - 1}回` : ""})`
+                            : "未案内"}
+                        {(r.status === "pending" || r.status === "scheduled") && !invites[r.id]?.declined_at && (
+                          <button
+                            onClick={() => sendInvites([r.id])}
+                            disabled={inviting}
+                            style={{ display: "block", background: "none", border: 0, padding: 0, color: brand.tealDark, fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+                          >
+                            {invites[r.id]?.sent_count ? "案内を再送" : "案内を送る"}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </td>
                 )}

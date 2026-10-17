@@ -185,6 +185,18 @@ export async function POST(req: Request) {
       text: selfText,
     });
     sentRequester = result.ok;
+    // 事前ヒアリングの案内を送った記録(催促の起点になる)
+    if (result.ok && intakeLink.length > 0) {
+      const now = new Date().toISOString();
+      await admin.from("interview_intake_invites").upsert({
+        request_id: request.id,
+        company_id: request.company_id,
+        first_sent_at: now,
+        last_sent_at: now,
+        sent_count: 1,
+        updated_at: now,
+      });
+    }
     if (!result.ok) {
       console.error("notify-interview self-send failure:", result.detail);
     }
