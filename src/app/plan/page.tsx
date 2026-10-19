@@ -26,6 +26,7 @@ export const metadata = {
   description:
     "産業医が実施者を務めるWebストレスチェック。50人未満の事業場の義務化に。QRコードを配るだけで当日から実施でき、個人情報は法令に沿って守られます。受検者1名あたりの料金で集団分析込み。",
   keywords: ["ストレスチェック", "50人未満", "義務化", "産業医", "実施者", "集団分析", "Web", "小規模事業場"],
+  alternates: { canonical: "/plan" },
 };
 
 const h2 = { fontSize: 18, color: brand.tealDark, margin: "0 0 10px" } as const;
@@ -55,9 +56,38 @@ export default async function PlanPage() {
     mainEntity: FAQ.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
   };
 
+  // サービスと料金の構造化データ。提供者は mestate.jp の事務所(同じ @id)とつなぎ、
+  // 検索エンジン・AIが「うえまつ産業医事務所のサービス」として結びつけられるようにする
+  const serviceLd = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "@id": "https://stres.mestate.jp/plan#service",
+    name: "ストレスチェックWeb",
+    serviceType: "ストレスチェック(労働安全衛生法に基づく心理的な負担の程度を把握するための検査)",
+    description:
+      "産業医が実施者を務めるWebのストレスチェック。50人未満の事業場にも対応。QRコードを配るだけで、申込当日から実施できる。集団分析込み。調査票は57項目・80項目から選べる(同じ料金)。",
+    url: "https://stres.mestate.jp/plan",
+    areaServed: { "@type": "Country", name: "日本" },
+    provider: {
+      "@type": "Organization",
+      "@id": "https://mestate.jp/#organization",
+      name: IMPLEMENTER.officeName,
+      legalName: SELLER.name,
+      url: "https://mestate.jp/",
+    },
+    offers: {
+      "@type": "Offer",
+      price: pricing.unitPrice,
+      priceCurrency: "JPY",
+      description: `受検者1名あたり${pricing.unitPrice}円(税込・実施者込み・集団分析込み。${minSeats(pricing)}名までは${pricing.minTotal.toLocaleString()}円)。会社の登録は無料。`,
+      url: "https://stres.mestate.jp/plan",
+    },
+  };
+
   return (
     <div style={{ maxWidth: 860, margin: "0 auto", display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 16 }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceLd) }} />
 
       {/* 1. ひと目で伝わる最初の画面 */}
       <Card>
@@ -224,6 +254,10 @@ export default async function PlanPage() {
               運営: {SELLER.name}{IMPLEMENTER.officeName}
               <br />
               {SELLER.address}
+              <br />
+              <a href="https://mestate.jp/stresscheck.html" style={{ color: brand.tealDark, textDecoration: "underline" }}>
+                うえまつ産業医事務所のホームページ
+              </a>
             </div>
             {IMPLEMENTER_PROFILE.career.length > 0 && (
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
