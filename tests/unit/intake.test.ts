@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { detectCrisis, higherRisk, SUMMARY_SCHEMA, TURN_SCHEMA } from "@/lib/intake";
 
-describe("事前ヒアリング: 命に関わるサインの言葉", () => {
+describe("事前問診: 命に関わるサインの言葉", () => {
   it("はっきりした言葉は拾う(全角・半角の違いも)", () => {
     expect(detectCrisis("もう死にたいと思うことがある")).toBe(true);
     expect(detectCrisis("消えたい気持ちになる")).toBe(true);
@@ -16,14 +16,15 @@ describe("事前ヒアリング: 命に関わるサインの言葉", () => {
   });
 });
 
-describe("事前ヒアリング: 緊急度", () => {
+describe("事前問診: 緊急度", () => {
   it("高いほうを残す", () => {
     expect(higherRisk("low", "high")).toBe("high");
     expect(higherRisk("moderate", "low")).toBe("moderate");
     expect(higherRisk("none", "none")).toBe("none");
   });
   it("AIの返答の形は必須項目がそろっている", () => {
-    expect(TURN_SCHEMA.required).toEqual(["reply", "done", "risk_level"]);
+    expect(TURN_SCHEMA.required).toEqual(["reply", "done", "risk_level", "progress"]);
+    expect(SUMMARY_SCHEMA.required).toContain("company_share_draft");
     expect(SUMMARY_SCHEMA.required).toContain("reply_draft");
     expect(SUMMARY_SCHEMA.additionalProperties).toBe(false);
   });
@@ -31,7 +32,7 @@ describe("事前ヒアリング: 緊急度", () => {
 
 import { shouldRemind } from "@/lib/intake-invite";
 
-describe("事前ヒアリング: 催促", () => {
+describe("事前問診: 催促", () => {
   const now = new Date("2026-10-20T00:00:00Z");
   const base = { last_sent_at: "2026-10-16T00:00:00Z", sent_count: 1, declined_at: null };
   it("案内から3日たって未回答なら催促する", () => {

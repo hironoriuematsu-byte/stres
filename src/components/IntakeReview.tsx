@@ -6,7 +6,7 @@ import { postJson } from "@/lib/api-client";
 import { logAccess } from "@/lib/log";
 import { Badge, Btn } from "@/components/ui";
 import { brand } from "@/lib/brand";
-import { RISK_LABEL, type IntakeMessage, type IntakeStatus, type IntakeSummary, type RiskLevel } from "@/lib/intake";
+import { RISK_LABEL, SHARE_OPTIONS, type IntakeMessage, type IntakeStatus, type IntakeSummary, type RiskLevel, type ShareConsent } from "@/lib/intake";
 
 export type IntakeRecord = {
   id: string;
@@ -19,14 +19,21 @@ export type IntakeRecord = {
   reply_draft: string | null;
   reply: string | null;
   reply_sent_at: string | null;
+  share_consent?: ShareConsent | null;
+  company_share_draft?: string | null;
+  company_share?: string | null;
+  company_shared_at?: string | null;
+  summary_error?: string | null;
 };
 
 export const riskTone = (r: RiskLevel): "red" | "orange" | "teal" | "gray" =>
   r === "high" ? "red" : r === "moderate" ? "orange" : r === "low" ? "teal" : "gray";
 
-// 実施者(医師)向け: 事前ヒアリングの要約・会話記録・本人への返信
+// 実施者(医師)向け: 事前問診の要約・会話記録・本人への返信
 export function IntakeReview({ intake, personName, onChanged, demo }: { intake: IntakeRecord; personName: string; onChanged: () => void; demo?: boolean }) {
   const [reply, setReply] = useState(intake.reply ?? intake.reply_draft ?? "");
+  const [share, setShare] = useState(intake.company_share ?? intake.company_share_draft ?? "");
+  const consentKeys = intake.share_consent?.keys ?? [];
   const [showLog, setShowLog] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -41,6 +48,17 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
     setBusy(false);
     if (!ok) return setMsg({ ok: false, text: json.error ?? "送信できませんでした" });
     setMsg({ ok: true, text: "本人に返信を送りました。" });
+    onChanged();
+  };
+  const shareToCompany = async () => {
+    if (demo) return setMsg({ ok: true, text: "(デモ)実際の画面では、会社の担当者(実施事務従事者)の面接指導申出の一覧に表示され、お知らせメールが届きます。" });
+    if (!window.confirm("この内容を会社の担当者(実施事務従事者)に共有しますか？")) return;
+    setBusy(true);
+    setMsg(null);
+    const { ok, json } = await postJson("/api/intake/share", { intakeId: intake.id, text: share });
+    setBusy(false);
+    if (!ok) return setMsg({ ok: false, text: json.error ?? "共有できませんでした" });
+    setMsg({ ok: true, text: "会社の担当者に共有しました。" });
     onChanged();
   };
   const resummarize = async () => {
@@ -68,7 +86,7 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
   return (
     <div style={{ background: "#FAFCFC", border: `1px solid ${brand.line}`, borderRadius: 10, padding: 14, display: "grid", gap: 12 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <strong style={{ fontSize: 14, color: brand.ink }}>事前ヒアリング(AI)の要約</strong>
+        <strong style={{ fontSize: 14, color: brand.ink }}>事前問診(AI)の要約</strong>
         <Badge tone={riskTone(intake.risk_level)}>緊急度: {RISK_LABEL[intake.risk_level]}</Badge>
         {intake.status === "in_progress" && <Badge tone="gray">本人が聞き取り中</Badge>}
       </div>
@@ -87,7 +105,11 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
         </div>
       ) : (
         <div style={{ fontSize: 13, color: "#5B6B6A" }}>
-          {intake.status === "in_progress" ? "本人が聞き取りを終えると、要約がここに表示されます。" : "要約がまだありません。"}
+          {intake.status === "in_progress"
+            ? "本人が問診を終えると、要約がここに表示されます。"
+            : intake.summary_error
+              ? `${intake.summary_error}「要約と下書きを作り直す」を押してください。`
+              : "要約を作成しています(1分ほど)。少し待ってから画面を開き直してください。"}
         </div>
       )}
       <div style={{ fontSize: 12, color: "#8A9694", lineHeight: 1.6 }}>AIによる要約です。判断は会話の記録と面談で確認してください。</div>
@@ -122,6 +144,39 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
             <Btn onClick={send} disabled={busy || !reply.trim()}>{intake.reply_sent_at ? "修正して送り直す" : "本人に送信"}</Btn>
             <Btn tone="ghost" onClick={resummarize} disabled={busy}>要約と下書きを作り直す</Btn>
           </div>
+        </div>
+      )}
+      {intake.status !== "in_progress" && (
+        <div style={{ borderTop: `1px solid ${brand.line}`, paddingTop: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink, marginBottom: 4 }}>
+            会社の担当者(実施事務従事者)への共有
+            {intake.company_shared_at && `(${new Date(intake.company_shared_at).toLocaleDateString("ja-JP")} 共有済み)`}
+          </div>
+          <div style={{ fontSize: 12.5, color: "#5B6B6A", lineHeight: 1.7, marginBottom: 6 }}>
+            本人が選んだ範囲:{" "}
+            {consentKeys.length > 0 ? SHARE_OPTIONS.filter((o) => consentKeys.includes(o.key)).map((o) => o.label.replace(/\(.*\)/, "")).join("・") : "なし(共有しない)"}
+            {intake.share_consent?.note && (
+              <>
+                <br />
+                伝えてほしくないこと: {intake.share_consent.note}
+              </>
+            )}
+          </div>
+          {consentKeys.length > 0 && (
+            <>
+              <textarea
+                value={share}
+                onChange={(e) => setShare(e.target.value)}
+                rows={5}
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", fontSize: 14, lineHeight: 1.8, border: `1px solid ${brand.line}`, borderRadius: 10 }}
+              />
+              <div style={{ marginTop: 8 }}>
+                <Btn tone="ghost" onClick={shareToCompany} disabled={busy || !share.trim()}>
+                  {intake.company_shared_at ? "修正して共有し直す" : "担当者に共有する"}
+                </Btn>
+              </div>
+            </>
+          )}
         </div>
       )}
       {msg && <div style={{ fontSize: 13, color: msg.ok ? brand.tealDark : "#B02A2A" }}>{msg.text}</div>}

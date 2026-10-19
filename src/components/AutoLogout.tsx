@@ -18,7 +18,7 @@ export function AutoLogout() {
         window.location.replace("/login?reason=timeout");
       }, IDLE_MINUTES * 60 * 1000);
     };
-    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart"];
+    const events = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "sc-activity"]; // sc-activity: 音声入力で話している間
     events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
     reset();
     return () => {

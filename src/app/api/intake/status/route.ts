@@ -4,7 +4,7 @@ import { fail, intakeContext } from "@/lib/intake-api";
 
 export const runtime = "nodejs";
 
-// 本人の申出で事前ヒアリングを使えるか、と進み具合(マイページの案内用)
+// 本人の申出で事前問診を使えるか、と進み具合(マイページの案内用)
 export async function GET(req: Request) {
   const ctx = await intakeContext(req);
   if (!ctx.ok) return ctx.res;

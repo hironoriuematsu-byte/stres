@@ -14,7 +14,7 @@ import { fail, intakeContext, loadIntake, notifyUrgent, siteOrigin } from "@/lib
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// 事前ヒアリングの1往復(本人のみ)。本人の発言を受けて AI が返答する。
+// 事前問診の1往復(本人のみ)。本人の発言を受けて AI が返答する。
 // 命に関わる言葉があれば AI を待たずに相談先を示し、実施者に至急知らせる
 export async function POST(req: Request) {
   const ctx = await intakeContext(req);
@@ -28,8 +28,8 @@ export async function POST(req: Request) {
     return fail(400, "リクエスト形式が不正です");
   }
   const intake = await loadIntake(admin, body.intakeId);
-  if (!intake || intake.user_id !== userId) return fail(404, "事前ヒアリングが見つかりません");
-  if (intake.status !== "in_progress") return fail(400, "この事前ヒアリングは終了しています");
+  if (!intake || intake.user_id !== userId) return fail(404, "事前問診が見つかりません");
+  if (intake.status !== "in_progress") return fail(400, "この事前問診は終了しています");
   const text = typeof body.text === "string" ? body.text.trim() : "";
   if (!text) return fail(400, "入力してください");
   if (text.length > INTAKE_MAX_CHARS) return fail(400, `1回の入力は${INTAKE_MAX_CHARS}文字までにしてください`);
@@ -41,6 +41,7 @@ export async function POST(req: Request) {
   let reply: string;
   let done: boolean;
   let risk: RiskLevel = intake.risk_level ?? "none";
+  let progress = intake.progress ?? 0;
   if (detectCrisis(text)) {
     reply = CRISIS_MESSAGE;
     done = true;
@@ -51,21 +52,23 @@ export async function POST(req: Request) {
       reply = t.reply || "ありがとうございます。続けて教えてください。";
       done = t.done;
       risk = higherRisk(risk, t.risk_level);
+      progress = Math.max(progress, t.progress); // 戻らないようにする
     } catch (e) {
       console.error("intake turn failed", e);
       return fail(502, "AIの応答に失敗しました。少し時間をおいて、もう一度送信してください。");
     }
   }
   if (userTurns >= INTAKE_MAX_USER_TURNS) done = true;
+  if (done) progress = 100;
 
   history.push({ role: "assistant", content: reply, at: now() });
   const { error } = await admin
     .from("interview_intakes")
-    .update({ messages: history, risk_level: risk, updated_at: now() })
+    .update({ messages: history, risk_level: risk, progress, updated_at: now() })
     .eq("id", intake.id)
     .eq("status", "in_progress");
   if (error) return fail(500, `保存できませんでした: ${error.message}`);
 
   if (risk === "high") await notifyUrgent(admin, intake, siteOrigin(req));
-  return NextResponse.json({ reply, done, risk_level: risk });
+  return NextResponse.json({ reply, done, risk_level: risk, progress });
 }

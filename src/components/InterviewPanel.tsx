@@ -28,7 +28,7 @@ export function InterviewPanel({
 }: {
   companyId: string;
   companyName: string;
-  isOffice?: boolean; // 実施者(医師)の画面: 事前ヒアリング(AI)の要約・返信を表示する(会社の担当者には出さない)
+  isOffice?: boolean; // 実施者(医師)の画面: 事前問診(AI)の要約・返信を表示する(会社の担当者には出さない)
 }) {
   const [rows, setRows] = useState<InterviewRequest[] | null>(null);
   const [people, setPeople] = useState<Record<string, Profile>>({});
@@ -37,10 +37,13 @@ export function InterviewPanel({
   const [plans, setPlans] = useState<{ fiscal_year: number; interview_option: string | null }[] | null>(null);
   const [intakes, setIntakes] = useState<Record<string, IntakeRecord>>({});
   const [openIntake, setOpenIntake] = useState<string | null>(null);
-  // 事前ヒアリングの案内・催促の記録(実施者のみ)
+  // 事前問診の案内・催促の記録(実施者のみ)
   const [invites, setInvites] = useState<Record<string, { last_sent_at: string | null; sent_count: number; declined_at: string | null }>>({});
   const [inviteMsg, setInviteMsg] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
+  // 会社の担当者(実施事務従事者)向け: 医師が共有した面談前の情報
+  const [shares, setShares] = useState<Record<string, { company_share: string; company_shared_at: string }>>({});
+  const [openShare, setOpenShare] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -59,7 +62,7 @@ export function InterviewPanel({
     if (isOffice) {
       const { data: ins } = await supabase
         .from("interview_intakes")
-        .select("id, request_id, company_id, status, risk_level, messages, summary, reply_draft, reply, reply_sent_at")
+        .select("*")
         .eq("company_id", companyId);
       const map: Record<string, IntakeRecord> = {};
       ((ins as IntakeRecord[] | null) ?? []).forEach((i) => (map[i.request_id] = i));
@@ -73,6 +76,11 @@ export function InterviewPanel({
         (i) => (imap[i.request_id] = i)
       );
       setInvites(imap);
+    } else {
+      const { data: sh } = await supabase.rpc("intake_company_shares", { p_company: companyId });
+      const smap: Record<string, { company_share: string; company_shared_at: string }> = {};
+      ((sh as { request_id: string; company_share: string; company_shared_at: string }[] | null) ?? []).forEach((x) => (smap[x.request_id] = x));
+      setShares(smap);
     }
     setPlans(web ? ((eps as { fiscal_year: number; interview_option: string | null }[] | null) ?? []) : null);
     if (e1) {
@@ -105,10 +113,10 @@ export function InterviewPanel({
 
   if (rows === null) return <LoadingCard />;
 
-  // 事前ヒアリングの案内を送る(この機能の前に申出をした人への案内・個別の再送)
+  // 事前問診の案内を送る(この機能の前に申出をした人への案内・個別の再送)
   const sendInvites = async (ids: string[]) => {
     if (ids.length === 0) return;
-    if (!window.confirm(`${ids.length}件の申出者に、事前ヒアリングの案内メールを送りますか？`)) return;
+    if (!window.confirm(`${ids.length}件の申出者に、事前問診の案内メールを送りますか？`)) return;
     setInviting(true);
     setInviteMsg(null);
     const { ok, json } = await postJson<{ sent: number; skipped: string[] }>("/api/intake/invite", { requestIds: ids });
@@ -118,7 +126,7 @@ export function InterviewPanel({
     setInviteMsg(`${json.sent}件に案内を送りました。${skipped > 0 ? `送らなかった申出: ${skipped}件(${[...new Set(json.skipped)].join("・")})` : ""}`);
     reload();
   };
-  // まだ一度も案内していない、受付中の申出(事前ヒアリング未開始・「受けない」未選択)
+  // まだ一度も案内していない、受付中の申出(事前問診未開始・「受けない」未選択)
   const notInvited = isOffice
     ? rows.filter((r) => (r.status === "pending" || r.status === "scheduled") && !intakes[r.id] && !invites[r.id]?.sent_count && !invites[r.id]?.declined_at)
     : [];
@@ -155,7 +163,7 @@ export function InterviewPanel({
               disabled={inviting}
               style={{ background: "#fff", border: `1px solid ${brand.teal}`, color: brand.tealDark, borderRadius: 8, padding: "6px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
             >
-              {inviting ? "送っています…" : `事前ヒアリングの案内をまとめて送る(未案内 ${notInvited.length}件)`}
+              {inviting ? "送っています…" : `事前問診の案内をまとめて送る(未案内 ${notInvited.length}件)`}
             </button>
           )}
           {inviteMsg && <span style={{ fontSize: 13, color: brand.tealDark }}>{inviteMsg}</span>}
@@ -165,7 +173,7 @@ export function InterviewPanel({
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-              {["申出日", "氏名", "部署", "相談したいこと・連絡事項", ...(plans ? ["担当医"] : []), ...(isOffice ? ["事前ヒアリング"] : []), "状況", "操作"].map((h) => (
+              {["申出日", "氏名", "部署", "相談したいこと・連絡事項", ...(plans ? ["担当医"] : []), ...(isOffice ? ["事前問診"] : ["医師からの共有"]), "状況", "操作"].map((h) => (
                 <th key={h} style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>
                   {h}
                 </th>
@@ -188,6 +196,20 @@ export function InterviewPanel({
                   {[r.message, r.preferred].filter(Boolean).join(" / ") || "—"}
                 </td>
                 {plans && <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>{interviewDoctorLabel(optionOf(r.created_at))}</td>}
+                {!isOffice && (
+                  <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
+                    {shares[r.id] ? (
+                      <button
+                        onClick={() => setOpenShare(openShare === r.id ? null : r.id)}
+                        style={{ background: "none", border: 0, padding: 0, color: brand.tealDark, fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+                      >
+                        {openShare === r.id ? "閉じる" : "共有あり・見る"}
+                      </button>
+                    ) : (
+                      <span style={{ color: "#8A9694" }}>—</span>
+                    )}
+                  </td>
+                )}
                 {isOffice && (
                   <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
                     {intakes[r.id] ? (
@@ -247,6 +269,21 @@ export function InterviewPanel({
                   ))}
                 </td>
               </tr>
+              {!isOffice && openShare === r.id && shares[r.id] && (
+                <tr>
+                  <td colSpan={9} style={{ padding: "8px 10px 14px" }}>
+                    <div style={{ background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 10, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink }}>
+                        医師からの共有({new Date(shares[r.id].company_shared_at).toLocaleDateString("ja-JP")})
+                      </div>
+                      <div style={{ fontSize: 13.5, color: "#2C3B39", lineHeight: 1.8, whiteSpace: "pre-wrap", marginTop: 6 }}>{shares[r.id].company_share}</div>
+                      <div style={{ fontSize: 12, color: "#8A9694", marginTop: 6 }}>
+                        本人の同意を得た範囲で、面談の日程調整と職場での配慮の準備のために共有された内容です。実施事務従事者として守秘義務があります。
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
               {isOffice && openIntake === r.id && intakes[r.id] && (
                 <tr>
                   <td colSpan={9} style={{ padding: "8px 10px 14px" }}>

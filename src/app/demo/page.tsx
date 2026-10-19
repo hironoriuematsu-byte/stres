@@ -150,7 +150,7 @@ export default function DemoTopPage({ searchParams }: { searchParams: { q?: stri
       </Card>
 
       <Card>
-        <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 8px" }}>💬 面接指導の事前ヒアリング(AI)</h3>
+        <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 8px" }}>💬 面接指導の事前問診(AI)</h3>
         <p style={{ fontSize: 13.5, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 12px" }}>
           申出のあと、本人が任意でAIの質問に答えると、医師(実施者)に要約と返信の下書きが届きます。医師は事前に状況を把握できるので、面談の時間を相談に使えます。
           デモでは、決まった質問の流れで体験できます(実際のAIは本人の答えに合わせて質問を変えます)。

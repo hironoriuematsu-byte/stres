@@ -6,7 +6,7 @@ import { INTAKE_MAX_SENDS, sendIntakeInvite, shouldRemind, type InviteRow } from
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-// 事前ヒアリングの催促(毎日1回、Vercel Cron から呼ばれる)。
+// 事前問診の催促(毎日1回、Vercel Cron から呼ばれる)。
 // 案内したのに受けていない・途中でやめた人へ、最後の案内から3日ごとに最大2回まで再送する
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;

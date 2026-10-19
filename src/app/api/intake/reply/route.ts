@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     return fail(400, "リクエスト形式が不正です");
   }
   const intake = await loadIntake(admin, body.intakeId);
-  if (!intake) return fail(404, "事前ヒアリングが見つかりません");
+  if (!intake) return fail(404, "事前問診が見つかりません");
   const reply = typeof body.reply === "string" ? body.reply.trim() : "";
   if (!reply) return fail(400, "返信の文章を入力してください");
   if (reply.length > 4000) return fail(400, "返信は4000文字までにしてください");

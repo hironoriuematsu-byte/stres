@@ -27,7 +27,7 @@ export function MyPage({
 }) {
   const [results, setResults] = useState<ResultRow[] | null>(null);
   const [requests, setRequests] = useState<InterviewRequest[]>([]);
-  const [justRequested, setJustRequested] = useState<string | null>(null); // 申出の直後: 事前ヒアリングの案内を目立たせる
+  const [justRequested, setJustRequested] = useState<string | null>(null); // 申出の直後: 事前問診の案内を目立たせる
   const [showForm, setShowForm] = useState<string | null>(null); // result_id
   const [message, setMessage] = useState("");
   // 申出に伴う事業者への結果提供同意(告示によるみなし同意)の確認チェック

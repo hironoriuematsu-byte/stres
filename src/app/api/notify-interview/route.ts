@@ -148,13 +148,13 @@ export async function POST(req: Request) {
 
   // 申出した本人への受付確認メール(本人宛のため申出内容を含めてよい)
   let sentRequester = false;
-  // 事前ヒアリング(AI)を使える申出なら、受付確認メールに案内を入れる
+  // 事前問診(AI)を使える申出なら、受付確認メールに案内を入れる
   const intakeLink =
     intakeConfigured() && (await intakeEligible(admin, request))
       ? [
           "",
-          "■ 面談前の事前ヒアリング(任意・約10分)",
-          "医師との面談の前に、AIがいまの状況を伺います。医師が事前に確認するので、面談の時間を相談に使えます(受けなくても申出は有効です)。",
+          "■ 面談前の事前問診への回答をお願いします(約15〜20分)",
+          "医師との面談の前に、全員に回答をお願いしています。AIがいまの状況を詳しく伺い、医師が事前に確認するので、面談では解決策の相談に時間を使えます。下のリンクから回答してください(音声入力も使えます)。",
           `${origin}/intake/${request.id}`,
         ]
       : [];
@@ -185,7 +185,7 @@ export async function POST(req: Request) {
       text: selfText,
     });
     sentRequester = result.ok;
-    // 事前ヒアリングの案内を送った記録(催促の起点になる)
+    // 事前問診の案内を送った記録(催促の起点になる)
     if (result.ok && intakeLink.length > 0) {
       const now = new Date().toISOString();
       await admin.from("interview_intake_invites").upsert({
