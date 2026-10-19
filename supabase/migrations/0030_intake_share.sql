@@ -2,8 +2,8 @@
 -- 0030: 事前問診(AI)の進み具合と、会社の担当者への共有
 --   - progress: 聞き取りの進み具合(0〜100。本人の画面のバーに使う)
 --   - share_consent: 本人が選んだ「会社の担当者に伝えてよい範囲」
---   - company_share_draft / company_share: 共有する文章(AIの下書き / 医師が確認して共有したもの)
---   - 会社の担当者(実施事務従事者)は、医師が共有した文章だけを関数経由で読める(問診の記録そのものは読めない)
+--   - company_share_draft / company_share: 共有する文章(AIの下書き / 担当者に共有したもの。本人の同意の範囲で自動で共有し、医師が直すこともできる)
+--   - 会社の担当者(実施事務従事者)は、共有された文章だけを関数経由で読める(問診の記録そのものは読めない)
 -- 何度実行しても同じ結果になる(0028・0029 の実行後に実行する)
 -- ============================================================
 
@@ -15,7 +15,7 @@ alter table public.interview_intakes add column if not exists company_shared_at 
 alter table public.interview_intakes add column if not exists company_shared_by uuid references auth.users(id) on delete set null;
 alter table public.interview_intakes add column if not exists summary_error text;          -- 要約を作れなかったときの理由
 
--- 会社の担当者(実施事務従事者)向け: 医師が共有した文章だけを返す
+-- 会社の担当者(実施事務従事者)向け: 共有された文章だけを返す
 create or replace function public.intake_company_shares(p_company uuid)
 returns table(request_id uuid, company_share text, company_shared_at timestamptz)
 language sql stable security definer set search_path = public as $$
