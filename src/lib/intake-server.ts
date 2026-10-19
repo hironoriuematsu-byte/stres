@@ -50,14 +50,16 @@ export async function intakeEligible(
 
 // 会話の記録を Claude に渡す形にする(最初は本人の発言から始める必要があるため、開始の合図を置く)。
 // 最後の本人の発言には、追加の質問の残りの回数を添える(本人には表示されず、記録にも残らない)
-function toParams(history: IntakeMessage[], questionsLeft: number): Anthropic.Beta.BetaMessageParam[] {
+function toParams(history: IntakeMessage[], questionsLeft: number, mustAsk: boolean): Anthropic.Beta.BetaMessageParam[] {
   const msgs: Anthropic.Beta.BetaMessageParam[] = [
     { role: "user", content: "(面接指導を申し出ました。事前問診を始めてください)" },
   ];
   history.forEach((m, i) => {
     const note =
       i === history.length - 1 && m.role === "user"
-        ? `\n\n(システムからの連絡: この返答でできる追加の質問は、残り${questionsLeft}回です。${questionsLeft <= 0 ? "質問せずに終えてください。" : ""})`
+        ? `\n\n(システムからの連絡: この返答でできる追加の質問は、残り${questionsLeft}回です。${
+            questionsLeft <= 0 ? "質問せずに終えてください。" : mustAsk ? "まだ終えないでください。この返答では必ず追加の質問をし、done は false にしてください。" : ""
+          })`
         : "";
     msgs.push({ role: m.role, content: m.content + note });
   });
@@ -74,7 +76,8 @@ function jsonText(res: Anthropic.Beta.BetaMessage): string {
 // 追加の質問の1往復。本人の発言(history の最後)に対する返答を作る
 export async function intakeTurn(
   history: IntakeMessage[],
-  questionsLeft: number
+  questionsLeft: number,
+  mustAsk: boolean
 ): Promise<{ reply: string; done: boolean; risk_level: RiskLevel }> {
   const res = await claude().beta.messages.create({
     model: MODEL,
@@ -82,7 +85,7 @@ export async function intakeTurn(
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
     system: [{ type: "text", text: INTERVIEW_SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: toParams(history, questionsLeft),
+    messages: toParams(history, questionsLeft, mustAsk),
     output_config: { effort: "low", format: { type: "json_schema", schema: TURN_SCHEMA as unknown as Record<string, unknown> } },
   });
   const parsed = JSON.parse(jsonText(res)) as { reply: string; done: boolean; risk_level: RiskLevel };

@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import {
   CRISIS_MESSAGE,
-  INTAKE_CLOSING,
+  decideTurn,
   INTAKE_MAX_CHARS,
-  INTAKE_MAX_USER_TURNS,
   detectCrisis,
   followupsLeft,
   formatQuickAnswers,
@@ -85,8 +84,8 @@ export async function POST(req: Request) {
     done = true;
   } else {
     try {
-      const t = await intakeTurn(history, left);
-      reply = t.reply || INTAKE_CLOSING;
+      const t = await decideTurn(userTurns, (mustAsk) => intakeTurn(history, left, mustAsk));
+      reply = t.reply;
       done = t.done;
       risk = higherRisk(risk, t.risk_level);
     } catch (e) {
@@ -95,11 +94,6 @@ export async function POST(req: Request) {
         { error: "回答は保存しました。AIの応答に失敗したため、「続きの質問を受け取る」を押してください。", saved: true },
         { status: 502 }
       );
-    }
-    // 追加の質問の上限を超えたら、AIの返答にかかわらず終える
-    if (!done && (left <= 0 || userTurns >= INTAKE_MAX_USER_TURNS)) {
-      reply = INTAKE_CLOSING;
-      done = true;
     }
   }
   const progress = intakeProgress(userTurns, done);

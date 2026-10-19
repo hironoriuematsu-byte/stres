@@ -661,10 +661,8 @@ function QuickForm({
                       border: `1px solid ${on ? brand.teal : brand.line}`,
                       background: on ? brand.teal : "#fff",
                       color: on ? "#fff" : brand.ink,
-                      fontWeight: on ? 700 : 400,
                     }}
                   >
-                    {on ? "✓ " : ""}
                     {o}
                   </button>
                 );
