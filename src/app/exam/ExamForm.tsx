@@ -560,7 +560,13 @@ export function ExamForm({
               marginTop: 12,
             }}
           >
-            高ストレス状態にあると判定されました。医師(産業医)による面接指導の対象です。マイページから面接指導の申出ができます。申出を理由とする不利益取り扱いは法律で禁止されています。
+            高ストレス状態にあると判定されました。医師(産業医)による面接指導の対象です。
+            <strong>面談を希望する場合は、下のボタンから申し出てください。</strong>申出は任意です。申出を理由とする不利益取り扱いは法律で禁止されています。
+            <div style={{ marginTop: 10 }}>
+              <Link href={demo ? "/demo/interview" : "/my?interview=1"}>
+                <Btn tone="orange">産業医面接指導を申し出る</Btn>
+              </Link>
+            </div>
           </div>
         )}
         <ReportView

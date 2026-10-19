@@ -71,6 +71,7 @@ export function MyPage({
     if (target) {
       setShowForm(target.id);
       autoOpened.current = true;
+      setTimeout(() => document.getElementById(`result-${target.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     }
   }, [wantInterview, results, requests]);
 
@@ -238,7 +239,8 @@ export function MyPage({
       {results.map((r) => {
         const req = requests.find((q) => q.result_id === r.id);
         return (
-          <Card key={r.id}>
+          <div key={r.id} id={`result-${r.id}`}>
+          <Card>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
               <h3 style={{ fontSize: 17, color: brand.ink, margin: 0 }}>{r.fiscal_year}年度の結果</h3>
               {r.high_stress ? <Badge tone="red">高ストレス</Badge> : <Badge tone="gray">高ストレスに該当せず</Badge>}
@@ -246,36 +248,8 @@ export function MyPage({
             <p style={{ fontSize: 12, color: "#8A9694", margin: "4px 0 14px" }}>
               {new Date(r.created_at).toLocaleDateString("ja-JP")} 実施 / 部署: {r.dept}
             </p>
-            <div style={{ marginBottom: 10 }}>
-              <Link href={`/report/${r.id}`} style={{ fontSize: 13, color: brand.tealDark, fontWeight: 700 }}>
-                📄 結果票を見る(印刷・PDF保存)
-              </Link>
-            </div>
-            <ScoreBar label="A. 仕事のストレス要因" value={r.score_a} max={68} />
-            <ScoreBar label="B. 心身のストレス反応" value={r.score_b} max={116} threshold={77} />
-            <ScoreBar label="C. 周囲のサポート(点が高いほど乏しい)" value={r.score_c} max={36} />
-
-            <label
-              style={{
-                display: "flex",
-                gap: 10,
-                alignItems: "flex-start",
-                background: "#F4FAF9",
-                border: `1px solid ${brand.line}`,
-                borderRadius: 10,
-                padding: 12,
-                cursor: "pointer",
-                marginTop: 10,
-              }}
-            >
-              <input type="checkbox" checked={r.consent} disabled={busy} onChange={() => toggleConsent(r)} style={{ marginTop: 3 }} />
-              <span style={{ fontSize: 13, color: brand.ink, lineHeight: 1.7 }}>
-                この結果を会社の担当者へ提供することに同意する(いつでも変更できます)
-              </span>
-            </label>
-
             {r.high_stress && (
-              <div style={{ marginTop: 14 }}>
+              <div style={{ margin: "0 0 14px" }}>
                 {req ? (
                   <div
                     style={{
@@ -365,19 +339,55 @@ export function MyPage({
                     </div>
                   </div>
                 ) : (
-                  <Btn
-                    tone="orange"
-                    onClick={() => {
-                      setShowForm(r.id);
-                      setConsentAgree(false);
-                    }}
-                  >
-                    産業医面接指導を申し出る
-                  </Btn>
+                  <div style={{ background: "#FDF0F0", border: "1px solid #F3CBCB", borderRadius: 10, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 13.5, color: "#7A2A2A", lineHeight: 1.8, marginBottom: 10 }}>
+                      高ストレスと判定されました。<strong>産業医との面談(面接指導)を希望する場合は、下のボタンから申し出てください。</strong>
+                      申出は任意です。申出を理由とする不利益な取り扱いは、法律で禁止されています。
+                    </div>
+                    <Btn
+                      tone="orange"
+                      onClick={() => {
+                        setShowForm(r.id);
+                        setConsentAgree(false);
+                      }}
+                      style={{ padding: "12px 24px", fontSize: 15 }}
+                    >
+                      産業医面接指導を申し出る
+                    </Btn>
+                  </div>
                 )}
               </div>
             )}
+            <div style={{ marginBottom: 10 }}>
+              <Link href={`/report/${r.id}`} style={{ fontSize: 13, color: brand.tealDark, fontWeight: 700 }}>
+                📄 結果票を見る(印刷・PDF保存)
+              </Link>
+            </div>
+            <ScoreBar label="A. 仕事のストレス要因" value={r.score_a} max={68} />
+            <ScoreBar label="B. 心身のストレス反応" value={r.score_b} max={116} threshold={77} />
+            <ScoreBar label="C. 周囲のサポート(点が高いほど乏しい)" value={r.score_c} max={36} />
+
+            <label
+              style={{
+                display: "flex",
+                gap: 10,
+                alignItems: "flex-start",
+                background: "#F4FAF9",
+                border: `1px solid ${brand.line}`,
+                borderRadius: 10,
+                padding: 12,
+                cursor: "pointer",
+                marginTop: 10,
+              }}
+            >
+              <input type="checkbox" checked={r.consent} disabled={busy} onChange={() => toggleConsent(r)} style={{ marginTop: 3 }} />
+              <span style={{ fontSize: 13, color: brand.ink, lineHeight: 1.7 }}>
+                この結果を会社の担当者へ提供することに同意する(いつでも変更できます)
+              </span>
+            </label>
+
           </Card>
+          </div>
         );
       })}
     </div>
