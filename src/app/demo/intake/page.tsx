@@ -1,6 +1,6 @@
 import { DemoNotice } from "@/app/demo/DemoNotice";
 import { IntakeChat } from "@/app/intake/[requestId]/IntakeChat";
-import { DEMO_REPLY_FROM_DOCTOR, DEMO_STEPS } from "./script";
+import { DEMO_QUICK, DEMO_QUICK_NOTE, DEMO_REPLY_FROM_DOCTOR, DEMO_STEPS } from "./script";
 
 export const metadata = { title: "面接指導の事前問診(デモ)" };
 
@@ -9,7 +9,7 @@ export default function DemoIntakePage() {
   return (
     <>
       <DemoNotice />
-      <IntakeChat requestId="demo" demo={{ steps: DEMO_STEPS, doctorReply: DEMO_REPLY_FROM_DOCTOR, doctorHref: "/demo/intake/doctor" }} />
+      <IntakeChat requestId="demo" demo={{ quick: DEMO_QUICK, quickNote: DEMO_QUICK_NOTE, steps: DEMO_STEPS, doctorReply: DEMO_REPLY_FROM_DOCTOR, doctorHref: "/demo/intake/doctor" }} />
     </>
   );
 }

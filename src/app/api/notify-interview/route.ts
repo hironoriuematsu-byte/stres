@@ -5,6 +5,7 @@ import { IMPLEMENTER } from "@/lib/org";
 import { sendViaResend, sleep } from "@/lib/mail";
 import { fiscalYearOf, interviewDoctorLabel, interviewNotifiesOffice, jstDate } from "@/lib/plan";
 import { intakeConfigured, intakeEligible } from "@/lib/intake-server";
+import { INTAKE_MINUTES } from "@/lib/intake";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 宛先数分の送信間隔・再試行に耐えられるようにする
@@ -153,8 +154,8 @@ export async function POST(req: Request) {
     intakeConfigured() && (await intakeEligible(admin, request))
       ? [
           "",
-          "■ 面談前の事前問診への回答をお願いします(約15〜20分)",
-          "医師との面談の前に、全員に回答をお願いしています。AIがいまの状況を詳しく伺い、医師が事前に確認するので、面談では解決策の相談に時間を使えます。下のリンクから回答してください(音声入力も使えます)。",
+          `■ 面談前の事前問診への回答をお願いします(${INTAKE_MINUTES})`,
+          "医師との面談の前に、全員に回答をお願いしています。選んで答える質問と、AIからの短い追加の質問です。医師が事前に確認するので、面談では解決策の相談に時間を使えます。回答は自動で保存され、途中でやめても続きから再開できます。",
           `${origin}/intake/${request.id}`,
         ]
       : [];

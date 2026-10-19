@@ -13,10 +13,21 @@ import {
   CRISIS_MESSAGE,
   INTAKE_FIRST_MESSAGE,
   INTAKE_MAX_CHARS,
+  INTAKE_MAX_FOLLOWUPS,
+  INTAKE_MINUTES,
+  QUICK_HEADER,
+  QUICK_NOTE_LABEL,
+  QUICK_QUESTIONS,
   SHARE_OPTIONS,
   detectCrisis,
+  followupsLeft,
+  formatQuickAnswers,
+  intakeProgress,
+  quickRisk,
+  validQuickAnswers,
   type IntakeMessage,
   type IntakeStatus,
+  type QuickAnswers,
   type RiskLevel,
   type ShareKey,
 } from "@/lib/intake";
@@ -31,8 +42,33 @@ type Intake = {
   reply_sent_at: string | null;
 };
 
-// 紹介用デモの台本(AIを使わず、決まった質問を順に出す)
-export type IntakeDemo = { steps: { reply: string; sample: string }[]; doctorReply: string; doctorHref: string };
+// 紹介用デモの台本(AIを使わず、決まった質問を順に出す)。steps[0] は選んで答える質問のあとの返答
+export type IntakeDemo = {
+  quick: QuickAnswers;
+  quickNote: string;
+  steps: { reply: string; sample: string }[];
+  doctorReply: string;
+  doctorHref: string;
+};
+
+// 書きかけの回答を、この端末のブラウザに残す(閉じても消えないように)。使えない環境では何もしない
+const draftKey = (kind: "quick" | "text", id: string) => `sc-intake-${kind}-${id}`;
+function readDraft<T>(key: string): T | null {
+  try {
+    const v = window.localStorage.getItem(key);
+    return v ? (JSON.parse(v) as T) : null;
+  } catch {
+    return null;
+  }
+}
+function writeDraft(key: string, value: unknown) {
+  try {
+    if (value === null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // 保存できない環境(プライベートモードなど)では、サーバーに送った分だけが残る
+  }
+}
 
 // 進み具合のバー(value が null のときは「処理中」の動くバー)
 function ProgressBar({ value, label }: { value: number | null; label: string }) {
@@ -65,6 +101,11 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
   const [shareKeys, setShareKeys] = useState<ShareKey[]>([]);
   const [shareNote, setShareNote] = useState("");
   const [sendPct, setSendPct] = useState(0);
+  const [quick, setQuick] = useState<QuickAnswers>({});
+  const [quickNote, setQuickNote] = useState("");
+  const [resumed, setResumed] = useState(false);
+  const [needRetry, setNeedRetry] = useState(false);
+  const draftsLoaded = useRef(false);
   const bottom = useRef<HTMLDivElement>(null);
   const { desktopVoice, touch } = useVoiceSupport();
 
@@ -94,8 +135,13 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
         .maybeSingle();
       const it = (data as Intake | null) ?? null;
       setIntake(it);
-      // 前回、聞き取りの最後まで進んでいた(AIが終わりを告げていた)ら、共有範囲の選択から再開する
-      if (it && it.status === "in_progress" && it.progress >= 100) setDone(true);
+      if (it && it.status === "in_progress") {
+        const last = it.messages[it.messages.length - 1];
+        // 前回の続き: 回答の途中で閉じた/AIの応答に失敗していた/最後まで進んでいた(共有範囲の選択から)
+        if (it.messages.some((m) => m.role === "user")) setResumed(true);
+        if (last?.role === "user") setNeedRetry(true);
+        if (it.progress >= 100 && last?.role === "assistant") setDone(true);
+      }
     }
     setAvailable(Boolean(json.available) || Boolean(json.intake));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,8 +151,27 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
     load();
   }, [load]);
   useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [intake?.messages.length, busy, done]);
+    if (intake?.messages.some((m) => m.role === "user")) bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [intake?.messages, busy, done]);
+
+  // 書きかけの回答を読み込む(1回だけ)と、変わるたびに残す
+  useEffect(() => {
+    if (demo || draftsLoaded.current || !intake) return;
+    draftsLoaded.current = true;
+    const q = readDraft<{ answers: QuickAnswers; note: string }>(draftKey("quick", requestId));
+    if (q) {
+      setQuick(q.answers ?? {});
+      setQuickNote(q.note ?? "");
+    }
+    const t = readDraft<string>(draftKey("text", requestId));
+    if (t) setText(t);
+  }, [demo, intake, requestId]);
+  useEffect(() => {
+    if (!demo && draftsLoaded.current) writeDraft(draftKey("quick", requestId), { answers: quick, note: quickNote });
+  }, [demo, quick, quickNote, requestId]);
+  useEffect(() => {
+    if (!demo && draftsLoaded.current) writeDraft(draftKey("text", requestId), text || null);
+  }, [demo, text, requestId]);
 
   const start = async () => {
     if (demo) {
@@ -141,45 +206,49 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
     window.location.href = "/my";
   };
 
-  const send = async () => {
-    if (!intake || !text.trim()) return;
-    const mine: IntakeMessage = { role: "user", content: text.trim(), at: new Date().toISOString() };
-    setIntake({ ...intake, messages: [...intake.messages, mine] });
-    const sent = text;
-    setText("");
+  // デモ: 台本の次の返答を少し待ってから出す
+  const demoReply = (userTurns: number, crisis: boolean) => {
+    if (!demo) return;
+    const idx = userTurns - 1;
+    const last = idx >= demo.steps.length - 1;
+    const reply = crisis ? CRISIS_MESSAGE : (demo.steps[idx]?.reply ?? demo.steps[demo.steps.length - 1].reply);
+    setTimeout(() => {
+      setBusy("");
+      setIntake((p) =>
+        p
+          ? {
+              ...p,
+              risk_level: crisis ? "high" : p.risk_level,
+              progress: intakeProgress(userTurns, crisis || last),
+              messages: [...p.messages, { role: "assistant", content: reply, at: new Date().toISOString() }],
+            }
+          : p
+      );
+      if (crisis || last) setDone(true);
+    }, 900);
+  };
+
+  // サーバーに送る(本人の回答はAIの応答より先に保存される)
+  const post = async (payload: Record<string, unknown>, mine: IntakeMessage | null, restore: () => void): Promise<boolean> => {
+    if (!intake) return false;
+    if (mine) setIntake({ ...intake, messages: [...intake.messages, mine] });
     setBusy("send");
     setErr(null);
-    if (demo) {
-      // デモ: 台本の次の質問を少し待ってから出す
-      const idx = intake.messages.filter((m) => m.role === "user").length;
-      const crisis = detectCrisis(sent);
-      const last = idx >= demo.steps.length - 1;
-      const reply = crisis ? CRISIS_MESSAGE : (demo.steps[idx]?.reply ?? demo.steps[demo.steps.length - 1].reply);
-      setTimeout(() => {
-        setBusy("");
-        setIntake((p) =>
-          p
-            ? {
-                ...p,
-                risk_level: crisis ? "high" : p.risk_level,
-                progress: crisis || last ? 100 : Math.round(((idx + 1) / demo.steps.length) * 100),
-                messages: [...p.messages, { role: "assistant", content: reply, at: new Date().toISOString() }],
-              }
-            : p
-        );
-        if (crisis || last) setDone(true);
-      }, 900);
-      return;
-    }
-    const { ok, json } = await postJson<{ reply: string; done: boolean; risk_level: RiskLevel; progress: number }>("/api/intake/message", {
-      intakeId: intake.id,
-      text: sent,
-    });
+    setNeedRetry(false);
+    const { ok, json } = await postJson<{ reply: string; done: boolean; risk_level: RiskLevel; progress: number; saved?: boolean }>(
+      "/api/intake/message",
+      { intakeId: intake.id, ...payload }
+    );
     setBusy("");
     if (!ok) {
-      setIntake((p) => (p ? { ...p, messages: p.messages.slice(0, -1) } : p));
-      setText(sent);
-      return setErr(json.error ?? "送信できませんでした");
+      if (json.saved) {
+        setNeedRetry(true); // 回答は保存済み。続きの質問だけ受け取り直す
+      } else {
+        if (mine) setIntake((p) => (p ? { ...p, messages: p.messages.slice(0, -1) } : p));
+        restore();
+      }
+      setErr(json.error ?? "送信できませんでした");
+      return Boolean(json.saved);
     }
     setIntake((p) =>
       p
@@ -192,7 +261,36 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
         : p
     );
     if (json.done) setDone(true);
+    return true;
   };
+
+  const submitQuick = async () => {
+    if (!intake || !validQuickAnswers(quick)) return;
+    const mine: IntakeMessage = { role: "user", content: formatQuickAnswers(quick, quickNote), at: new Date().toISOString() };
+    if (demo) {
+      const crisis = quickRisk(quick) === "high" || detectCrisis(quickNote);
+      setIntake({ ...intake, messages: [...intake.messages, mine], progress: intakeProgress(1, false) });
+      setBusy("send");
+      return demoReply(1, crisis);
+    }
+    if (await post({ quick, note: quickNote }, mine, () => {})) writeDraft(draftKey("quick", requestId), null);
+  };
+
+  const send = async () => {
+    if (!intake || !text.trim()) return;
+    const sent = text.trim();
+    const mine: IntakeMessage = { role: "user", content: sent, at: new Date().toISOString() };
+    setText("");
+    if (demo) {
+      const turns = intake.messages.filter((m) => m.role === "user").length + 1;
+      setIntake({ ...intake, messages: [...intake.messages, mine], progress: intakeProgress(turns, false) });
+      setBusy("send");
+      return demoReply(turns, detectCrisis(sent));
+    }
+    await post({ text: sent }, mine, () => setText(sent));
+  };
+
+  const retry = () => post({ retry: true }, null, () => {});
 
   const finish = async () => {
     if (!intake) return;
@@ -265,18 +363,22 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
     return (
       <div style={box}>
         <Card>
-          <Badge tone="orange">面談の前に回答をお願いします(約15〜20分)</Badge>
+          <Badge tone="orange">面談の前に回答をお願いします({INTAKE_MINUTES})</Badge>
           <h1 style={{ fontSize: 21, color: brand.ink, margin: "10px 0 8px" }}>面接指導の事前問診</h1>
           <p style={{ fontSize: 14.5, color: "#2C3B39", lineHeight: 1.9, margin: "0 0 10px" }}>
-            医師との面談の前に、<strong>必ず事前問診にご回答ください</strong>。AIがいまの状況を詳しく伺い、医師が事前に内容を確認します。
+            医師との面談の前に、<strong>必ず事前問診にご回答ください</strong>。医師が事前に内容を確認するので、
             面談では状況の聞き取りを省き、<strong>解決策の相談に時間を使えます</strong>。
           </p>
           <ul style={{ fontSize: 13, color: "#44534F", lineHeight: 1.9, margin: "0 0 12px", paddingLeft: 20 }}>
-            <li>質問に、できるだけ具体的にお答えください。<strong>音声入力</strong>を使うと、話すだけで詳しく入力できます。</li>
-            <li>聞き取りはAI(Anthropic社の Claude)が行います。AIは医師ではなく、診断や治療の指示はしません。</li>
+            <li>
+              最初に<strong>選んで答える質問({QUICK_QUESTIONS.length}問・約2分)</strong>、続いて<strong>AIからの追加の質問(最大{INTAKE_MAX_FOLLOWUPS}問)</strong>にお答えください。
+            </li>
+            <li>追加の質問はAI(Anthropic社の Claude)が行います。AIは医師ではなく、診断や治療の指示はしません。</li>
             <li>内容を見られるのは、あなたと実施者(産業医)だけです。会社の担当者に伝える範囲は、最後にあなたが選べます。</li>
             <li>AIの提供元に送った内容は、AIの学習には使われません(提供元の規約による)。</li>
-            <li>中断しても、あとで続きから再開できます。</li>
+            <li>
+              <strong>回答は自動で保存されます</strong>。途中でやめても、あとでマイページやメールのリンクから続きを再開できます。途中までの回答も医師が確認します。
+            </li>
           </ul>
           <label style={{ display: "flex", gap: 8, fontSize: 13.5, lineHeight: 1.7, alignItems: "flex-start" }}>
             <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ marginTop: 3 }} />
@@ -301,11 +403,12 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
   }
 
   const finished = intake.status !== "in_progress";
+  const userTurns = intake.messages.filter((m) => m.role === "user").length;
   const voiceHint = touch
-    ? "🎤 スマートフォンは、キーボードのマイクのボタンを押すと、話すだけで入力できます。できるだけ詳しく話してください。"
+    ? "🎤 スマートフォンは、キーボードのマイクのボタンを押すと、話すだけで入力できます。"
     : desktopVoice
-      ? "🎤「音声で入力」を押すと、話した内容がそのまま入力されます。できるだけ詳しく話してください。"
-      : "🎤 音声入力も使えます(Windows:「Windowsキー + H」/ Mac:「fn(地球儀)キーを2回」)。できるだけ詳しく話してください。";
+      ? "🎤「音声で入力」を押すと、話した内容がそのまま入力されます。"
+      : "🎤 音声入力も使えます(Windows:「Windowsキー + H」/ Mac:「fn(地球儀)キーを2回」)。";
 
   return (
     <div style={box}>
@@ -314,9 +417,31 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
         <h1 style={{ fontSize: 18, color: brand.ink, margin: "0 0 4px" }}>面接指導の事前問診</h1>
         <p style={{ fontSize: 12, color: "#7A8886", margin: "0 0 10px" }}>AIによる聞き取りです(医師ではありません)。内容は実施者(産業医)だけが確認します。</p>
         {!finished && <ProgressBar value={intake.progress || 5} label="問診の進み具合" />}
+        {!finished && !done && userTurns > 0 && (
+          <div style={{ fontSize: 12, color: "#5B6B6A", marginTop: 6 }}>
+            AIからの追加の質問: あと最大{followupsLeft(userTurns)}問(必要な情報がそろえば、早めに終わります)
+          </div>
+        )}
+        {resumed && !finished && (
+          <div style={{ fontSize: 13, color: brand.tealDark, background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 8, padding: "8px 10px", marginTop: 10, lineHeight: 1.7 }}>
+            前回の続きから再開しています。これまでの回答は保存されています。
+          </div>
+        )}
       </Card>
       {crisis}
-      <Card>
+      {!finished && userTurns === 0 && (
+        <QuickForm
+          quick={quick}
+          setQuick={setQuick}
+          note={quickNote}
+          setNote={setQuickNote}
+          busy={busy !== ""}
+          onSubmit={submitQuick}
+          err={err}
+          demoFill={demo ? () => (setQuick(demo.quick), setQuickNote(demo.quickNote)) : undefined}
+        />
+      )}
+      {userTurns > 0 && <Card>
         <div style={{ display: "grid", gap: 10 }}>
           {intake.messages.map((m, i) => (
             <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
@@ -332,7 +457,14 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
                   color: m.role === "user" ? "#fff" : brand.ink,
                 }}
               >
-                {m.content}
+                {m.role === "user" && m.content.startsWith(QUICK_HEADER) ? (
+                  <details>
+                    <summary style={{ cursor: "pointer" }}>✓ 選んで答える質問に回答しました(開いて確認)</summary>
+                    {m.content.slice(QUICK_HEADER.length)}
+                  </details>
+                ) : (
+                  m.content
+                )}
               </div>
             </div>
           ))}
@@ -340,11 +472,22 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
           <div ref={bottom} />
         </div>
 
-        {!finished && !done && (
+        {!finished && !done && needRetry && busy === "" && (
+          <div style={{ marginTop: 14, borderTop: `1px solid ${brand.line}`, paddingTop: 12 }}>
+            <div style={{ fontSize: 13, color: "#44534F", lineHeight: 1.7, marginBottom: 8 }}>
+              回答は保存されています。下のボタンを押すと、続きの質問を受け取れます。
+            </div>
+            <Btn onClick={retry} style={{ padding: "10px 24px" }}>
+              続きの質問を受け取る
+            </Btn>
+            {err && <div style={{ fontSize: 13, color: "#B02A2A", marginTop: 8 }}>{err}</div>}
+          </div>
+        )}
+        {!finished && !done && !needRetry && (
           <div style={{ marginTop: 14, borderTop: `1px solid ${brand.line}`, paddingTop: 12 }}>
             {demo && (
               <div style={{ fontSize: 12, color: "#8A6B2E", background: "#FBF3E3", border: "1px solid #EFD9A8", borderRadius: 8, padding: "8px 10px", lineHeight: 1.7, marginBottom: 8 }}>
-                (デモ)決まった順番の質問を出しているだけで、答えの内容は読み取りません。実際のAIは、答えに合わせて次の質問を変え、すでに伺ったことは繰り返しません。
+                (デモ)決まった順番の質問を出しているだけで、答えの内容は読み取りません。実際のAIは、選んだ答えと書いた内容に合わせて、就業上の措置の判断に必要な点だけを聞きます。
               </div>
             )}
             <div style={{ fontSize: 12.5, color: brand.tealDark, background: "#F4FAF9", borderRadius: 8, padding: "8px 10px", lineHeight: 1.7, marginBottom: 8 }}>
@@ -354,7 +497,7 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
               value={text}
               onChange={(e) => setText(e.target.value.slice(0, INTAKE_MAX_CHARS))}
               rows={4}
-              placeholder="ここに入力してください(音声入力もできます)"
+              placeholder="番号ごとに、短くて大丈夫です(音声入力もできます)"
               disabled={busy !== ""}
               style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", fontSize: 15, lineHeight: 1.7, border: `1px solid ${brand.line}`, borderRadius: 10 }}
             />
@@ -374,9 +517,10 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
               )}
             </div>
             {err && <div style={{ fontSize: 13, color: "#B02A2A", marginTop: 8 }}>{err}</div>}
+            <div style={{ fontSize: 11.5, color: "#8A9694", marginTop: 8 }}>書きかけの文章も、この端末に自動で保存されます。</div>
           </div>
         )}
-      </Card>
+      </Card>}
 
       {/* 聞き取りが終わったら: 会社の担当者に伝えてよい範囲を選んで、医師に送る */}
       {!finished && done && (
@@ -452,5 +596,112 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
         </Card>
       )}
     </div>
+  );
+}
+
+// ① 選んで答える質問(1画面)。すべてに答えると送れる
+function QuickForm({
+  quick,
+  setQuick,
+  note,
+  setNote,
+  busy,
+  onSubmit,
+  err,
+  demoFill,
+}: {
+  quick: QuickAnswers;
+  setQuick: (f: (p: QuickAnswers) => QuickAnswers) => void;
+  note: string;
+  setNote: (v: string) => void;
+  busy: boolean;
+  onSubmit: () => void;
+  err: string | null;
+  demoFill?: () => void;
+}) {
+  const answered = QUICK_QUESTIONS.filter((q) => (quick[q.key] ?? []).length > 0).length;
+  const toggle = (key: string, opt: string, multi: boolean, none?: string) =>
+    setQuick((p) => {
+      const cur = p[key] ?? [];
+      if (!multi) return { ...p, [key]: [opt] };
+      if (cur.includes(opt)) return { ...p, [key]: cur.filter((x) => x !== opt) };
+      // 「特にない」と他の選択肢は同時に選ばない
+      const next = opt === none ? [opt] : [...cur.filter((x) => x !== none), opt];
+      return { ...p, [key]: next };
+    });
+  return (
+    <Card>
+      <h2 style={{ fontSize: 16, color: brand.ink, margin: "0 0 4px" }}>選んで答える質問({QUICK_QUESTIONS.length}問・約2分)</h2>
+      <p style={{ fontSize: 12.5, color: "#5B6B6A", margin: "0 0 12px", lineHeight: 1.7 }}>
+        あてはまるものを選んでください。選んだ答えは、この端末に自動で保存されます。
+      </p>
+      <div style={{ display: "grid", gap: 16 }}>
+        {QUICK_QUESTIONS.map((q, i) => (
+          <fieldset key={q.key} style={{ border: 0, margin: 0, padding: 0 }}>
+            <legend style={{ fontSize: 14, fontWeight: 700, color: brand.ink, lineHeight: 1.6, marginBottom: 6, padding: 0 }}>
+              {i + 1}. {q.label}
+            </legend>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {q.options.map((o) => {
+                const on = (quick[q.key] ?? []).includes(o);
+                return (
+                  <button
+                    key={o}
+                    type="button"
+                    aria-pressed={on}
+                    disabled={busy}
+                    onClick={() => toggle(q.key, o, Boolean(q.multi), q.none)}
+                    style={{
+                      fontSize: 13.5,
+                      lineHeight: 1.5,
+                      padding: "7px 12px",
+                      borderRadius: 999,
+                      cursor: "pointer",
+                      textAlign: "left",
+                      border: `1px solid ${on ? brand.teal : brand.line}`,
+                      background: on ? brand.teal : "#fff",
+                      color: on ? "#fff" : brand.ink,
+                      fontWeight: on ? 700 : 400,
+                    }}
+                  >
+                    {on ? "✓ " : ""}
+                    {o}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+        ))}
+        <div>
+          <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: brand.ink, marginBottom: 6 }}>{QUICK_NOTE_LABEL}</label>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value.slice(0, 300))}
+            disabled={busy}
+            placeholder="例: 4月から担当が増えて、終わらない"
+            style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", fontSize: 15, border: `1px solid ${brand.line}`, borderRadius: 10 }}
+          />
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", alignItems: "center" }}>
+        <Btn tone="orange" onClick={onSubmit} disabled={busy || answered < QUICK_QUESTIONS.length} style={{ padding: "12px 28px", fontSize: 16 }}>
+          {busy ? "送っています…" : "次へ(AIの追加の質問へ)"}
+        </Btn>
+        <span style={{ fontSize: 12.5, color: "#5B6B6A" }}>
+          {answered}/{QUICK_QUESTIONS.length}問 回答済み
+        </span>
+        {demoFill && (
+          <Btn tone="ghost" disabled={busy} onClick={demoFill}>
+            (デモ)答えの例を入れる
+          </Btn>
+        )}
+      </div>
+      {busy && (
+        <div style={{ marginTop: 10 }}>
+          <ProgressBar value={null} label="回答を保存して、追加の質問を準備しています…" />
+        </div>
+      )}
+      {err && <div style={{ fontSize: 13, color: "#B02A2A", marginTop: 8 }}>{err}</div>}
+    </Card>
   );
 }

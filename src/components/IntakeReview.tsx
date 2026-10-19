@@ -38,6 +38,8 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const s = intake.summary;
+  const inProgress = intake.status === "in_progress";
+  const answered = intake.messages.some((m) => m.role === "user");
 
   const send = async () => {
     if (demo) return setMsg({ ok: true, text: "(デモ)実際の画面では、本人のマイページに返信が表示され、お知らせメールが届きます。" });
@@ -68,7 +70,7 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
     const { ok, json } = await postJson("/api/intake/finish", { intakeId: intake.id });
     setBusy(false);
     if (!ok) return setMsg({ ok: false, text: json.error ?? "作り直せませんでした" });
-    setMsg({ ok: true, text: "要約と返信の下書きを作り直しました。" });
+    setMsg({ ok: true, text: inProgress ? "途中までの内容で要約を作りました。" : "要約と返信の下書きを作り直しました。" });
     onChanged();
   };
   const openLog = () => {
@@ -88,7 +90,8 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <strong style={{ fontSize: 14, color: brand.ink }}>事前問診(AI)の要約</strong>
         <Badge tone={riskTone(intake.risk_level)}>緊急度: {RISK_LABEL[intake.risk_level]}</Badge>
-        {intake.status === "in_progress" && <Badge tone="gray">本人が聞き取り中</Badge>}
+        {inProgress && <Badge tone="gray">本人が回答の途中</Badge>}
+        {s?.partial && <Badge tone="orange">途中までの回答の要約{s.generated_at ? `(${new Date(s.generated_at).toLocaleDateString("ja-JP")})` : ""}</Badge>}
       </div>
       {s ? (
         <div>
@@ -101,22 +104,31 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
           {row("本人の希望", s.wishes)}
           {row("緊急度の根拠", s.risk_notes)}
           {row("面談で確認", (s.points_to_confirm ?? []).map((p) => `・${p}`).join("\n"))}
-          {row("措置の候補(案)", (s.measure_candidates ?? []).map((p) => `・${p}`).join("\n"))}
+          {row("就業上の措置の案", (s.measure_candidates ?? []).map((p) => `・${p}`).join("\n"))}
         </div>
       ) : (
         <div style={{ fontSize: 13, color: "#5B6B6A" }}>
-          {intake.status === "in_progress"
-            ? "本人が問診を終えると、要約がここに表示されます。"
+          {inProgress
+            ? answered
+              ? "本人が回答の途中です。終えると要約がここに表示されます。途中のまま2日たつと、途中までの内容で自動で要約を作ります。面談が近いときは、下のボタンで今すぐ作れます。"
+              : "本人はまだ回答していません。"
             : intake.summary_error
               ? `${intake.summary_error}「要約と下書きを作り直す」を押してください。`
               : "要約を作成しています(1分ほど)。少し待ってから画面を開き直してください。"}
+        </div>
+      )}
+      {inProgress && answered && (
+        <div>
+          <Btn tone="ghost" onClick={resummarize} disabled={busy}>
+            {busy ? "作っています(1分ほど)…" : s ? "最新の回答で要約を作り直す" : "途中までの内容で要約を作る"}
+          </Btn>
         </div>
       )}
       <div style={{ fontSize: 12, color: "#8A9694", lineHeight: 1.6 }}>AIによる要約です。判断は会話の記録と面談で確認してください。</div>
 
       <div>
         <button onClick={openLog} style={{ background: "none", border: 0, padding: 0, color: brand.tealDark, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-          {showLog ? "▲" : "▼"} 会話の記録({intake.messages.filter((m) => m.role === "user").length}往復)
+          {showLog ? "▲" : "▼"} 会話の記録(本人の回答{intake.messages.filter((m) => m.role === "user").length}回)
         </button>
         {showLog && (
           <div style={{ marginTop: 8, display: "grid", gap: 6, maxHeight: 360, overflowY: "auto" }}>

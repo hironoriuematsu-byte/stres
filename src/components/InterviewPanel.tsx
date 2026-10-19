@@ -218,7 +218,13 @@ export function InterviewPanel({
                         style={{ background: "none", border: 0, padding: 0, cursor: "pointer", display: "flex", gap: 6, alignItems: "center" }}
                       >
                         <Badge tone={riskTone(intakes[r.id].risk_level)}>
-                          {intakes[r.id].status === "in_progress" ? "聞き取り中" : intakes[r.id].reply_sent_at ? "返信済み" : "要約あり"}・{RISK_LABEL[intakes[r.id].risk_level]}
+                          {intakes[r.id].status === "in_progress"
+                            ? intakes[r.id].summary
+                              ? "回答途中・要約あり"
+                              : "回答途中"
+                            : intakes[r.id].reply_sent_at
+                              ? "返信済み"
+                              : "要約あり"}・{RISK_LABEL[intakes[r.id].risk_level]}
                         </Badge>
                         <span style={{ color: brand.tealDark, fontSize: 12, fontWeight: 700 }}>{openIntake === r.id ? "閉じる" : "確認"}</span>
                       </button>

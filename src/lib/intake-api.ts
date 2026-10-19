@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requestUser } from "@/lib/supabase/server";
 import { adminClient, officeEmails, sendMails } from "@/lib/plan-server";
 import type { IntakeMessage, IntakeStatus, RiskLevel, ShareConsent } from "@/lib/intake";
-import { RISK_LABEL } from "@/lib/intake";
+import { higherRisk, RISK_LABEL } from "@/lib/intake";
+import { intakeSummarize } from "@/lib/intake-server";
 
 // 事前問診のAPIで共通の処理(ログイン確認・記録の読み込み・実施者へのお知らせ)
 
@@ -41,6 +42,39 @@ export async function loadIntake(admin: SupabaseClient, id: unknown): Promise<In
   if (typeof id !== "string" || !id) return null;
   const { data } = await admin.from("interview_intakes").select("*").eq("id", id).maybeSingle();
   return (data as IntakeRow | null) ?? null;
+}
+
+// 医師向けの要約・本人への返信の下書き・会社への共有の下書きを作って保存する。
+// partial: 本人が途中でやめた時点までの内容で作る(問診は終わらせず、本人は続きから再開できる)
+export async function saveSummary(admin: SupabaseClient, intake: IntakeRow, share: ShareConsent | null, partial = false): Promise<string | null> {
+  const { data: request } = await admin.from("interview_requests").select("result_id").eq("id", intake.request_id).maybeSingle();
+  const { data: result } = request
+    ? await admin.from("results").select("score_a, score_b, score_c, high_stress").eq("id", request.result_id).maybeSingle()
+    : { data: null };
+  try {
+    const s = await intakeSummarize(
+      intake.messages,
+      result as { score_a: number; score_b: number; score_c: number; high_stress: boolean } | null,
+      share,
+      partial
+    );
+    await admin
+      .from("interview_intakes")
+      .update({
+        summary: s.summary,
+        reply_draft: s.reply_draft,
+        company_share_draft: s.company_share_draft || null,
+        risk_level: higherRisk(intake.risk_level ?? "none", s.summary.risk_level),
+        summary_error: null,
+      })
+      .eq("id", intake.id);
+    return null;
+  } catch (e) {
+    console.error("intake summarize failed", e);
+    const msg = "要約を作れませんでした(会話の記録は保存されています)。";
+    await admin.from("interview_intakes").update({ summary_error: msg }).eq("id", intake.id);
+    return msg;
+  }
 }
 
 async function companyName(admin: SupabaseClient, companyId: string): Promise<string> {

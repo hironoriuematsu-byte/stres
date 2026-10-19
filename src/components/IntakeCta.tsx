@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { brand } from "@/lib/brand";
 import { Btn } from "@/components/ui";
+import { INTAKE_MINUTES } from "@/lib/intake";
 
 type Status = { available: boolean; intake: { id: string; status: string; reply: string | null; reply_sent_at: string | null } | null };
 
@@ -41,9 +42,9 @@ export function IntakeCta({ requestId, prominent }: { requestId: string; promine
     // 申出の直後: そのまま事前問診に進めるよう、大きく案内する
     return (
       <div style={{ marginTop: 12, background: "#FFF8EE", border: "1px solid #F0D9A8", borderRadius: 12, padding: "14px 16px" }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: brand.ink }}>続けて、面談前の事前問診に回答してください(約15〜20分)</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: brand.ink }}>続けて、面談前の事前問診に回答してください({INTAKE_MINUTES})</div>
         <div style={{ fontSize: 13, color: "#44534F", lineHeight: 1.8, margin: "6px 0 10px" }}>
-          医師との面談の前に、全員に回答をお願いしています。AIがいまの状況を詳しく伺い、医師が事前に確認するので、面談では解決策の相談に時間を使えます。中断しても、マイページから続きを再開できます。
+          医師との面談の前に、全員に回答をお願いしています。選んで答える質問と、AIからの短い追加の質問です。医師が事前に確認するので、面談では解決策の相談に時間を使えます。回答は自動で保存され、中断してもマイページから続きを再開できます。
         </div>
         <Link href={href}>
           <Btn tone="orange">事前問診に回答する</Btn>
@@ -54,7 +55,15 @@ export function IntakeCta({ requestId, prominent }: { requestId: string; promine
   return (
     <div style={{ marginTop: 10, background: "#fff", border: `1px solid ${brand.line}`, borderRadius: 10, padding: "10px 12px" }}>
       <div style={{ fontSize: 13, color: brand.ink, lineHeight: 1.7 }}>
-        <strong>面談の前に、事前問診への回答をお願いします</strong>(約15〜20分)。AIがいまの状況を詳しく伺い、医師が事前に確認します。
+        {st.intake ? (
+          <>
+            <strong>事前問診が途中のままです</strong>。これまでの回答は保存されています。続きから回答してください(残りは数分です)。
+          </>
+        ) : (
+          <>
+            <strong>面談の前に、事前問診への回答をお願いします</strong>({INTAKE_MINUTES})。医師が事前に内容を確認します。
+          </>
+        )}
       </div>
       <Link href={href} style={link}>
         {st.intake ? "事前問診の続きに回答する →" : "事前問診に回答する →"}

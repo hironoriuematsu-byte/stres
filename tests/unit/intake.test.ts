@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { detectCrisis, higherRisk, SUMMARY_SCHEMA, TURN_SCHEMA } from "@/lib/intake";
+import {
+  detectCrisis,
+  followupsLeft,
+  formatQuickAnswers,
+  higherRisk,
+  INTAKE_MAX_FOLLOWUPS,
+  intakeProgress,
+  needsPartialSummary,
+  QUICK_QUESTIONS,
+  quickRisk,
+  SUMMARY_SCHEMA,
+  TURN_SCHEMA,
+  validQuickAnswers,
+  type QuickAnswers,
+} from "@/lib/intake";
 
 describe("事前問診: 命に関わるサインの言葉", () => {
   it("はっきりした言葉は拾う(全角・半角の違いも)", () => {
@@ -23,7 +37,7 @@ describe("事前問診: 緊急度", () => {
     expect(higherRisk("none", "none")).toBe("none");
   });
   it("AIの返答の形は必須項目がそろっている", () => {
-    expect(TURN_SCHEMA.required).toEqual(["reply", "done", "risk_level", "progress"]);
+    expect(TURN_SCHEMA.required).toEqual(["reply", "done", "risk_level"]);
     expect(SUMMARY_SCHEMA.required).toContain("company_share_draft");
     expect(SUMMARY_SCHEMA.required).toContain("reply_draft");
     expect(SUMMARY_SCHEMA.additionalProperties).toBe(false);
@@ -46,5 +60,68 @@ describe("事前問診: 催促", () => {
     expect(shouldRemind(base, "completed", "pending", now)).toBe(false);
     expect(shouldRemind(base, null, "done", now)).toBe(false);
     expect(shouldRemind({ ...base, last_sent_at: null, sent_count: 0 }, null, "pending", now)).toBe(false); // 最初の案内は実施者か申出時
+  });
+});
+
+describe("事前問診: 選んで答える質問", () => {
+  const calm: QuickAnswers = Object.fromEntries(QUICK_QUESTIONS.map((q) => [q.key, [q.options[0]]]));
+  it("すべてに答えていれば受け付ける。未回答・選択肢にない値・1つだけの質問に複数は受け付けない", () => {
+    expect(validQuickAnswers(calm)).toBe(true);
+    const { sleep: _omit, ...missing } = calm;
+    expect(validQuickAnswers(missing)).toBe(false);
+    expect(validQuickAnswers({ ...calm, sleep: ["勝手な値"] })).toBe(false);
+    expect(validQuickAnswers({ ...calm, sleep: ["よく眠れている", "ほとんど眠れない日が多い"] })).toBe(false);
+    expect(validQuickAnswers({ ...calm, causes: ["仕事の量・時間", "上司との関係"] })).toBe(true);
+    expect(validQuickAnswers(null)).toBe(false);
+  });
+  it("会話の記録に残す文章に、質問と答えが入る", () => {
+    const t = formatQuickAnswers({ ...calm, overtime: ["月80時間以上"] }, "担当が増えた");
+    expect(t).toContain("残業・休日出勤は、合わせてどのくらいですか: 月80時間以上");
+    expect(t).toContain("いちばん困っていること: 担当が増えた");
+  });
+  it("死にたい気持ちが少しでもあれば緊急度は高、措置が要りそうな答えは中", () => {
+    expect(quickRisk(calm)).toBe("low");
+    expect(quickRisk({ ...calm, crisis: ["ときどきある"] })).toBe("high");
+    expect(quickRisk({ ...calm, overtime: ["月80時間以上"] })).toBe("moderate");
+    expect(quickRisk({ ...calm, causes: ["ハラスメントと感じること"] })).toBe("moderate");
+  });
+});
+
+describe("事前問診: 往復の上限と進み具合", () => {
+  it("追加の質問は最大5問。選んで答える質問のあとから数える", () => {
+    expect(INTAKE_MAX_FOLLOWUPS).toBe(5);
+    expect(followupsLeft(1)).toBe(5);
+    expect(followupsLeft(3)).toBe(3);
+    expect(followupsLeft(6)).toBe(0);
+    expect(followupsLeft(9)).toBe(0);
+  });
+  it("進み具合は戻らず、終わるまで100にならない", () => {
+    expect(intakeProgress(0, false)).toBe(5);
+    expect(intakeProgress(1, false)).toBe(40);
+    expect(intakeProgress(2, false)).toBeGreaterThan(intakeProgress(1, false));
+    expect(intakeProgress(20, false)).toBe(95);
+    expect(intakeProgress(2, true)).toBe(100);
+  });
+});
+
+describe("事前問診: 途中でやめたときの要約", () => {
+  const now = new Date("2026-10-20T00:00:00Z");
+  const msgs = (lastAt: string) => [
+    { role: "assistant" as const, content: "はじめに", at: "2026-10-15T00:00:00Z" },
+    { role: "user" as const, content: "回答", at: lastAt },
+  ];
+  it("最後の回答から2日たっていて、要約がまだ・古いときに作る", () => {
+    expect(needsPartialSummary({ status: "in_progress", messages: msgs("2026-10-17T00:00:00Z"), summary: null }, now)).toBe(true);
+    expect(
+      needsPartialSummary({ status: "in_progress", messages: msgs("2026-10-17T00:00:00Z"), summary: { generated_at: "2026-10-16T00:00:00Z" } }, now)
+    ).toBe(true);
+  });
+  it("2日たっていない・作成済み・回答なし・完了済みなら作らない", () => {
+    expect(needsPartialSummary({ status: "in_progress", messages: msgs("2026-10-19T00:00:00Z"), summary: null }, now)).toBe(false);
+    expect(
+      needsPartialSummary({ status: "in_progress", messages: msgs("2026-10-17T00:00:00Z"), summary: { generated_at: "2026-10-18T00:00:00Z" } }, now)
+    ).toBe(false);
+    expect(needsPartialSummary({ status: "in_progress", messages: msgs("2026-10-17T00:00:00Z").slice(0, 1), summary: null }, now)).toBe(false);
+    expect(needsPartialSummary({ status: "completed", messages: msgs("2026-10-17T00:00:00Z"), summary: null }, now)).toBe(false);
   });
 });

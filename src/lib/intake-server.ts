@@ -48,12 +48,19 @@ export async function intakeEligible(
   return option === "mestate";
 }
 
-// 会話の記録を Claude に渡す形にする(最初は本人の発言から始める必要があるため、開始の合図を置く)
-function toParams(history: IntakeMessage[]): Anthropic.Beta.BetaMessageParam[] {
+// 会話の記録を Claude に渡す形にする(最初は本人の発言から始める必要があるため、開始の合図を置く)。
+// 最後の本人の発言には、追加の質問の残りの回数を添える(本人には表示されず、記録にも残らない)
+function toParams(history: IntakeMessage[], questionsLeft: number): Anthropic.Beta.BetaMessageParam[] {
   const msgs: Anthropic.Beta.BetaMessageParam[] = [
     { role: "user", content: "(面接指導を申し出ました。事前問診を始めてください)" },
   ];
-  for (const m of history) msgs.push({ role: m.role, content: m.content });
+  history.forEach((m, i) => {
+    const note =
+      i === history.length - 1 && m.role === "user"
+        ? `\n\n(システムからの連絡: この返答でできる追加の質問は、残り${questionsLeft}回です。${questionsLeft <= 0 ? "質問せずに終えてください。" : ""})`
+        : "";
+    msgs.push({ role: m.role, content: m.content + note });
+  });
   return msgs;
 }
 
@@ -64,29 +71,30 @@ function jsonText(res: Anthropic.Beta.BetaMessage): string {
   return block.text;
 }
 
-// 聞き取りの1往復。本人の発言(history の最後)に対する返答を作る
+// 追加の質問の1往復。本人の発言(history の最後)に対する返答を作る
 export async function intakeTurn(
-  history: IntakeMessage[]
-): Promise<{ reply: string; done: boolean; risk_level: RiskLevel; progress: number }> {
+  history: IntakeMessage[],
+  questionsLeft: number
+): Promise<{ reply: string; done: boolean; risk_level: RiskLevel }> {
   const res = await claude().beta.messages.create({
     model: MODEL,
     max_tokens: 4000,
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
     system: [{ type: "text", text: INTERVIEW_SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: toParams(history),
+    messages: toParams(history, questionsLeft),
     output_config: { effort: "low", format: { type: "json_schema", schema: TURN_SCHEMA as unknown as Record<string, unknown> } },
   });
-  const parsed = JSON.parse(jsonText(res)) as { reply: string; done: boolean; risk_level: RiskLevel; progress?: number };
-  const progress = Math.max(0, Math.min(100, Math.round(Number(parsed.progress) || 0)));
-  return { reply: String(parsed.reply ?? "").trim(), done: Boolean(parsed.done), risk_level: parsed.risk_level ?? "none", progress };
+  const parsed = JSON.parse(jsonText(res)) as { reply: string; done: boolean; risk_level: RiskLevel };
+  return { reply: String(parsed.reply ?? "").trim(), done: Boolean(parsed.done), risk_level: parsed.risk_level ?? "none" };
 }
 
 // 医師向けの要約、本人への返信の下書き、会社の担当者に共有する文章の下書き
 export async function intakeSummarize(
   history: IntakeMessage[],
   scores: { score_a: number; score_b: number; score_c: number; high_stress: boolean } | null,
-  share: ShareConsent | null
+  share: ShareConsent | null,
+  partial = false
 ): Promise<{ summary: IntakeSummary; reply_draft: string; company_share_draft: string }> {
   const transcript = history.map((m) => `${m.role === "user" ? "本人" : "AI"}: ${m.content}`).join("\n");
   const scoreText = scores
@@ -102,10 +110,14 @@ export async function intakeSummarize(
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
     system: [{ type: "text", text: SUMMARY_SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: `${scoreText}\n${shareText}\n\n## 事前問診の会話記録\n${transcript}` }],
+    messages: [{ role: "user", content: `${scoreText}\n${shareText}${partial ? "\n※途中までの回答(本人は問診を途中でやめています)" : ""}\n\n## 事前問診の会話記録\n${transcript}` }],
     output_config: { effort: "high", format: { type: "json_schema", schema: SUMMARY_SCHEMA as unknown as Record<string, unknown> } },
   });
   const parsed = JSON.parse(jsonText(res)) as IntakeSummary & { reply_draft: string; company_share_draft: string };
   const { reply_draft, company_share_draft, ...summary } = parsed;
-  return { summary, reply_draft, company_share_draft: share && share.keys.length > 0 ? company_share_draft : "" };
+  return {
+    summary: { ...summary, partial, generated_at: new Date().toISOString() },
+    reply_draft,
+    company_share_draft: share && share.keys.length > 0 ? company_share_draft : "",
+  };
 }
