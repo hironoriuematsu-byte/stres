@@ -84,7 +84,7 @@ export async function POST(req: Request) {
     done = true;
   } else {
     try {
-      const t = await decideTurn(userTurns, (mustAsk) => intakeTurn(history, left, mustAsk));
+      const t = await decideTurn(userTurns, () => intakeTurn(history, left));
       reply = t.reply;
       done = t.done;
       risk = higherRisk(risk, t.risk_level);

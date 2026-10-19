@@ -44,7 +44,7 @@ export function IntakeCta({ requestId, prominent }: { requestId: string; promine
       <div style={{ marginTop: 12, background: "#FFF8EE", border: "1px solid #F0D9A8", borderRadius: 12, padding: "14px 16px" }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: brand.ink }}>続けて、面談前の事前問診に回答してください({INTAKE_MINUTES})</div>
         <div style={{ fontSize: 13, color: "#44534F", lineHeight: 1.8, margin: "6px 0 10px" }}>
-          医師との面談の前に、全員に回答をお願いしています。選んで答える質問と、AIからの短い追加の質問です。医師が事前に確認するので、面談では解決策の相談に時間を使えます。回答は自動で保存され、中断してもマイページから続きを再開できます。
+          医師との面談の前に、全員に回答をお願いしています。選んで答える質問が中心で、必要なときだけAIから短い追加の質問があります。医師が事前に確認するので、面談では解決策の相談に時間を使えます。回答は自動で保存され、中断してもマイページから続きを再開できます。
         </div>
         <Link href={href}>
           <Btn tone="orange">事前問診に回答する</Btn>

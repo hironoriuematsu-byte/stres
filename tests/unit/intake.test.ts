@@ -2,8 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   decideTurn,
   detectCrisis,
-  INTAKE_FALLBACK_QUESTIONS,
-  INTAKE_MIN_FOLLOWUPS,
+  INTAKE_CLOSING,
   followupsLeft,
   formatQuickAnswers,
   higherRisk,
@@ -129,48 +128,31 @@ describe("事前問診: 途中でやめたときの要約", () => {
   });
 });
 
-describe("事前問診: 追加の質問が必ず回る(AIの判断まかせにしない)", () => {
+describe("事前問診: 追加の質問の回数(必要なときだけ・上限あり)", () => {
   // 選んで答える質問のあと、本人が答えるたびに decideTurn を呼び、終わるまでの追加の質問の数を数える
-  async function run(ai: (turn: number, mustAsk: boolean) => { done: boolean; risk_level?: "none" | "high" }) {
+  async function run(ai: (turn: number) => boolean) {
     let questions = 0;
-    let calls = 0;
     for (let userTurns = 1; userTurns <= 20; userTurns++) {
-      const t = await decideTurn(userTurns, async (mustAsk) => {
-        calls++;
-        const r = ai(userTurns, mustAsk);
-        return { reply: r.done ? "終わります" : `質問${userTurns}`, done: r.done, risk_level: r.risk_level ?? "none" };
+      const t = await decideTurn(userTurns, async () => {
+        const done = ai(userTurns);
+        return { reply: done ? "終わります" : `質問${userTurns}`, done, risk_level: "none" };
       });
-      if (t.done) return { questions, calls, last: t };
+      if (t.done) return { questions, last: t };
       questions++;
     }
     throw new Error("終わらない");
   }
-  it("AIが選択式だけで終えようとしても、最低2問は聞く", async () => {
-    const r = await run(() => ({ done: true }));
-    expect(INTAKE_MIN_FOLLOWUPS).toBe(2);
-    expect(r.questions).toBe(2);
-  });
-  it("やり直しでAIが質問すれば、AIの質問を使う", async () => {
-    const r = await run((turn, mustAsk) => ({ done: !(mustAsk && turn <= 2) || turn > 3 }));
-    expect(r.questions).toBeGreaterThanOrEqual(2);
-  });
-  it("AIがやり直しても終えようとするときは、決まった質問を出す", async () => {
-    const t = await decideTurn(1, async () => ({ reply: "終わります", done: true, risk_level: "none" }));
-    expect(t.done).toBe(false);
-    expect(t.reply).toBe(INTAKE_FALLBACK_QUESTIONS[0]);
-  });
-  it("AIが3問目で終えれば、3問で終わる", async () => {
-    const r = await run((turn) => ({ done: turn >= 4 }));
-    expect(r.questions).toBe(3);
+  it("選択式だけで十分とAIが判断すれば、追加の質問なしで終わる", async () => {
+    const r = await run(() => true);
+    expect(r.questions).toBe(0);
     expect(r.last.reply).toBe("終わります");
   });
-  it("AIが終えようとしなくても、5問で必ず終わる", async () => {
-    const r = await run(() => ({ done: false }));
-    expect(r.questions).toBe(5);
+  it("AIが3問目で終えれば、3問で終わる", async () => {
+    expect((await run((turn) => turn >= 4)).questions).toBe(3);
   });
-  it("緊急度が高いときは、下限にかかわらずすぐ終える", async () => {
-    const r = await run(() => ({ done: true, risk_level: "high" }));
-    expect(r.questions).toBe(0);
-    expect(r.calls).toBe(1);
+  it("AIが終えようとしなくても、5問で必ず終わる", async () => {
+    const r = await run(() => false);
+    expect(r.questions).toBe(5);
+    expect(r.last.reply).toBe(INTAKE_CLOSING);
   });
 });

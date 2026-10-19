@@ -371,7 +371,7 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
           </p>
           <ul style={{ fontSize: 13, color: "#44534F", lineHeight: 1.9, margin: "0 0 12px", paddingLeft: 20 }}>
             <li>
-              最初に<strong>選んで答える質問({QUICK_QUESTIONS.length}問・約2分)</strong>、続いて<strong>AIからの追加の質問(最大{INTAKE_MAX_FOLLOWUPS}問)</strong>にお答えください。
+              最初に<strong>選んで答える質問({QUICK_QUESTIONS.length}問・約2分)</strong>にお答えください。必要なときだけ、<strong>AIから追加の質問(最大{INTAKE_MAX_FOLLOWUPS}問)</strong>をします。
             </li>
             <li>追加の質問はAI(Anthropic社の Claude)が行います。AIは医師ではなく、診断や治療の指示はしません。</li>
             <li>内容を見られるのは、あなたと実施者(産業医)だけです。会社の担当者に伝える範囲は、最後にあなたが選べます。</li>
@@ -419,7 +419,7 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
         {!finished && <ProgressBar value={intake.progress || 5} label="問診の進み具合" />}
         {!finished && !done && userTurns > 0 && (
           <div style={{ fontSize: 12, color: "#5B6B6A", marginTop: 6 }}>
-            AIからの追加の質問: あと最大{followupsLeft(userTurns)}問(必要な情報がそろえば、早めに終わります)
+            AIからの追加の質問: あと最大{followupsLeft(userTurns)}問(必要な情報がそろえば、その時点で終わります)
           </div>
         )}
         {resumed && !finished && (
@@ -683,7 +683,7 @@ function QuickForm({
       </div>
       <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", alignItems: "center" }}>
         <Btn tone="orange" onClick={onSubmit} disabled={busy || answered < QUICK_QUESTIONS.length} style={{ padding: "12px 28px", fontSize: 16 }}>
-          {busy ? "送っています…" : "次へ(AIの追加の質問へ)"}
+          {busy ? "送っています…" : "次へ"}
         </Btn>
         <span style={{ fontSize: 12.5, color: "#5B6B6A" }}>
           {answered}/{QUICK_QUESTIONS.length}問 回答済み
@@ -696,7 +696,7 @@ function QuickForm({
       </div>
       {busy && (
         <div style={{ marginTop: 10 }}>
-          <ProgressBar value={null} label="回答を保存して、追加の質問を準備しています…" />
+          <ProgressBar value={null} label="回答を保存して、確認しています…" />
         </div>
       )}
       {err && <div style={{ fontSize: 13, color: "#B02A2A", marginTop: 8 }}>{err}</div>}

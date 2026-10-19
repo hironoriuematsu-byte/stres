@@ -26,10 +26,9 @@ export type IntakeSummary = {
   generated_at?: string; // 要約を作った時刻(サーバーが付ける)
 };
 
-// 流れ: ① 選んで答える質問(1画面・約2分) → ② AIの追加の質問(最大5問) → ③ 会社に伝えてよい範囲を選んで医師に送る
+// 流れ: ① 選んで答える質問(1画面・約2分) → ② 必要なときだけAIの追加の質問(0〜5問) → ③ 会社に伝えてよい範囲を選んで医師に送る
 // 離脱を防ぐため、往復はできるだけ少なくする。回答は1問ごとにサーバーに保存し、続きから再開できる
 export const INTAKE_MAX_FOLLOWUPS = 5; // AIの追加の質問の上限
-export const INTAKE_MIN_FOLLOWUPS = 2; // AIの追加の質問の下限(選択式だけで終わらないようにする。緊急時を除く)
 export const INTAKE_MAX_USER_TURNS = INTAKE_MAX_FOLLOWUPS + 2; // 念のための上限(選んで答える質問 + 追加の質問 + 予備)
 export const INTAKE_NAME = "事前問診";
 export const INTAKE_MINUTES = "約5〜10分";
@@ -38,7 +37,7 @@ export const INTAKE_PARTIAL_AFTER_DAYS = 2; // 途中でやめてからこの日
 
 export const INTAKE_FIRST_MESSAGE =
   "面接指導のお申し出、ありがとうございます。医師との面談の前に、いまの状況を伺います(事前問診)。" +
-  `最初に選んで答える質問、続いてAIから追加の質問(最大${INTAKE_MAX_FOLLOWUPS}問)をお聞きします。` +
+  `最初に選んで答える質問、必要に応じてAIから追加の質問(最大${INTAKE_MAX_FOLLOWUPS}問)をお聞きします。` +
   "回答は自動で保存され、中断しても続きから再開できます。";
 
 export const INTAKE_CLOSING =
@@ -126,32 +125,14 @@ export function intakeProgress(userTurns: number, done: boolean): number {
 // AIの追加の質問の残り(いま表示している質問を含む)
 export const followupsLeft = (userTurns: number): number => Math.max(0, INTAKE_MAX_FOLLOWUPS - Math.max(0, userTurns - 1));
 
-// まだ終えてはいけないか(本人が答えた追加の質問が下限に届いていない)
-export const mustAskMore = (userTurns: number): boolean => Math.max(0, userTurns - 1) < INTAKE_MIN_FOLLOWUPS;
-
-// AIの返答を受けて、この回の返答と終わるかどうかを決める(往復の下限・上限をAIまかせにしない)。
-// ask(mustAsk) は AI を1回呼ぶ。下限より前に終えようとしたら(緊急時を除く)1回だけやり直し、それでも終えるなら決まった質問をする
+// AIの返答を受けて、この回の返答と終わるかどうかを決める。追加の質問が要るかはAIが判断し(0問で終えてよい)、
+// 上限の回数を超えたら、AIの返答にかかわらず終える
 export type TurnResult = { reply: string; done: boolean; risk_level: RiskLevel };
-export async function decideTurn(userTurns: number, ask: (mustAsk: boolean) => Promise<TurnResult>): Promise<TurnResult> {
-  const mustAsk = mustAskMore(userTurns);
-  let t = await ask(mustAsk);
-  if (mustAsk && t.done && t.risk_level !== "high") {
-    t = await ask(true);
-    if (t.done && t.risk_level !== "high") {
-      t = { ...t, done: false, reply: INTAKE_FALLBACK_QUESTIONS[Math.min(Math.max(0, userTurns - 1), INTAKE_FALLBACK_QUESTIONS.length - 1)] };
-    }
-  }
-  const reply = t.reply || INTAKE_CLOSING;
-  // 追加の質問の上限を超えたら、AIの返答にかかわらず終える
+export async function decideTurn(userTurns: number, ask: () => Promise<TurnResult>): Promise<TurnResult> {
+  const t = await ask();
   if (!t.done && (followupsLeft(userTurns) <= 0 || userTurns >= INTAKE_MAX_USER_TURNS)) return { ...t, reply: INTAKE_CLOSING, done: true };
-  return { ...t, reply };
+  return { ...t, reply: t.reply || INTAKE_CLOSING };
 }
-
-// AIが下限より前に終えようとし、やり直しても質問しなかったときに使う質問(措置の判断に最低限必要なこと)
-export const INTAKE_FALLBACK_QUESTIONS = [
-  "ご回答ありがとうございます。いくつか具体的に伺います。\n1. いちばん困っていることは、いつ頃から、どんな場面で起きていますか？\n2. 仕事への影響(ミス・残業・休みなど)で、具体的にあったことを教えてください。",
-  "ありがとうございます。最後に伺います。\n1. 職場にどんな配慮があると助かりますか？(例: 担当の見直し、締め切りの調整、残業を減らす)\n2. ほかに医師に伝えておきたいことがあれば、一緒に書いてください。",
-];
 
 // 途中でやめたまま日数がたち、途中までの内容で要約を作る(作り直す)べきか
 export function needsPartialSummary(
@@ -284,7 +265,8 @@ export const INTERVIEW_SYSTEM = `あなたは、うえまつ産業医事務所�
 - 選んで答えたことは聞き直さない。「特にない」「ない」と答えた項目は聞かない。
 
 ## 追加の質問の決め方
-- 追加の質問は${INTAKE_MIN_FOLLOWUPS}〜${INTAKE_MAX_FOLLOWUPS}回(目安は3回)。選んで答えた内容だけで終えてはいけない。各回の本人の発言の最後に、システムから残りの回数や、まだ終えてはいけないことが伝えられる。
+- 追加の質問は0〜${INTAKE_MAX_FOLLOWUPS}回。各回の本人の発言の最後に、システムから残りの回数が伝えられる。少ない回数で終えるほどよい。
+- 選んで答えた内容で措置の判断に十分なら、追加の質問はせずに終えてよい(本人の負担を減らすため)。
 - 1回の返答で、関係のある2〜3点をまとめて、番号を付けて聞く。答えやすいように短い例を添える。
 - 聞く優先順:
   1. 選んで答えた中で、措置の判断に関わる点の具体化(例: 残業が多い→何時間くらい・いつ頃から・今後も続く見込みか / 眠れない→睡眠は何時間・いつ頃から / 欠勤がある→この1か月で何日 / ハラスメント→誰との間で・いつ頃から(詳しい内容は面談で伺うと伝える))。
@@ -313,7 +295,7 @@ export const INTERVIEW_SYSTEM = `あなたは、うえまつ産業医事務所�
 - 判断に迷うときは高いほうにする。
 
 ## 終わり方
-- ${INTAKE_MIN_FOLLOWUPS}回以上質問し、措置の判断に必要な情報がそろったら、残りの回数があっても終える。終えるときは、お礼と「このあと、会社の担当者に伝えてよい範囲を選んでいただき、医師に送ります」と伝え、質問はせずに done を true にする。
+- 措置の判断に必要な情報がそろったら、残りの回数があっても終える(1回目の返答で終えてもよい)。終えるときは、お礼と「このあと、会社の担当者に伝えてよい範囲を選んでいただき、医師に送ります」と伝え、質問はせずに done を true にする。
 - 残りの回数が0回と伝えられたら、質問せずに終える(done を true)。
 - 本人が続けられないと言ったら、そこで終える(done を true)。
 
