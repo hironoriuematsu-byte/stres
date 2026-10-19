@@ -528,7 +528,7 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
           <h2 style={{ fontSize: 16, color: brand.ink, margin: "0 0 6px" }}>最後に、会社の担当者に伝えてよい範囲を選んでください</h2>
           <p style={{ fontSize: 13, color: "#44534F", lineHeight: 1.8, margin: "0 0 10px" }}>
             職場での配慮(業務量の調整など)の準備のために、会社のストレスチェック担当者(実施事務従事者:守秘義務があり、人事権のない方)に伝えてよい範囲です。
-            選んだ範囲だけをAIが短くまとめ、<strong>送信後すぐに担当者へメールでお知らせします</strong>(医師の確認は経ません)。病名や心身の状態、通院・服薬のことは伝えません。選ばなければ、面談の前には何も伝えません。
+            選んだ範囲だけをAIが短くまとめ、<strong>送信後すぐに担当者に共有されます</strong>(医師の確認は経ません。担当者はログインして確認します)。病名や心身の状態、通院・服薬のことは伝えません。選ばなければ、面談の前には何も伝えません。
           </p>
           <div style={{ display: "grid", gap: 6 }}>
             {SHARE_OPTIONS.map((o) => (

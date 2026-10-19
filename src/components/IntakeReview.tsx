@@ -54,8 +54,8 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
     onChanged();
   };
   const shareToCompany = async () => {
-    if (demo) return setMsg({ ok: true, text: "(デモ)実際の画面では、会社の担当者(実施事務従事者)に内容がメールで届き、面接指導申出の一覧にも表示されます。" });
-    if (!window.confirm("この内容を会社の担当者(実施事務従事者)にメールで送りますか？")) return;
+    if (demo) return setMsg({ ok: true, text: "(デモ)実際の画面では、会社の担当者(実施事務従事者)の面接指導申出の一覧に表示され、共有が届いたことだけがメールで知らされます。" });
+    if (!window.confirm("この内容を会社の担当者(実施事務従事者)に共有しますか？(メールには内容を書かず、届いたことだけを知らせます)")) return;
     setBusy(true);
     setMsg(null);
     const { ok, json } = await postJson("/api/intake/share", { intakeId: intake.id, text: share });
