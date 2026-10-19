@@ -9,6 +9,8 @@ import { brand } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // 正規URL・OGPの絶対URLの基準
+  metadataBase: new URL("https://stres.mestate.jp"),
   title: {
     default: "うえまつ産業医事務所 ストレスチェックWeb",
     template: "%s | うえまつ産業医事務所 ストレスチェックWeb",

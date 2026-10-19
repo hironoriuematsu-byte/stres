@@ -6,6 +6,7 @@ import { buildDemoPeople, DEMO_COMPANY, DEMO_FISCAL_YEAR } from "@/lib/demo-data
 export const metadata = {
   title: "サンプル(デモ)",
   description: "架空企業のデータで、個人結果票と集団分析報告書のサンプルをご覧いただけます。",
+  alternates: { canonical: "/demo" },
 };
 
 // 広告・紹介用のデモ。ログイン不要で、架空データのみを表示する
