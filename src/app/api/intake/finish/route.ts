@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { waitUntil } from "@vercel/functions";
 import { SHARE_OPTIONS, type ShareConsent, type ShareKey } from "@/lib/intake";
-import { fail, intakeContext, loadIntake, notifyCompleted, notifyUrgent, saveSummary, siteOrigin, type IntakeRow } from "@/lib/intake-api";
+import { fail, intakeContext, loadIntake, notifyCompleted, notifyUrgent, saveSummary, shareToCompany, siteOrigin, type IntakeRow } from "@/lib/intake-api";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
 
 // 事前問診を終えて医師に送る(本人)。本人にはすぐに「送りました」を返し、要約は裏で作る。
+// 本人が会社への共有に同意していれば、要約と一緒にできた共有の文章を会社の担当者にメールで送る。
 // 実施者(医師)が要約を作り直すときにも呼ばれる(このときは出来上がるまで待つ)。
 // 本人が回答の途中なら、途中までの内容で要約を作る(問診は終わらせない)
 export async function POST(req: Request) {
@@ -55,7 +56,14 @@ export async function POST(req: Request) {
   waitUntil(
     (async () => {
       await saveSummary(admin, { ...intake, share_consent: share }, share);
-      const { data: latest } = await admin.from("interview_intakes").select("risk_level").eq("id", intake.id).maybeSingle();
+      const { data: latest } = await admin
+        .from("interview_intakes")
+        .select("risk_level, company_share_draft")
+        .eq("id", intake.id)
+        .maybeSingle();
+      // 本人が同意した範囲を、医師の確認を待たずに会社の担当者へ送る
+      const draft = ((latest?.company_share_draft as string | null) ?? "").trim();
+      if (share.keys.length > 0 && draft) await shareToCompany(admin, intake, draft, null, origin);
       const risk = (latest?.risk_level as IntakeRow["risk_level"] | undefined) ?? intake.risk_level ?? "none";
       if (risk === "high") await notifyUrgent(admin, intake, origin);
       await notifyCompleted(admin, intake, risk, origin);

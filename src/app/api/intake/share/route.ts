@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { sendMails } from "@/lib/plan-server";
-import { fail, intakeContext, loadIntake, siteOrigin } from "@/lib/intake-api";
+import { fail, intakeContext, loadIntake, shareToCompany, siteOrigin } from "@/lib/intake-api";
 
 export const runtime = "nodejs";
 
-// 医師(実施者)が確認した内容を、会社の担当者(実施事務従事者)に共有する。
-// 本人が選んだ範囲のみ。メールには内容を書かず、ログインして読んでもらう
+// 会社の担当者(実施事務従事者)への共有を、医師(実施者)が直して送り直す。
+// (共有は本人が問診を終えたときに自動で送られる。本人が選んだ範囲のみ)
 export async function POST(req: Request) {
   const ctx = await intakeContext(req);
   if (!ctx.ok) return ctx.res;
@@ -25,32 +24,8 @@ export async function POST(req: Request) {
   if (!text) return fail(400, "共有する文章を入力してください");
   if (text.length > 2000) return fail(400, "共有する文章は2000文字までにしてください");
 
-  const now = new Date().toISOString();
-  const { error } = await admin
-    .from("interview_intakes")
-    .update({ company_share: text, company_shared_at: now, company_shared_by: userId, updated_at: now })
-    .eq("id", intake.id);
-  if (error) return fail(500, `保存できませんでした: ${error.message}`);
+  const err = await shareToCompany(admin, intake, text, userId, siteOrigin(req));
+  if (err) return fail(500, err);
   await admin.from("access_logs").insert({ user_id: userId, role: "office", action: "intake_shared_to_company", target: intake.id, company_id: intake.company_id });
-
-  // 会社の担当者(実施事務従事者)に知らせる
-  const { data: jimus } = await admin.from("profiles").select("user_id").eq("role", "jimu").eq("company_id", intake.company_id);
-  const emails: string[] = [];
-  for (const j of jimus ?? []) {
-    const { data: u } = await admin.auth.admin.getUserById(j.user_id);
-    if (u?.user?.email) emails.push(u.user.email);
-  }
-  await sendMails(
-    emails,
-    "【ストレスチェックWeb】面接指導の申出について医師から共有があります",
-    [
-      "面接指導の申出について、医師(産業医)から面談の準備のための情報が共有されました。",
-      "ログインして、面接指導申出の一覧で確認してください(本人の同意を得た範囲の内容です)。",
-      "",
-      `${siteOrigin(req)}/jimu`,
-      "",
-      "※このメールには内容は記載していません。実施事務従事者として守秘義務があります。",
-    ].join("\n")
-  );
   return NextResponse.json({ ok: true });
 }

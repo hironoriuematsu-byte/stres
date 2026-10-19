@@ -284,7 +284,7 @@ export function InterviewPanel({
                       </div>
                       <div style={{ fontSize: 13.5, color: "#2C3B39", lineHeight: 1.8, whiteSpace: "pre-wrap", marginTop: 6 }}>{shares[r.id].company_share}</div>
                       <div style={{ fontSize: 12, color: "#8A9694", marginTop: 6 }}>
-                        本人の同意を得た範囲で、面談の日程調整と職場での配慮の準備のために共有された内容です。実施事務従事者として守秘義務があります。
+                        本人の同意を得た範囲で、職場での配慮の準備のために共有された内容です。実施事務従事者として守秘義務があります。
                       </div>
                     </div>
                   </td>

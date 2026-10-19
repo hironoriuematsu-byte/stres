@@ -7,6 +7,9 @@ import { IntakeReview } from "@/components/IntakeReview";
 import { brand } from "@/lib/brand";
 import { DEMO_REPLY_FROM_DOCTOR, DEMO_SUMMARY, DEMO_TRANSCRIPT } from "../script";
 
+const DEMO_COMPANY_SHARE =
+  "・4月から担当案件が増えて締め切りが重なり、時間外労働は月45〜80時間の状況です。\n・担当の見直しや締め切りの調整を希望しています。";
+
 // 紹介用デモ: 事前問診の要約・会話記録・返信の下書き(医師=実施者の画面)
 export default function DemoIntakeDoctorPage() {
   return (
@@ -36,8 +39,10 @@ export default function DemoIntakeDoctorPage() {
             reply: null,
             reply_sent_at: null,
             share_consent: { keys: ["work", "wishes"], note: "上司には、自分から相談したことを伏せてほしい", at: "2026-10-17T10:00:00+09:00" },
-            company_share_draft:
-              "面接指導の申出があり、面談の準備のため本人の同意を得た範囲で共有します。\n・4月から担当案件が増えて締め切りが重なり、時間外労働は月45〜80時間の状況です。\n・担当の見直しや締め切りの調整を希望しています。\n面談の日程調整にご協力ください。職場での配慮の内容は、面談後に医師から意見をお伝えします。",
+            company_share_draft: DEMO_COMPANY_SHARE,
+            company_share: DEMO_COMPANY_SHARE,
+            company_shared_at: "2026-10-17T10:05:00+09:00",
+            company_shared_by: null,
           }}
         />
         <Link href="/demo/intake" style={{ color: brand.tealDark, fontWeight: 700, fontSize: 13 }}>

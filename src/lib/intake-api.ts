@@ -77,6 +77,49 @@ export async function saveSummary(admin: SupabaseClient, intake: IntakeRow, shar
   }
 }
 
+// 会社の担当者(実施事務従事者)に、本人が同意した範囲の内容を共有し、メールで知らせる。
+// 本人が問診を終えたときに自動で送る(by = null)。医師が直して送り直すこともできる(by = 医師)。
+// メールには共有の内容を書くが、本人の氏名は書かない(氏名はログインして申出の一覧で確認する)
+export async function shareToCompany(
+  admin: SupabaseClient,
+  intake: IntakeRow,
+  text: string,
+  by: string | null,
+  origin: string
+): Promise<string | null> {
+  const now = new Date().toISOString();
+  const { error } = await admin
+    .from("interview_intakes")
+    .update({ company_share: text, company_shared_at: now, company_shared_by: by })
+    .eq("id", intake.id);
+  if (error) return `保存できませんでした: ${error.message}`;
+
+  const { data: jimus } = await admin.from("profiles").select("user_id").eq("role", "jimu").eq("company_id", intake.company_id);
+  const emails: string[] = [];
+  for (const j of jimus ?? []) {
+    const { data: u } = await admin.auth.admin.getUserById(j.user_id);
+    if (u?.user?.email) emails.push(u.user.email);
+  }
+  await sendMails(
+    emails,
+    "【ストレスチェックWeb】面接指導の申出者から、職場での配慮についての共有があります",
+    [
+      "面接指導を申し出た従業員の事前問診のうち、本人が会社への共有に同意した範囲の内容をお知らせします。",
+      "職場での配慮の準備にお役立てください。就業上の措置についての医師の意見は、面談のあとにお伝えします。",
+      "",
+      "――――――――――",
+      text,
+      "――――――――――",
+      "",
+      "対象の方は、ログインして面接指導申出の一覧で確認してください(このメールには氏名を記載していません)。",
+      `${origin}/jimu`,
+      "",
+      "※実施事務従事者として守秘義務があります。この内容を人事評価などに使ったり、本人の同意なく他の人に伝えたりしないでください。",
+    ].join("\n")
+  );
+  return null;
+}
+
 async function companyName(admin: SupabaseClient, companyId: string): Promise<string> {
   const { data } = await admin.from("companies").select("name").eq("id", companyId).maybeSingle();
   return (data?.name as string | undefined) ?? "(不明)";

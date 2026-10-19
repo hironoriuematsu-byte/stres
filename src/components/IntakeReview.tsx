@@ -23,6 +23,7 @@ export type IntakeRecord = {
   company_share_draft?: string | null;
   company_share?: string | null;
   company_shared_at?: string | null;
+  company_shared_by?: string | null;
   summary_error?: string | null;
 };
 
@@ -53,8 +54,8 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
     onChanged();
   };
   const shareToCompany = async () => {
-    if (demo) return setMsg({ ok: true, text: "(デモ)実際の画面では、会社の担当者(実施事務従事者)の面接指導申出の一覧に表示され、お知らせメールが届きます。" });
-    if (!window.confirm("この内容を会社の担当者(実施事務従事者)に共有しますか？")) return;
+    if (demo) return setMsg({ ok: true, text: "(デモ)実際の画面では、会社の担当者(実施事務従事者)に内容がメールで届き、面接指導申出の一覧にも表示されます。" });
+    if (!window.confirm("この内容を会社の担当者(実施事務従事者)にメールで送りますか？")) return;
     setBusy(true);
     setMsg(null);
     const { ok, json } = await postJson("/api/intake/share", { intakeId: intake.id, text: share });
@@ -162,7 +163,8 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
         <div style={{ borderTop: `1px solid ${brand.line}`, paddingTop: 10 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: brand.ink, marginBottom: 4 }}>
             会社の担当者(実施事務従事者)への共有
-            {intake.company_shared_at && `(${new Date(intake.company_shared_at).toLocaleDateString("ja-JP")} 共有済み)`}
+            {intake.company_shared_at &&
+              `(${new Date(intake.company_shared_at).toLocaleDateString("ja-JP")} ${intake.company_shared_by ? "医師が共有" : "本人の同意により自動で送信"})`}
           </div>
           <div style={{ fontSize: 12.5, color: "#5B6B6A", lineHeight: 1.7, marginBottom: 6 }}>
             本人が選んだ範囲:{" "}
@@ -184,7 +186,7 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
               />
               <div style={{ marginTop: 8 }}>
                 <Btn tone="ghost" onClick={shareToCompany} disabled={busy || !share.trim()}>
-                  {intake.company_shared_at ? "修正して共有し直す" : "担当者に共有する"}
+                  {intake.company_shared_at ? "修正して送り直す" : "担当者に共有する"}
                 </Btn>
               </div>
             </>
