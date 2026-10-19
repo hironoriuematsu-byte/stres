@@ -8,7 +8,20 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/plan$", "/plan/brochure", "/plan/terms", "/plan/tokushoho", "/demo", "/privacy"],
+        allow: [
+          "/plan$",
+          "/plan/brochure",
+          "/plan/terms",
+          "/plan/tokushoho",
+          "/plan/*.jpg$",
+          "/demo",
+          "/privacy",
+          // サイトマップ本体と、ページの表示に使う画像・CSS・JS(検索エンジンが画面を正しく描画できるように)
+          "/sitemap.xml",
+          "/_next/static/",
+          "/_next/image",
+          "/logo.png",
+        ],
         disallow: ["/"],
       },
     ],
