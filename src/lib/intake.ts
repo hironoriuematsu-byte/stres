@@ -5,6 +5,8 @@
 //   AI は医師ではない: 診断・治療・服薬の指示はしない。緊急のサインがあればすぐに実施者に知らせる。
 // ============================================================
 
+import { IMPLEMENTER } from "@/lib/org";
+
 export type IntakeRole = "assistant" | "user";
 export type IntakeMessage = { role: IntakeRole; content: string; at: string };
 export type RiskLevel = "none" | "low" | "moderate" | "high";
@@ -146,6 +148,27 @@ export function needsPartialSummary(
   if (!last || now.getTime() - new Date(last).getTime() < INTAKE_PARTIAL_AFTER_DAYS * 86_400_000) return false;
   const gen = intake.summary?.generated_at;
   return !gen || new Date(gen).getTime() < new Date(last).getTime();
+}
+
+// 本人への返信の宛名と署名。AIには本人の氏名を送らず、「{{名字}}」と書かせてから、保存の前に名字に置き換える
+export const DOCTOR_SURNAME = IMPLEMENTER.name.split(/[\s\u3000]+/)[0]; // 上松
+export const SURNAME_MARK = "{{名字}}";
+
+// 氏名から名字を取り出す(空白で区切られていなければ氏名全体)。未登録なら空
+export function surnameOf(name: string | null | undefined): string {
+  const n = (name ?? "").trim();
+  if (!n || n === "未設定") return "";
+  return n.split(/[\s\u3000]+/)[0];
+}
+
+// 返信の下書きの宛名・署名を埋める。伏せ字(〇〇)が残っていても、名字・「上松」に置き換えるか取り除く
+export function fillReplyNames(text: string, surname: string): string {
+  const mark = /\{\{\s*名字\s*\}\}|[〇○◯]{1,3}/;
+  let t = text.replace(new RegExp(`(産業医|医師)(の)?\\s*(${mark.source})(\\s*(先生|医師))?`, "g"), `$1の${DOCTOR_SURNAME}`);
+  t = surname
+    ? t.replace(new RegExp(`(${mark.source})\\s*(さん|様)`, "g"), `${surname}$2`)
+    : t.replace(new RegExp(`(${mark.source})\\s*(さん|様)[、,]?\\s*`, "g"), "");
+  return t.replace(new RegExp(mark.source, "g"), "");
 }
 
 export const RISK_LABEL: Record<RiskLevel, string> = {
@@ -315,6 +338,7 @@ export const SUMMARY_SYSTEM = `あなたは産業医の面接指導を補助す�
 
 ## 本人への返信の下書き(reply_draft)
 - 医師が確認・修正してから本人に送る文章。医師(産業医)からの返信として書く。
+- 1行目は「{{名字}}さん」とだけ書く(本人の名字は後で入る。〇〇などの伏せ字は使わない)。名乗るときは「産業医の上松です」と書く。
 - 300〜500字。最初にお申し出と聞き取りへの協力へのお礼、次に伺った内容の受け止め、一般的なセルフケア(睡眠・休息・相談先)を1〜2点、最後に面談で一緒に考えたいこと。
 - 診断名や治療の指示は書かない。会社に何を伝えるかを約束しない。
 - 緊急度が高い場合は、まず相談窓口(こころの健康相談統一ダイヤル 0570-064-556 など)への相談をすすめ、医師からも連絡することを書く。119番は、命の危険が差し迫っているときの最後の手段として添える。

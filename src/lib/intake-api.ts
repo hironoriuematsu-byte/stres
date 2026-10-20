@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requestUser } from "@/lib/supabase/server";
 import { adminClient, officeEmails, sendMails } from "@/lib/plan-server";
 import type { IntakeMessage, IntakeStatus, RiskLevel, ShareConsent } from "@/lib/intake";
-import { higherRisk, RISK_LABEL } from "@/lib/intake";
+import { fillReplyNames, higherRisk, RISK_LABEL, surnameOf } from "@/lib/intake";
 import { intakeSummarize } from "@/lib/intake-server";
 
 // 事前問診のAPIで共通の処理(ログイン確認・記録の読み込み・実施者へのお知らせ)
@@ -47,7 +47,10 @@ export async function loadIntake(admin: SupabaseClient, id: unknown): Promise<In
 // 医師向けの要約・本人への返信の下書き・会社への共有の下書きを作って保存する。
 // partial: 本人が途中でやめた時点までの内容で作る(問診は終わらせず、本人は続きから再開できる)
 export async function saveSummary(admin: SupabaseClient, intake: IntakeRow, share: ShareConsent | null, partial = false): Promise<string | null> {
-  const { data: request } = await admin.from("interview_requests").select("result_id").eq("id", intake.request_id).maybeSingle();
+  const [{ data: request }, { data: prof }] = await Promise.all([
+    admin.from("interview_requests").select("result_id").eq("id", intake.request_id).maybeSingle(),
+    admin.from("profiles").select("name").eq("user_id", intake.user_id).maybeSingle(),
+  ]);
   const { data: result } = request
     ? await admin.from("results").select("score_a, score_b, score_c, high_stress").eq("id", request.result_id).maybeSingle()
     : { data: null };
@@ -62,7 +65,7 @@ export async function saveSummary(admin: SupabaseClient, intake: IntakeRow, shar
       .from("interview_intakes")
       .update({
         summary: s.summary,
-        reply_draft: s.reply_draft,
+        reply_draft: fillReplyNames(s.reply_draft, surnameOf(prof?.name as string | null | undefined)),
         company_share_draft: s.company_share_draft || null,
         risk_level: higherRisk(intake.risk_level ?? "none", s.summary.risk_level),
         summary_error: null,

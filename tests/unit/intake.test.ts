@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   decideTurn,
   detectCrisis,
+  fillReplyNames,
+  surnameOf,
   INTAKE_CLOSING,
   followupsLeft,
   formatQuickAnswers,
@@ -154,5 +156,28 @@ describe("事前問診: 追加の質問の回数(必要なときだけ・上限�
     const r = await run(() => false);
     expect(r.questions).toBe(5);
     expect(r.last.reply).toBe(INTAKE_CLOSING);
+  });
+});
+
+describe("事前問診: 本人への返信の宛名と署名", () => {
+  it("氏名から名字を取り出す(全角・半角の空白どちらでも)", () => {
+    expect(surnameOf("山田 太郎")).toBe("山田");
+    expect(surnameOf("山田　太郎")).toBe("山田");
+    expect(surnameOf("山田太郎")).toBe("山田太郎");
+    expect(surnameOf("未設定")).toBe("");
+    expect(surnameOf(null)).toBe("");
+  });
+  it("{{名字}}さん は本人の名字に、産業医の〇〇 は上松に置き換える", () => {
+    const t = fillReplyNames("{{名字}}さん\n\n事前問診へのご協力、ありがとうございました。産業医の〇〇です。", "山田");
+    expect(t).toBe("山田さん\n\n事前問診へのご協力、ありがとうございました。産業医の上松です。");
+  });
+  it("伏せ字が残っていても、〇〇さん・○○様・医師の◯◯ を置き換え、〇〇 の表記を残さない", () => {
+    const t = fillReplyNames("〇〇さん、こんにちは。○○様の状況を伺いました。医師の◯◯より。〇〇", "佐藤");
+    expect(t).toBe("佐藤さん、こんにちは。佐藤様の状況を伺いました。医師の上松より。");
+    expect(t).not.toMatch(/[〇○◯]/);
+  });
+  it("名字がわからないときは、宛名を書かない", () => {
+    expect(fillReplyNames("{{名字}}さん\n\n産業医の上松です。", "")).toBe("産業医の上松です。");
+    expect(fillReplyNames("〇〇さん、ありがとうございました。", "")).toBe("ありがとうございました。");
   });
 });

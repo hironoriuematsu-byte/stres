@@ -40,7 +40,9 @@ export const DEMO_STEPS: { reply: string; sample: string }[] = [
   },
 ];
 
-export const DEMO_REPLY_FROM_DOCTOR = `事前問診へのご協力、ありがとうございました。産業医の上松です。
+export const DEMO_REPLY_FROM_DOCTOR = `山田さん
+
+事前問診へのご協力、ありがとうございました。産業医の上松です。
 
 4月から担当の案件が増えて締め切りが重なり、残業が多い状態が続いていること、睡眠が5時間ほどで、集中しにくくなっていることを確認しました。上司に言い出しにくい中で、よく伝えてくださいました。
 
