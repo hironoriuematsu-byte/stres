@@ -8,6 +8,8 @@ import { getFiscalYear } from "@/lib/fiscal";
 import { ExamForm } from "./ExamForm";
 import { fetchBirthDate } from "@/lib/birth-date-db";
 import { formatJpDate, jstToday } from "@/lib/plan";
+import { adminClient } from "@/lib/plan-server";
+import { recordExamStart } from "@/lib/exam-reminder";
 
 export default async function ExamPage() {
   const { user, profile } = await getSessionProfile();
@@ -84,6 +86,10 @@ export default async function ExamPage() {
       </Card>
     );
   }
+
+  // 受検を始めたことを記録する(数日たっても回答が届かないときに、1回だけ催促メールを送るため)
+  const admin = adminClient();
+  if (admin) await recordExamStart(admin, profile.user_id, fiscalYear, profile.company_id!);
 
   return (
     <ExamForm

@@ -3,6 +3,7 @@ import { getFiscalYear } from "@/lib/fiscal";
 import { addDays, formatJpDate, jstToday } from "@/lib/plan";
 import { adminClient, sendMails } from "@/lib/plan-server";
 import { SELLER } from "@/lib/org";
+import { sendExamReminders } from "@/lib/exam-reminder";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -10,7 +11,8 @@ export const maxDuration = 60;
 // 更新の案内メール(毎日1回、Vercel Cron から呼ばれる)。
 // Web申込の企業のうち、前年度に受検があり今年度の申込がまだない企業の担当者へ、
 // 前年の受検開始日の約1か月半前(45日前)と2週間前(14日前)に「今年もそろそろ時期です」と案内する。
-// 送った記録は plan_reminders に残し、同じ案内は二重に送らない
+// 送った記録は plan_reminders に残し、同じ案内は二重に送らない。
+// あわせて、受検を始めたのに数日たっても回答を送っていない人へ、1回だけ催促する(exam-reminder.ts)
 export async function GET(req: Request) {
   // Vercel Cron は Authorization: Bearer <CRON_SECRET> を付けて呼ぶ。それ以外からの呼び出しは断る
   const secret = process.env.CRON_SECRET;
@@ -81,5 +83,6 @@ export async function GET(req: Request) {
     );
     sent++;
   }
-  return NextResponse.json({ ok: true, sent });
+  const examReminded = await sendExamReminders(admin, origin);
+  return NextResponse.json({ ok: true, sent, examReminded });
 }
