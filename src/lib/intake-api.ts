@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requestUser } from "@/lib/supabase/server";
 import { adminClient, officeEmails, sendMails } from "@/lib/plan-server";
 import type { IntakeMessage, IntakeStatus, RiskLevel, ShareConsent } from "@/lib/intake";
-import { fillReplyNames, higherRisk, RISK_LABEL, surnameOf } from "@/lib/intake";
+import { fillReplyNames, higherRisk, removeEmergencyCall, RISK_LABEL, surnameOf } from "@/lib/intake";
 import { intakeSummarize } from "@/lib/intake-server";
 
 // 事前問診のAPIで共通の処理(ログイン確認・記録の読み込み・実施者へのお知らせ)
@@ -65,7 +65,7 @@ export async function saveSummary(admin: SupabaseClient, intake: IntakeRow, shar
       .from("interview_intakes")
       .update({
         summary: s.summary,
-        reply_draft: fillReplyNames(s.reply_draft, surnameOf(prof?.name as string | null | undefined)),
+        reply_draft: removeEmergencyCall(fillReplyNames(s.reply_draft, surnameOf(prof?.name as string | null | undefined))),
         company_share_draft: s.company_share_draft || null,
         risk_level: higherRisk(intake.risk_level ?? "none", s.summary.risk_level),
         summary_error: null,

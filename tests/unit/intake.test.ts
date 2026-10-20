@@ -3,6 +3,7 @@ import {
   decideTurn,
   detectCrisis,
   fillReplyNames,
+  removeEmergencyCall,
   surnameOf,
   INTAKE_CLOSING,
   followupsLeft,
@@ -179,5 +180,15 @@ describe("事前問診: 本人への返信の宛名と署名", () => {
   it("名字がわからないときは、宛名を書かない", () => {
     expect(fillReplyNames("{{名字}}さん\n\n産業医の上松です。", "")).toBe("産業医の上松です。");
     expect(fillReplyNames("〇〇さん、ありがとうございました。", "")).toBe("ありがとうございました。");
+  });
+});
+
+describe("事前問診: 本人への返信では119番を案内しない", () => {
+  it("119番・救急車に触れた文だけを取り除く", () => {
+    const t = removeEmergencyCall(
+      "まずは、こころの耳電話相談(0120-565-455)に相談してください。いますぐ命の危険があるときは119番に電話してください。医師からも連絡します。"
+    );
+    expect(t).toBe("まずは、こころの耳電話相談(0120-565-455)に相談してください。医師からも連絡します。");
+    expect(removeEmergencyCall("救急車を呼んでください。\n\n\n面談で一緒に考えます。")).toBe("\n\n面談で一緒に考えます。");
   });
 });
