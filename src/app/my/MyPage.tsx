@@ -9,6 +9,7 @@ import { KenkoLink } from "@/components/KenkoLink";
 import { brand } from "@/lib/brand";
 import { InterviewRequest, ResultRow, STATUS_LABEL } from "@/lib/types";
 import { IntakeCta } from "@/components/IntakeCta";
+import { InterviewSchedulePick } from "@/components/InterviewSchedulePick";
 import { getFiscalYear } from "@/lib/fiscal";
 import { LoadingCard } from "@/components/LoadingCard";
 
@@ -263,6 +264,7 @@ export function MyPage({
                   >
                     面接指導の申出済み({new Date(req.created_at).toLocaleDateString("ja-JP")})/ 状況:{" "}
                     <strong>{STATUS_LABEL[req.status]}</strong>
+                    <InterviewSchedulePick request={req} onChanged={reload} />
                     <IntakeCta requestId={req.id} />
                   </div>
                 ) : showForm === r.id ? (

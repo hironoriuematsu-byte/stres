@@ -48,6 +48,13 @@ export type InterviewRequest = {
   preferred: string | null;
   status: "pending" | "scheduled" | "done" | "cancelled";
   created_at: string;
+  // 日程調整(SQL 0032)
+  schedule_mode?: "online" | "visit" | null;
+  slots_offered_at?: string | null;
+  scheduled_at?: string | null;
+  duration_min?: number | null;
+  meet_url?: string | null;
+  visit_note?: string | null;
 };
 
 export type GroupAnalysisRow = {

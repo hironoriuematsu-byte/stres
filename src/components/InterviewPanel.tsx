@@ -12,6 +12,7 @@ import { getFiscalYear } from "@/lib/fiscal";
 import { IntakeReview, riskTone, type IntakeRecord } from "@/components/IntakeReview";
 import { RISK_LABEL } from "@/lib/intake";
 import { postJson } from "@/lib/api-client";
+import { InterviewScheduleEditor, scheduleSummary } from "@/components/InterviewScheduleEditor";
 
 const NEXT_STATUS: Record<string, InterviewRequest["status"][]> = {
   pending: ["scheduled", "cancelled"],
@@ -44,6 +45,11 @@ export function InterviewPanel({
   // 会社の担当者(実施事務従事者)向け: 医師が共有した面談前の情報
   const [shares, setShares] = useState<Record<string, { company_share: string; company_shared_at: string }>>({});
   const [openShare, setOpenShare] = useState<string | null>(null);
+  // 日程調整(実施者): 企業の産業医面談ルームのURLと、開いている申出の日程の編集
+  const [meetRoom, setMeetRoom] = useState<string | null>(null);
+  const [roomInput, setRoomInput] = useState("");
+  const [roomMsg, setRoomMsg] = useState<string | null>(null);
+  const [openSchedule, setOpenSchedule] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -55,10 +61,13 @@ export function InterviewPanel({
         .eq("company_id", companyId)
         .order("created_at", { ascending: false }),
       supabase.from("profiles").select("user_id, name, emp_id, dept").eq("company_id", companyId),
-      supabase.from("companies").select("web_signup").eq("id", companyId).maybeSingle(),
+      supabase.from("companies").select("web_signup, meet_room_url").eq("id", companyId).maybeSingle(),
       supabase.from("exam_plans").select("fiscal_year, interview_option").eq("company_id", companyId).order("fiscal_year", { ascending: false }),
     ]);
     const web = Boolean((co as { web_signup?: boolean } | null)?.web_signup);
+    const room = ((co as { meet_room_url?: string | null } | null)?.meet_room_url ?? null) || null;
+    setMeetRoom(room);
+    setRoomInput(room ?? "");
     if (isOffice) {
       const { data: ins } = await supabase
         .from("interview_intakes")
@@ -151,6 +160,37 @@ export function InterviewPanel({
                 ? "申出は会社の担当者にだけ通知されます。最寄りの地域産業保健センターに面接指導をお申し込みください。"
                 : "申出は会社の担当者にだけ通知されます。自社の産業医など、会社で手配した医師と日程を調整してください。"}
             担当の変更は、メニュー画面の受検期間の欄からできます。
+          </div>
+        </div>
+      )}
+      {isOffice && (
+        <div style={{ fontSize: 13, color: brand.ink, background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 8, padding: "10px 12px", lineHeight: 1.7, marginBottom: 12 }}>
+          <div style={{ fontWeight: 700 }}>この企業の産業医面談ルーム(Google Meet)のURL</div>
+          <div style={{ fontSize: 12, color: "#5B6B6A", marginBottom: 6 }}>
+            オンライン面談の日時が確定したとき、このURLを本人に案内します。Google Meet で会議を作り、そのリンクを貼り付けてください(企業ごとに1つ・使い回し)。
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              value={roomInput}
+              onChange={(e) => setRoomInput(e.target.value)}
+              placeholder="https://meet.google.com/xxx-xxxx-xxx"
+              style={{ flex: 1, minWidth: 240, fontSize: 13, padding: "6px 8px", border: `1px solid ${brand.line}`, borderRadius: 6 }}
+            />
+            <button
+              onClick={async () => {
+                setRoomMsg(null);
+                const { ok, json } = await postJson<{ url?: string | null; error?: string }>("/api/interview/room", { companyId, url: roomInput });
+                if (!ok) return setRoomMsg(json.error ?? "保存できませんでした");
+                setMeetRoom(json.url ?? null);
+                setRoomMsg(json.url ? "保存しました。" : "URLを消しました。");
+              }}
+              disabled={(roomInput.trim() || "") === (meetRoom ?? "")}
+              style={{ background: "#fff", border: `1px solid ${brand.teal}`, color: brand.tealDark, borderRadius: 8, padding: "6px 12px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+            >
+              保存
+            </button>
+            {roomMsg && <span style={{ fontSize: 12, color: brand.tealDark }}>{roomMsg}</span>}
+            {!meetRoom && !roomMsg && <span style={{ fontSize: 12, color: "#8A6B2E" }}>未登録(オンラインの候補日時を出す前に登録してください)</span>}
           </div>
         </div>
       )}
@@ -252,8 +292,30 @@ export function InterviewPanel({
                   <Badge tone={r.status === "pending" ? "orange" : r.status === "done" ? "teal" : "gray"}>
                     {STATUS_LABEL[r.status]}
                   </Badge>
+                  {scheduleSummary(r) && <div style={{ fontSize: 12, color: brand.ink, marginTop: 4, lineHeight: 1.5 }}>{scheduleSummary(r)}</div>}
+                  {!isOffice && r.status === "scheduled" && r.schedule_mode === "visit" && (
+                    <div style={{ fontSize: 11.5, color: "#8A6B2E", marginTop: 2 }}>当日の時間と場所を本人に伝えてください</div>
+                  )}
                 </td>
                 <td style={{ padding: "9px 10px", whiteSpace: "nowrap" }}>
+                  {isOffice && (r.status === "pending" || r.status === "scheduled") && (
+                    <button
+                      onClick={() => setOpenSchedule(openSchedule === r.id ? null : r.id)}
+                      style={{
+                        background: openSchedule === r.id ? brand.teal : "#fff",
+                        border: `1px solid ${brand.teal}`,
+                        color: openSchedule === r.id ? "#fff" : brand.tealDark,
+                        borderRadius: 8,
+                        padding: "4px 10px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        marginRight: 6,
+                      }}
+                    >
+                      {openSchedule === r.id ? "日程を閉じる" : r.scheduled_at || r.slots_offered_at ? "日程" : "日程を決める"}
+                    </button>
+                  )}
                   {NEXT_STATUS[r.status].map((s) => (
                     <button
                       key={s}
@@ -287,6 +349,13 @@ export function InterviewPanel({
                         本人の同意を得た範囲で、職場での配慮の準備のために共有された内容です。実施事務従事者として守秘義務があります。
                       </div>
                     </div>
+                  </td>
+                </tr>
+              )}
+              {isOffice && openSchedule === r.id && (
+                <tr>
+                  <td colSpan={9} style={{ padding: "8px 10px 14px" }}>
+                    <InterviewScheduleEditor request={r} meetRoomUrl={meetRoom} onChanged={reload} />
                   </td>
                 </tr>
               )}
