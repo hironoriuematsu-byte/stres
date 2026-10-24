@@ -132,9 +132,10 @@ export function QuestionRow({
   );
 }
 
-export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+export function Card({ children, style, className }: { children: ReactNode; style?: CSSProperties; className?: string }) {
   return (
     <div
+      className={className}
       style={{
         background: "#fff",
         border: `1px solid ${brand.line}`,

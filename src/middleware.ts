@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
-const PROTECTED_PREFIXES = ["/exam", "/office", "/jimu", "/company", "/my", "/account", "/intake"];
+const PROTECTED_PREFIXES = ["/exam", "/office", "/jimu", "/company", "/my", "/account", "/intake", "/contracts"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
