@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  CRISIS_MESSAGE,
+  CRISIS_FOLLOWUP,
   decideTurn,
   INTAKE_MAX_CHARS,
   detectCrisis,
@@ -80,23 +80,25 @@ export async function POST(req: Request) {
   let done: boolean;
   let covered: number | undefined;
   const left = followupsLeft(userTurns);
-  if (crisis) {
-    reply = CRISIS_MESSAGE;
-    done = true;
-  } else {
-    try {
-      const t = await decideTurn(userTurns, () => intakeTurn(history, left));
-      reply = t.reply;
-      done = t.done;
-      covered = t.covered?.length;
-      risk = higherRisk(risk, t.risk_level);
-    } catch (e) {
-      console.error("intake turn failed", e);
+  // 死にたい気持ちのサインがあっても聞き取りは続け、AIが落ち着いて詳しく確かめる(医師には上で至急知らせている)。
+  // いまにも実行しそうな様子のときだけ、AIが相談窓口につないで終える
+  try {
+    const t = await decideTurn(userTurns, () => intakeTurn(history, left, crisis));
+    reply = t.reply;
+    done = t.done;
+    covered = t.covered?.length;
+    risk = higherRisk(risk, t.risk_level);
+  } catch (e) {
+    console.error("intake turn failed", e);
+    if (!crisis) {
       return NextResponse.json(
         { error: "回答は保存しました。AIの応答に失敗したため、「続きの質問を受け取る」を押してください。", saved: true },
         { status: 502 }
       );
     }
+    // AIが応答できなくても、サインがあったときは相談先を必ず示す
+    reply = CRISIS_FOLLOWUP;
+    done = false;
   }
   // 進み具合は聞き終えた項目の割合で決め、戻らないようにする
   const progress = done ? 100 : Math.max(intake.progress ?? 0, intakeProgress(userTurns, false, covered));

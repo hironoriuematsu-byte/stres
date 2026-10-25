@@ -10,7 +10,7 @@ import { VoiceInputButton, useVoiceSupport } from "@/components/VoiceInputButton
 import { brand } from "@/lib/brand";
 import {
   CRISIS_CONTACTS,
-  CRISIS_MESSAGE,
+  CRISIS_FOLLOWUP,
   INTAKE_FIRST_MESSAGE,
   INTAKE_MAX_CHARS,
   INTAKE_MINUTES,
@@ -209,7 +209,8 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
     if (!demo) return;
     const idx = userTurns - 1;
     const last = idx >= demo.steps.length - 1;
-    const reply = crisis ? CRISIS_MESSAGE : (demo.steps[idx]?.reply ?? demo.steps[demo.steps.length - 1].reply);
+    // サインがあっても聞き取りは続ける(実際のAIは頻度・強さ・具体的な考えなどを落ち着いて確かめる)
+    const reply = crisis ? CRISIS_FOLLOWUP : (demo.steps[idx]?.reply ?? demo.steps[demo.steps.length - 1].reply);
     setTimeout(() => {
       setBusy("");
       setIntake((p) =>
@@ -217,12 +218,12 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
           ? {
               ...p,
               risk_level: crisis ? "high" : p.risk_level,
-              progress: intakeProgress(userTurns, crisis || last),
+              progress: intakeProgress(userTurns, last),
               messages: [...p.messages, { role: "assistant", content: reply, at: new Date().toISOString() }],
             }
           : p
       );
-      if (crisis || last) setDone(true);
+      if (last) setDone(true);
     }, 900);
   };
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  CRISIS_FOLLOWUP,
   decideTurn,
   detectCrisis,
+  INTERVIEW_SYSTEM,
   fillReplyNames,
   removeEmergencyCall,
   surnameOf,
@@ -199,5 +201,22 @@ describe("事前問診: 本人への返信では119番を案内しない", () =>
     );
     expect(t).toBe("まずは、こころの耳電話相談(0120-565-455)に相談してください。医師からも連絡します。");
     expect(removeEmergencyCall("救急車を呼んでください。\n\n\n面談で一緒に考えます。")).toBe("\n\n面談で一緒に考えます。");
+  });
+});
+
+describe("事前問診: 死にたい気持ちのサインがあっても聞き取りを続ける", () => {
+  it("聞き取る項目に、希死念慮の確認(頻度・強さ・方法・準備・思いとどまらせるもの)が入っている", () => {
+    const risk = INTAKE_TOPICS.find((t) => t.key === "risk");
+    expect(risk?.label).toMatch(/頻度/);
+    expect(risk?.label).toMatch(/思いとどまらせている/);
+  });
+  it("AIへの指示: サインがあっても終えず、いまにも実行しそうなときだけ終える", () => {
+    expect(INTERVIEW_SYSTEM).toMatch(/サインがあっても、聞き取りは終えない/);
+    expect(INTERVIEW_SYSTEM).toMatch(/いまにも実行しそうな様子/);
+    expect(INTERVIEW_SYSTEM).not.toMatch(/聞き取りは続けなくてよい/);
+  });
+  it("AIが応答できないときの返答は、相談先を示して聞き取りを続ける", () => {
+    expect(CRISIS_FOLLOWUP).toMatch(/相談窓口/);
+    expect(CRISIS_FOLLOWUP).toMatch(/頻度/);
   });
 });

@@ -52,14 +52,16 @@ export async function intakeEligible(
 
 // 会話の記録を Claude に渡す形にする(最初は本人の発言から始める必要があるため、開始の合図を置く)。
 // 最後の本人の発言には、質問できる残りの回数を添える(本人には表示されず、記録にも残らない)
-function toParams(history: IntakeMessage[], questionsLeft: number): Anthropic.Beta.BetaMessageParam[] {
+function toParams(history: IntakeMessage[], questionsLeft: number, crisisSign: boolean): Anthropic.Beta.BetaMessageParam[] {
   const msgs: Anthropic.Beta.BetaMessageParam[] = [
     { role: "user", content: "(面接指導を申し出ました。事前問診を始めてください)" },
   ];
   history.forEach((m, i) => {
     const note =
       i === history.length - 1 && m.role === "user"
-        ? `\n\n(システムからの連絡: 質問できるのは、この返答を含めて残り${questionsLeft}回までです。${questionsLeft <= 0 ? "質問せずに終えてください。" : questionsLeft <= 3 ? "まだ聞いていない項目のうち、措置の判断に大事なものを優先してください。" : ""})`
+        ? `\n\n(システムからの連絡: 質問できるのは、この返答を含めて残り${questionsLeft}回までです。${questionsLeft <= 0 ? "質問せずに終えてください。" : questionsLeft <= 3 ? "まだ聞いていない項目のうち、措置の判断に大事なものを優先してください。" : ""}${
+            crisisSign ? "この発言に、死にたい・消えたい気持ちのサインがあります(医師には自動で至急知らせました)。指示に沿って、落ち着いて詳しく確かめてください。" : ""
+          })`
         : "";
     msgs.push({ role: m.role, content: m.content + note });
   });
@@ -74,14 +76,14 @@ function jsonText(res: Anthropic.Beta.BetaMessage): string {
 }
 
 // 聞き取りの1往復。本人の発言(history の最後)に対する返答と、聞き終えた項目を返す
-export async function intakeTurn(history: IntakeMessage[], questionsLeft: number): Promise<TurnResult> {
+export async function intakeTurn(history: IntakeMessage[], questionsLeft: number, crisisSign = false): Promise<TurnResult> {
   const res = await claude().beta.messages.create({
     model: MODEL,
     max_tokens: 4000,
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
     system: [{ type: "text", text: INTERVIEW_SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: toParams(history, questionsLeft),
+    messages: toParams(history, questionsLeft, crisisSign),
     output_config: { effort: "medium", format: { type: "json_schema", schema: TURN_SCHEMA as unknown as Record<string, unknown> } },
   });
   const parsed = JSON.parse(jsonText(res)) as { reply: string; done: boolean; risk_level: RiskLevel; covered?: unknown };
