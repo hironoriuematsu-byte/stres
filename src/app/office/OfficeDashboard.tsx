@@ -25,6 +25,7 @@ const GroupReportView = dynamic(
 const UserAdminPanel = dynamic(() => import("@/components/UserAdminPanel").then((m) => m.UserAdminPanel), { loading: panelLoading, ssr: false });
 const AccessLogsPanel = dynamic(() => import("@/components/AccessLogsPanel").then((m) => m.AccessLogsPanel), { loading: panelLoading, ssr: false });
 const CampaignPanel = dynamic(() => import("@/components/CampaignPanel").then((m) => m.CampaignPanel), { loading: panelLoading, ssr: false });
+const ExamReminderPanel = dynamic(() => import("@/components/ExamReminderPanel").then((m) => m.ExamReminderPanel), { loading: panelLoading, ssr: false });
 const CompanyAdminPanel = dynamic(() => import("@/components/CompanyAdminPanel").then((m) => m.CompanyAdminPanel), { loading: panelLoading, ssr: false });
 const WebCompaniesPanel = dynamic(() => import("@/components/WebCompaniesPanel").then((m) => m.WebCompaniesPanel), { loading: panelLoading, ssr: false });
 const PlanStatusPanel = dynamic(() => import("@/components/PlanStatusPanel").then((m) => m.PlanStatusPanel), { ssr: false });
@@ -40,7 +41,7 @@ const MENU_ITEMS: MenuItem<Tab>[] = [
   { key: "結果一覧", icon: "📋", title: "結果一覧", desc: "受検結果の一覧・詳細・CSV出力・再受検対応" },
   { key: "面接指導申出", icon: "🩺", title: "面接指導申出", desc: "産業医面接指導の申出の確認と対応状況の管理" },
   { key: "集団分析", icon: "📊", title: "集団分析", desc: "部署別集計・健康リスク・集団分析報告書" },
-  { key: "配布URL・QR", icon: "🔗", title: "配布URL・QR", desc: "受検用URL・QRコードの発行・停止・再発行" },
+  { key: "配布URL・QR", icon: "🔗", title: "配布URL・QR", desc: "受検用URL・QRコードの発行・停止・再発行と、未受検の方へのリマインド" },
   { key: "ユーザー管理", icon: "✉️", title: "ユーザー管理", desc: "招待・メンバー一覧・ロール変更" },
   { key: "企業管理", icon: "🏢", title: "企業管理", desc: "契約企業の追加・名称変更" },
   { key: "部署管理", icon: "🗂️", title: "部署管理", desc: "受検時に選択できる部署名の登録・編集" },
@@ -180,6 +181,7 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
           {tab === "配布URL・QR" && company && (
             <CampaignPanel companyId={company.id} companyName={company.name} fiscalYear={year} manage />
           )}
+          {tab === "配布URL・QR" && company && <ExamReminderPanel companyId={company.id} companyName={company.name} />}
           {/* key: 上部で企業を切り替えたら、招待先・メンバー一覧も選び直した状態にする */}
           {tab === "ユーザー管理" && (
             <UserAdminPanel key={companyId} companies={companies} defaultCompanyId={companyId} />
