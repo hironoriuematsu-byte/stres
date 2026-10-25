@@ -125,6 +125,48 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
           </Btn>
         </div>
       )}
+      {s?.opinion && (
+        <div style={{ borderTop: `1px solid ${brand.line}`, paddingTop: 10 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: brand.ink, marginBottom: 4 }}>面接指導結果報告書・意見書の下書き(AI案)</div>
+          <div style={{ fontSize: 12, color: "#8A6B2E", marginBottom: 6 }}>事前問診だけで作った案です。面談で確かめてから、医師の判断で確定してください。</div>
+          {row("勤務の状況", s.opinion.work_condition)}
+          {row("疲労の蓄積", s.opinion.fatigue)}
+          {row("心理的な負担", s.opinion.psych_burden)}
+          {row("その他の心身", s.opinion.other_health)}
+          {row("指導区分(案)", s.opinion.guidance)}
+          {row("就業区分(案)", s.opinion.work_category)}
+          {row("就業上の措置(案)", (s.opinion.measures ?? []).length > 0 ? s.opinion.measures.map((m) => `・${m}`).join("\n") : "なし")}
+          {row("措置期間(案)", s.opinion.measure_period)}
+          {row("職場環境の改善", s.opinion.environment)}
+          {row("受診の配慮等", s.opinion.medical_care)}
+          {row("根拠・面談で確認", s.opinion.basis)}
+          <button
+            onClick={() => {
+              const o = s.opinion!;
+              const text = [
+                "【面接指導結果報告書・意見書(下書き)】",
+                `勤務の状況: ${o.work_condition}`,
+                `疲労の蓄積の状況: ${o.fatigue}`,
+                `心理的な負担の状況: ${o.psych_burden}`,
+                `その他の心身の状況: ${o.other_health}`,
+                `本人への指導区分: ${o.guidance}`,
+                `就業区分: ${o.work_category}`,
+                `就業上の措置: ${(o.measures ?? []).join("、") || "なし"}`,
+                `措置期間: ${o.measure_period}`,
+                `職場環境の改善に関する意見: ${o.environment}`,
+                `医療機関への受診の配慮等: ${o.medical_care}`,
+              ].join("\n");
+              navigator.clipboard?.writeText(text).then(
+                () => setMsg({ ok: true, text: "意見書の下書きをコピーしました。" }),
+                () => setMsg({ ok: false, text: "コピーできませんでした。" })
+              );
+            }}
+            style={{ marginTop: 8, background: "#fff", border: `1px solid ${brand.teal}`, color: brand.tealDark, borderRadius: 8, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+          >
+            意見書の下書きをコピー
+          </button>
+        </div>
+      )}
       <div style={{ fontSize: 12, color: "#8A9694", lineHeight: 1.6 }}>AIによる要約です。判断は会話の記録と面談で確認してください。</div>
 
       <div>

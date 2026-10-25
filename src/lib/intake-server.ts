@@ -11,6 +11,8 @@ import {
   type IntakeSummary,
   type RiskLevel,
   type ShareConsent,
+  type TurnResult,
+  validTopics,
 } from "@/lib/intake";
 
 // ============================================================
@@ -49,7 +51,7 @@ export async function intakeEligible(
 }
 
 // 会話の記録を Claude に渡す形にする(最初は本人の発言から始める必要があるため、開始の合図を置く)。
-// 最後の本人の発言には、追加の質問の残りの回数を添える(本人には表示されず、記録にも残らない)
+// 最後の本人の発言には、質問できる残りの回数を添える(本人には表示されず、記録にも残らない)
 function toParams(history: IntakeMessage[], questionsLeft: number): Anthropic.Beta.BetaMessageParam[] {
   const msgs: Anthropic.Beta.BetaMessageParam[] = [
     { role: "user", content: "(面接指導を申し出ました。事前問診を始めてください)" },
@@ -57,7 +59,7 @@ function toParams(history: IntakeMessage[], questionsLeft: number): Anthropic.Be
   history.forEach((m, i) => {
     const note =
       i === history.length - 1 && m.role === "user"
-        ? `\n\n(システムからの連絡: この返答でできる追加の質問は、残り${questionsLeft}回です。${questionsLeft <= 0 ? "質問せずに終えてください。" : ""})`
+        ? `\n\n(システムからの連絡: 質問できるのは、この返答を含めて残り${questionsLeft}回までです。${questionsLeft <= 0 ? "質問せずに終えてください。" : questionsLeft <= 3 ? "まだ聞いていない項目のうち、措置の判断に大事なものを優先してください。" : ""})`
         : "";
     msgs.push({ role: m.role, content: m.content + note });
   });
@@ -71,11 +73,8 @@ function jsonText(res: Anthropic.Beta.BetaMessage): string {
   return block.text;
 }
 
-// 追加の質問の1往復。本人の発言(history の最後)に対する返答を作る
-export async function intakeTurn(
-  history: IntakeMessage[],
-  questionsLeft: number
-): Promise<{ reply: string; done: boolean; risk_level: RiskLevel }> {
+// 聞き取りの1往復。本人の発言(history の最後)に対する返答と、聞き終えた項目を返す
+export async function intakeTurn(history: IntakeMessage[], questionsLeft: number): Promise<TurnResult> {
   const res = await claude().beta.messages.create({
     model: MODEL,
     max_tokens: 4000,
@@ -83,10 +82,15 @@ export async function intakeTurn(
     fallbacks: "default",
     system: [{ type: "text", text: INTERVIEW_SYSTEM, cache_control: { type: "ephemeral" } }],
     messages: toParams(history, questionsLeft),
-    output_config: { effort: "low", format: { type: "json_schema", schema: TURN_SCHEMA as unknown as Record<string, unknown> } },
+    output_config: { effort: "medium", format: { type: "json_schema", schema: TURN_SCHEMA as unknown as Record<string, unknown> } },
   });
-  const parsed = JSON.parse(jsonText(res)) as { reply: string; done: boolean; risk_level: RiskLevel };
-  return { reply: String(parsed.reply ?? "").trim(), done: Boolean(parsed.done), risk_level: parsed.risk_level ?? "none" };
+  const parsed = JSON.parse(jsonText(res)) as { reply: string; done: boolean; risk_level: RiskLevel; covered?: unknown };
+  return {
+    reply: String(parsed.reply ?? "").trim(),
+    done: Boolean(parsed.done),
+    risk_level: parsed.risk_level ?? "none",
+    covered: validTopics(parsed.covered),
+  };
 }
 
 // 医師向けの要約、本人への返信の下書き、会社の担当者に共有する文章の下書き

@@ -1,7 +1,9 @@
 // ============================================================
 // 面接指導の事前問診(AI)。画面とサーバーで共通の定義
-//   高ストレス者が面接指導を申し出たあと、AI が状況を詳しく聞き取り(面談の前に回答をお願いする)、
-//   医師(実施者)向けの要約と本人への返信の下書きを作る。返信は医師が確認してから本人に送る。
+//   高ストレス者が面接指導を申し出たあと、AI が状況をできるだけ詳しく聞き取り(面談の前に回答をお願いする)、
+//   医師(実施者)向けの要約・面接指導結果報告書と意見書の下書き・本人への返信の下書きを作る。
+//   目的: 医師が面談の前に十分な情報を持ち、面談では確認と相談に集中し、正確な意見書を出せるようにする。
+//   返信は医師が確認してから本人に送る。
 //   AI は医師ではない: 診断・治療・服薬の指示はしない。緊急のサインがあればすぐに実施者に知らせる。
 // ============================================================
 
@@ -24,32 +26,53 @@ export type IntakeSummary = {
   risk_notes: string; // 緊急度の判断の根拠
   points_to_confirm: string[]; // 医師が面接で確認したいこと
   measure_candidates: string[]; // 就業上の措置の候補(医師の判断の参考。案)
+  opinion?: IntakeOpinion; // 面接指導結果報告書・事後措置に係る意見書の下書き(AI案。医師が判断・修正する)
   partial?: boolean; // 本人が途中でやめた時点までの内容で作った要約(サーバーが付ける)
   generated_at?: string; // 要約を作った時刻(サーバーが付ける)
 };
 
-// 流れ: ① 選んで答える質問(1画面・約2分) → ② 必要なときだけAIの追加の質問(0〜5問) → ③ 会社に伝えてよい範囲を選んで医師に送る
-// 離脱を防ぐため、往復はできるだけ少なくする。回答は1問ごとにサーバーに保存し、続きから再開できる
-export const INTAKE_MAX_FOLLOWUPS = 5; // AIの追加の質問の上限
+// 面接指導結果報告書・事後措置に係る意見書(厚生労働省の様式例)の項目に沿った下書き
+export const GUIDANCE_OPTIONS = ["措置不要", "要保健指導", "要経過観察", "要再面接", "現病治療継続", "要医療機関紹介"] as const;
+export const WORK_CATEGORY_OPTIONS = ["通常勤務", "就業制限・配慮", "要休業"] as const;
+export type IntakeOpinion = {
+  work_condition: string; // 勤務の状況(労働時間、労働時間以外の要因)
+  fatigue: string; // 疲労の蓄積の状況
+  psych_burden: string; // 心理的な負担の状況
+  other_health: string; // その他の心身の状況
+  guidance: (typeof GUIDANCE_OPTIONS)[number]; // 本人への指導区分(案)
+  work_category: (typeof WORK_CATEGORY_OPTIONS)[number]; // 就業区分(案)
+  measures: string[]; // 就業上の措置の内容(案)
+  measure_period: string; // 措置期間(案)
+  environment: string; // 職場環境の改善に関する意見(案)
+  medical_care: string; // 医療機関への受診の配慮等(案)
+  basis: string; // 判断の根拠と、面談で確かめるべきこと
+};
+
+// 流れ: ① 選んで答える質問(1画面・約3分) → ② AIの聞き取り(意見書に必要な項目を一通り・1〜2点ずつ深掘り)
+//       → ③ 会社に伝えてよい範囲を選んで医師に送る
+// 長くなるため、回答は1問ごとにサーバーに保存し、続きから再開できる。途中でやめても途中までの内容で要約を作る
+export const INTAKE_MAX_FOLLOWUPS = 25; // AIの質問の上限(費用と本人の負担の上限)
 export const INTAKE_MAX_USER_TURNS = INTAKE_MAX_FOLLOWUPS + 2; // 念のための上限(選んで答える質問 + 追加の質問 + 予備)
 export const INTAKE_NAME = "事前問診";
-export const INTAKE_MINUTES = "約5〜10分";
+export const INTAKE_MINUTES = "約15〜20分";
 export const INTAKE_MAX_CHARS = 1000; // 1回の入力の上限
 export const INTAKE_PARTIAL_AFTER_DAYS = 2; // 途中でやめてからこの日数がたったら、途中までの内容で要約を作る
 
 export const INTAKE_FIRST_MESSAGE =
-  "面接指導のお申し出、ありがとうございます。医師との面談の前に、いまの状況を伺います(事前問診)。" +
-  `最初に選んで答える質問、必要に応じてAIから追加の質問(最大${INTAKE_MAX_FOLLOWUPS}問)をお聞きします。` +
-  "回答は自動で保存され、中断しても続きから再開できます。";
+  "面接指導のお申し出、ありがとうございます。医師との面談の前に、いまの状況をできるだけ詳しく伺います(事前問診)。" +
+  "伺った内容は医師が事前に確認し、面談では確認と解決策の相談に時間を使います。" +
+  "回答は自動で保存され、中断しても続きから再開できます。答えにくい質問は「答えたくない」で大丈夫です。";
 
 export const INTAKE_CLOSING =
   "ご回答ありがとうございました。伺った内容は、医師が面談の前に確認します。\n" +
   "このあと、会社の担当者に伝えてよい範囲を選んでいただき、医師に送ります。";
 
-// ① 選んで答える質問。就業上の措置(残業の制限・業務の調整・配置・休業)と受診の要否を判断する材料を、まとめて短時間で集める
+// ① 選んで答える質問。全体像(勤務・心身・要因・受診・希望・危険のサイン)をまとめて短時間で集め、AIの聞き取りの出発点にする
 export type QuickQuestion = { key: string; label: string; options: string[]; multi?: boolean; none?: string };
 export const QUICK_QUESTIONS: QuickQuestion[] = [
-  { key: "overtime", label: "最近1か月の残業・休日出勤は、合わせてどのくらいですか", options: ["ほとんどない", "月45時間まで", "月45〜80時間", "月80時間以上", "わからない"] },
+  { key: "overtime", label: "最近3か月の残業・休日出勤は、合わせて月にどのくらいですか", options: ["ほとんどない", "月45時間まで", "月45〜80時間", "月80時間以上", "わからない"] },
+  { key: "holidays", label: "休日はとれていますか", options: ["週に2日ほどとれている", "週に1日ほど", "月に数日しかとれない"] },
+  { key: "night", label: "深夜(22時〜5時)の勤務や交替勤務はありますか", options: ["ない", "ときどきある", "定期的にある"] },
   { key: "sleep", label: "睡眠はとれていますか", options: ["よく眠れている", "寝つきが悪い・夜中や早朝に目が覚めることがある", "ほとんど眠れない日が多い"] },
   { key: "appetite", label: "食欲に変化はありますか", options: ["変わらない", "減った", "増えた"] },
   { key: "mood", label: "気分の落ち込みや、やる気が出ない状態は、どのくらい続いていますか", options: ["特にない", "2週間未満", "2週間〜1か月", "1か月以上"] },
@@ -117,19 +140,41 @@ export function quickRisk(a: QuickAnswers): RiskLevel {
   return "low";
 }
 
-// 問診の進み具合(%)。選んで答える質問で 40%、追加の質問に1つ答えるごとに 12%
-export function intakeProgress(userTurns: number, done: boolean): number {
+// AIが聞き取る項目(面接指導結果報告書・意見書の項目に沿う)。AIは毎回、聞き終えた項目を返し、進み具合の計算に使う
+export const INTAKE_TOPICS = [
+  { key: "chief", label: "いちばん困っていること(内容・いつから・きっかけ)" },
+  { key: "work_hours", label: "労働時間(直近3か月の時間外・休日出勤・持ち帰り・深夜業・交替勤務・出張)" },
+  { key: "work_content", label: "仕事の内容・量・責任・裁量と、最近の変化(異動・昇進・繁忙・担当の増加)" },
+  { key: "relations", label: "職場の人間関係(上司・同僚)とハラスメントの有無、職場の支援" },
+  { key: "sleep_fatigue", label: "睡眠(時間・寝つき・中途覚醒・早朝覚醒)と疲労の蓄積(休日の回復)" },
+  { key: "mental", label: "気分・意欲・興味・不安・イライラ・集中力・自分を責める気持ち(程度と期間)" },
+  { key: "physical", label: "体の症状(頭痛・動悸・胃腸・食欲・体重の変化)" },
+  { key: "function", label: "仕事と生活への影響(ミス・能率・遅刻・欠勤・家事や趣味)" },
+  { key: "private", label: "仕事以外のストレス(家族・介護・育児・経済・健康)" },
+  { key: "medical", label: "通院・服薬・持病・過去のメンタルヘルス不調と、主治医から言われていること" },
+  { key: "lifestyle", label: "飲酒(量・頻度・寝酒)・喫煙・運動などの生活習慣" },
+  { key: "coping", label: "相談できる人と、自分なりの対処法" },
+  { key: "wishes", label: "本人の希望(業務の調整・配置・休業・受診)と、会社に知られたくないこと" },
+] as const;
+export type TopicKey = (typeof INTAKE_TOPICS)[number]["key"];
+const TOPIC_KEYS = new Set<string>(INTAKE_TOPICS.map((t) => t.key));
+export const validTopics = (keys: unknown): TopicKey[] =>
+  Array.isArray(keys) ? [...new Set(keys.filter((k): k is TopicKey => typeof k === "string" && TOPIC_KEYS.has(k)))] : [];
+
+// 問診の進み具合(%)。選んで答える質問で 15%、残りは聞き終えた項目の割合。終わるまで100にしない
+export function intakeProgress(userTurns: number, done: boolean, coveredCount?: number): number {
   if (done) return 100;
   if (userTurns <= 0) return 5;
-  return Math.min(95, 40 + 12 * (userTurns - 1));
+  if (coveredCount === undefined) return Math.min(95, 15 + 4 * (userTurns - 1)); // 項目が分からないとき(デモ)
+  return Math.min(95, 15 + Math.round((80 * coveredCount) / INTAKE_TOPICS.length));
 }
 
-// AIの追加の質問の残り(いま表示している質問を含む)
+// AIの質問の残り(上限まで)
 export const followupsLeft = (userTurns: number): number => Math.max(0, INTAKE_MAX_FOLLOWUPS - Math.max(0, userTurns - 1));
 
-// AIの返答を受けて、この回の返答と終わるかどうかを決める。追加の質問が要るかはAIが判断し(0問で終えてよい)、
+// AIの返答を受けて、この回の返答と終わるかどうかを決める。いつ終えるかはAIが判断し(全項目を聞き終えたら)、
 // 上限の回数を超えたら、AIの返答にかかわらず終える
-export type TurnResult = { reply: string; done: boolean; risk_level: RiskLevel };
+export type TurnResult = { reply: string; done: boolean; risk_level: RiskLevel; covered?: TopicKey[] };
 export async function decideTurn(userTurns: number, ask: () => Promise<TurnResult>): Promise<TurnResult> {
   const t = await ask();
   if (!t.done && (followupsLeft(userTurns) <= 0 || userTurns >= INTAKE_MAX_USER_TURNS)) return { ...t, reply: INTAKE_CLOSING, done: true };
@@ -235,11 +280,16 @@ export type ShareConsent = { keys: ShareKey[]; note: string; at: string };
 export const TURN_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["reply", "done", "risk_level"],
+  required: ["reply", "done", "risk_level", "covered"],
   properties: {
-    reply: { type: "string", description: "本人への返答(日本語・短く・やさしく)" },
-    done: { type: "boolean", description: "必要な情報がそろい、終わってよいとき true" },
+    reply: { type: "string", description: "本人への返答(日本語・やさしく)" },
+    done: { type: "boolean", description: "聞き取る項目を一通り聞き終え、終わってよいとき true" },
     risk_level: { type: "string", enum: ["none", "low", "moderate", "high"] },
+    covered: {
+      type: "array",
+      description: "これまでの会話(選んで答えた内容を含む)で、十分に聞き取れた項目",
+      items: { type: "string", enum: INTAKE_TOPICS.map((t) => t.key) },
+    },
   },
 } as const;
 
@@ -259,6 +309,7 @@ export const SUMMARY_SCHEMA = {
     "risk_notes",
     "points_to_confirm",
     "measure_candidates",
+    "opinion",
     "reply_draft",
     "company_share_draft",
   ],
@@ -274,41 +325,57 @@ export const SUMMARY_SCHEMA = {
     risk_notes: { type: "string" },
     points_to_confirm: { type: "array", items: { type: "string" } },
     measure_candidates: { type: "array", items: { type: "string" } },
+    opinion: {
+      type: "object",
+      additionalProperties: false,
+      required: ["work_condition", "fatigue", "psych_burden", "other_health", "guidance", "work_category", "measures", "measure_period", "environment", "medical_care", "basis"],
+      properties: {
+        work_condition: { type: "string" },
+        fatigue: { type: "string" },
+        psych_burden: { type: "string" },
+        other_health: { type: "string" },
+        guidance: { type: "string", enum: [...GUIDANCE_OPTIONS] },
+        work_category: { type: "string", enum: [...WORK_CATEGORY_OPTIONS] },
+        measures: { type: "array", items: { type: "string" } },
+        measure_period: { type: "string" },
+        environment: { type: "string" },
+        medical_care: { type: "string" },
+        basis: { type: "string" },
+      },
+    },
     reply_draft: { type: "string" },
     company_share_draft: { type: "string" },
   },
 } as const;
 
-// 聞き取り役の指示(医師ではない立場を守る)。離脱を防ぐため、質問は少なく・まとめて聞く
+// 聞き取り役の指示(医師ではない立場を守る)。意見書を正確に書けるよう、項目を一通り・具体的に聞く
 export const INTERVIEW_SYSTEM = `あなたは、うえまつ産業医事務所の「面接指導の事前問診」を担当するAIです。医師ではありません。
-ストレスチェックで高ストレスと判定され、産業医による面接指導を申し出た従業員に、面談の前に追加の質問をします。
+ストレスチェックで高ストレスと判定され、産業医による面接指導を申し出た従業員から、面談の前に状況をできるだけ詳しく聞き取ります。
 
 ## 目的
-- 医師が面談の前に、就業上の措置(通常勤務でよいか、残業の制限・業務量の調整・担当や配置の変更・休業が必要か)と、医療機関の受診が必要かを判断できる材料をそろえること。
-- それにより、面談を短く・解決策の相談に集中させること。
-- 本人の負担を小さくし、途中でやめる人を出さないこと。質問はできるだけ少なくする。
+- 医師が面談の前に十分な情報を持ち、面談では確認と解決策の相談に集中できるようにすること。
+- 医師が「面接指導結果報告書・事後措置に係る意見書」(勤務の状況、疲労の蓄積、心理的な負担、その他の心身の状況、指導区分、就業区分、就業上の措置、職場環境の改善、受診の配慮)を正確に書けるだけの、具体的な情報を集めること。
 
 ## すでに分かっていること
-- 会話の最初に、本人が「選んで答える質問」(残業時間・睡眠・食欲・気分・仕事への影響・ストレスの原因・通院・飲酒・相談相手・希望・死にたい気持ちの有無)に答えている。
-- 選んで答えたことは聞き直さない。「特にない」「ない」と答えた項目は聞かない。
+- 会話の最初に、本人が「選んで答える質問」(残業時間・休日・深夜勤務・睡眠・食欲・気分・仕事への影響・ストレスの原因・通院・飲酒・相談相手・希望・死にたい気持ちの有無)に答えている。
+- 選んで答えたことは、そのまま聞き直さない。そこを出発点に、具体的に掘り下げる。
 
-## 追加の質問の決め方
-- 追加の質問は0〜${INTAKE_MAX_FOLLOWUPS}回。各回の本人の発言の最後に、システムから残りの回数が伝えられる。少ない回数で終えるほどよい。
-- 選んで答えた内容で措置の判断に十分なら、追加の質問はせずに終えてよい(本人の負担を減らすため)。
-- 1回の返答で、関係のある2〜3点をまとめて、番号を付けて聞く。答えやすいように短い例を添える。
-- 聞く優先順:
-  1. 選んで答えた中で、措置の判断に関わる点の具体化(例: 残業が多い→何時間くらい・いつ頃から・今後も続く見込みか / 眠れない→睡眠は何時間・いつ頃から / 欠勤がある→この1か月で何日 / ハラスメント→誰との間で・いつ頃から(詳しい内容は面談で伺うと伝える))。
-  2. いちばん困っていること・ストレスの原因の具体(何が・いつ頃から・何が変わったか)。
-  3. 希望の具体(どんな調整があると助かるか。上司や会社に知られたくないことがあるか)。
-  4. 通院中なら、主治医から仕事について言われていること。
-- 聞かなくてよいこと: 措置の判断に影響しない細部、生い立ちや過去の詳しい経緯、選んで答えた内容の確認。
-- 最後の質問には「ほかに医師に伝えておきたいことがあれば、一緒に書いてください」を添える。
-- 内容の確認や要約を本人に見せる必要はない(医師が会話の記録を確認する)。
+## 聞き取る項目(すべて聞く。会話の流れに合わせて自然な順で)
+${INTAKE_TOPICS.map((t) => `- ${t.key}: ${t.label}`).join("\n")}
+
+## 聞き方(具体的に・数字で)
+- 一度に聞くのは1つか2つまで。前の答えを受けて、次の質問を決める。
+- あいまいな答えは掘り下げる: いつから・どのくらいの頻度・何時間・何日・どんな場面で・誰との間で・仕事への影響は。
+- 数字で聞けるものは数字で聞く: 時間外労働の時間(月ごと)、睡眠時間、休んだ日数、飲酒量(種類と量・頻度)、体重の変化など。
+- 措置の判断に関わる点は特に具体的に: 長時間労働の原因と今後の見通し、業務の調整の余地、深夜業・交替勤務の頻度、仕事を続けられる状態か、受診の必要性につながる症状の程度と期間。
+- 本人の言葉の中に気になる点があれば、必ず確かめる。すでに答えたことは繰り返し聞かない。
+- 項目を一通り聞き終えたら、最後に「ほかに医師に伝えておきたいことはありますか」と聞く。
+- 目安は15〜25往復。項目を聞き終えるまでは終えない。
 
 ## 話し方
-- まず受け止める一言(1文)を添え、続けて番号付きの質問。全体で200字くらいまで。
-- 短く、やさしい日本語で。専門用語は使わない。
-- 答えたくないと言われたら、無理に聞かずに次へ進む。決めつけたり評価したりしない。
+- まず相手の話を受け止める一言を添えてから、次の質問をする。短く、やさしい日本語で。専門用語は使わない。
+- 答えたくないと言われたら、無理に聞かずに次の項目へ進む。決めつけたり評価したりしない。
+- 本人が疲れている様子なら、「途中で休んでも、続きから再開できます」と伝える。
 
 ## してはいけないこと
 - 病名の診断、病気かどうかの判断、治療・服薬の指示や変更の助言はしない(「医師が面談で一緒に考えます」と伝える)。
@@ -316,18 +383,22 @@ export const INTERVIEW_SYSTEM = `あなたは、うえまつ産業医事務所�
 - 一般的なセルフケア(睡眠のとり方、休息、相談先など)は一言なら伝えてよいが、個別の対処策は「医師からお伝えします」とする。
 
 ## 緊急度(risk_level)
-- high: 死にたい・消えたい気持ち、自分を傷つける行為・計画、他人を傷つける恐れ、現実と区別がつかない様子、ほとんど眠れない・食べられない状態が続いている。→ 返答では、気持ちを受け止め、まずは画面に表示している相談窓口(こころの健康相談統一ダイヤル・いのちの電話)に電話で相談してほしいこと、医師に知らせたことを伝える。119番は、いますぐ命の危険が差し迫っているときの最後の手段として最後に添える。質問は続けない(done を true)。
+- high: 死にたい・消えたい気持ち、自分を傷つける行為・計画、他人を傷つける恐れ、現実と区別がつかない様子、ほとんど眠れない・食べられない状態が続いている。→ 返答では、気持ちを受け止め、まずは画面に表示している相談窓口(こころの健康相談統一ダイヤル・いのちの電話)に電話で相談してほしいこと、医師に知らせたことを伝える。119番は、いますぐ命の危険が差し迫っているときの最後の手段として最後に添える。聞き取りは続けなくてよい(done を true)。
 - moderate: 仕事を休みがち、強い不眠や食欲低下が2週間以上、ハラスメントの訴え、強い不安・落ち込みが続いている。
 - low: ストレスはあるが日常生活・仕事はおおむね保てている。
 - none: 特に気になる点がない。
 - 判断に迷うときは高いほうにする。
 
-## 終わり方
-- 措置の判断に必要な情報がそろったら、残りの回数があっても終える(1回目の返答で終えてもよい)。終えるときは、お礼と「このあと、会社の担当者に伝えてよい範囲を選んでいただき、医師に送ります」と伝え、質問はせずに done を true にする。
-- 残りの回数が0回と伝えられたら、質問せずに終える(done を true)。
-- 本人が続けられないと言ったら、そこで終える(done を true)。
+## 聞き終えた項目(covered)
+- 毎回、これまでの会話全体で十分に聞き取れた項目のキーを covered に入れて返す(前回までに聞けた項目も含める)。
+- 本人が「答えたくない」と言った項目も、聞き終えたものとして入れてよい。
 
-返答は必ず指定の形式(reply, done, risk_level)で返す。reply は本人に表示される文章だけを書く。`;
+## 終わり方
+- すべての項目を聞き、最後の「ほかに伝えたいこと」も聞いたら、お礼と「このあと、会社の担当者に伝えてよい範囲を選んでいただき、医師に送ります」と伝え、質問はせずに done を true にする。
+- 残りの回数が0回と伝えられたら、質問せずに終える(done を true)。
+- 本人がどうしても続けられないと言ったら、そこで終える(done を true)。
+
+返答は必ず指定の形式(reply, done, risk_level, covered)で返す。reply は本人に表示される文章だけを書く。`;
 
 export const SUMMARY_SYSTEM = `あなたは産業医の面接指導を補助するAIです。高ストレス者の事前問診(選んで答える質問への回答と、AIとの会話記録)と、ストレスチェックの点数をもとに、医師(実施者)向けの要約、本人への返信の下書き、会社の担当者に共有する文章の下書きを作ります。
 目的は、医師が面談を短くし、会社に就業上の措置(事後措置)についての意見を的確に伝えられるようにすることです。
@@ -340,6 +411,18 @@ export const SUMMARY_SYSTEM = `あなたは産業医の面接指導を補助す�
 - points_to_confirm: 措置の判断のために、面談で確認すべき点だけ(2〜5個・大事な順)。すでに分かっていることは入れない。
 - measure_candidates: 就業上の措置の案を「措置の案 — 根拠」の形で(例: 「時間外労働の制限(月45時間以内) — 残業が月80時間以上で、2か月前から中途覚醒」)。就業区分(通常勤務/就業制限/要休業)の見立て、受診勧奨の要否も含める。あくまで医師の判断の参考となる案。
 - 入力に「途中までの回答」とあるときは、本人が問診を途中でやめている。分かっている範囲で要約し、足りない点を points_to_confirm に入れる。
+
+## 面接指導結果報告書・事後措置に係る意見書の下書き(opinion)
+- 厚生労働省の様式例の項目に沿って、医師が判断・修正する前提の案を書く。本人が答えたことを根拠にし、推測で補わない。
+- work_condition: 勤務の状況(労働時間: 直近の時間外・休日出勤・深夜業など / 労働時間以外の要因: 業務の量と質・責任・人間関係・職場の支援)
+- fatigue: 疲労の蓄積の状況(睡眠・休日の回復・疲労感) / psych_burden: 心理的な負担の状況(気分・意欲・不安などの程度と期間) / other_health: その他の心身の状況(身体症状・持病・受診・飲酒など)
+- guidance: 本人への指導区分の案(措置不要・要保健指導・要経過観察・要再面接・現病治療継続・要医療機関紹介から1つ)
+- work_category: 就業区分の案(通常勤務・就業制限・配慮・要休業から1つ)
+- measures: 就業上の措置の案(例: 「時間外労働の制限(月45時間まで)」「時間外労働の禁止」「就業時間の制限(9時〜18時)」「深夜業の回数の減少」「昼間勤務への転換」「作業の転換(担当業務の見直し)」「就業場所の変更」)。通常勤務なら空にする。
+- measure_period: 措置期間の案(例: 「1か月後の再面接まで」「3か月」)
+- environment: 職場環境の改善に関する意見の案(本人が特定されない形で、業務量・体制・コミュニケーションなど)
+- medical_care: 医療機関への受診の配慮等(受診をすすめる理由・受診のための休暇や時間の配慮など。不要なら「特になし」)
+- basis: この案にした根拠と、面談で確かめてから確定すべきこと(2〜4点)
 
 ## 本人への返信の下書き(reply_draft)
 - 医師が確認・修正してから本人に送る文章。医師(産業医)からの返信として書く。

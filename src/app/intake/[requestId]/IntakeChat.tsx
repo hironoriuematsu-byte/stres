@@ -13,14 +13,12 @@ import {
   CRISIS_MESSAGE,
   INTAKE_FIRST_MESSAGE,
   INTAKE_MAX_CHARS,
-  INTAKE_MAX_FOLLOWUPS,
   INTAKE_MINUTES,
   QUICK_HEADER,
   QUICK_NOTE_LABEL,
   QUICK_QUESTIONS,
   SHARE_OPTIONS,
   detectCrisis,
-  followupsLeft,
   formatQuickAnswers,
   intakeProgress,
   quickRisk,
@@ -371,7 +369,7 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
           </p>
           <ul style={{ fontSize: 13, color: "#44534F", lineHeight: 1.9, margin: "0 0 12px", paddingLeft: 20 }}>
             <li>
-              最初に<strong>選んで答える質問({QUICK_QUESTIONS.length}問・約2分)</strong>にお答えください。必要なときだけ、<strong>AIから追加の質問(最大{INTAKE_MAX_FOLLOWUPS}問)</strong>をします。
+              最初に<strong>選んで答える質問({QUICK_QUESTIONS.length}問・約3分)</strong>、続いて<strong>AIが状況を詳しく伺います</strong>(15〜25問ほど)。できるだけ具体的にお答えください。<strong>音声入力</strong>を使うと、話すだけで詳しく入力できます。
             </li>
             <li>追加の質問はAI(Anthropic社の Claude)が行います。AIは医師ではなく、診断や治療の指示はしません。</li>
             <li>内容を見られるのは、あなたと実施者(産業医)だけです。会社の担当者に伝える範囲は、最後にあなたが選べます。</li>
@@ -419,7 +417,7 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
         {!finished && <ProgressBar value={intake.progress || 5} label="問診の進み具合" />}
         {!finished && !done && userTurns > 0 && (
           <div style={{ fontSize: 12, color: "#5B6B6A", marginTop: 6 }}>
-            AIからの追加の質問: あと最大{followupsLeft(userTurns)}問(必要な情報がそろえば、その時点で終わります)
+            答えにくい質問は「答えたくない」で大丈夫です。途中でやめても、続きから再開できます。
           </div>
         )}
         {resumed && !finished && (
@@ -487,7 +485,7 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
           <div style={{ marginTop: 14, borderTop: `1px solid ${brand.line}`, paddingTop: 12 }}>
             {demo && (
               <div style={{ fontSize: 12, color: "#8A6B2E", background: "#FBF3E3", border: "1px solid #EFD9A8", borderRadius: 8, padding: "8px 10px", lineHeight: 1.7, marginBottom: 8 }}>
-                (デモ)決まった順番の質問を出しているだけで、答えの内容は読み取りません。実際のAIは、選んだ答えと書いた内容に合わせて、就業上の措置の判断に必要な点だけを聞きます。
+                (デモ)決まった順番の質問を出しているだけで、答えの内容は読み取りません。実際のAIは、選んだ答えと書いた内容に合わせて掘り下げ、意見書に必要な項目を一通り伺います。
               </div>
             )}
             <div style={{ fontSize: 12.5, color: brand.tealDark, background: "#F4FAF9", borderRadius: 8, padding: "8px 10px", lineHeight: 1.7, marginBottom: 8 }}>
@@ -497,7 +495,7 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
               value={text}
               onChange={(e) => setText(e.target.value.slice(0, INTAKE_MAX_CHARS))}
               rows={4}
-              placeholder="番号ごとに、短くて大丈夫です(音声入力もできます)"
+              placeholder="できるだけ具体的に(いつから・どのくらい・どんな場面で)。音声入力もできます"
               disabled={busy !== ""}
               style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", fontSize: 15, lineHeight: 1.7, border: `1px solid ${brand.line}`, borderRadius: 10 }}
             />
@@ -683,7 +681,7 @@ function QuickForm({
       </div>
       <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", alignItems: "center" }}>
         <Btn tone="orange" onClick={onSubmit} disabled={busy || answered < QUICK_QUESTIONS.length} style={{ padding: "12px 28px", fontSize: 16 }}>
-          {busy ? "送っています…" : "次へ"}
+          {busy ? "送っています…" : "次へ(AIの聞き取りへ)"}
         </Btn>
         <span style={{ fontSize: 12.5, color: "#5B6B6A" }}>
           {answered}/{QUICK_QUESTIONS.length}問 回答済み

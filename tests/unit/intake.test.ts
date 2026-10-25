@@ -10,6 +10,8 @@ import {
   formatQuickAnswers,
   higherRisk,
   INTAKE_MAX_FOLLOWUPS,
+  INTAKE_TOPICS,
+  validTopics,
   intakeProgress,
   needsPartialSummary,
   QUICK_QUESTIONS,
@@ -42,7 +44,11 @@ describe("事前問診: 緊急度", () => {
     expect(higherRisk("none", "none")).toBe("none");
   });
   it("AIの返答の形は必須項目がそろっている", () => {
-    expect(TURN_SCHEMA.required).toEqual(["reply", "done", "risk_level"]);
+    expect(TURN_SCHEMA.required).toEqual(["reply", "done", "risk_level", "covered"]);
+    expect(SUMMARY_SCHEMA.required).toContain("opinion");
+    expect(SUMMARY_SCHEMA.properties.opinion.required).toEqual(
+      expect.arrayContaining(["work_condition", "fatigue", "psych_burden", "other_health", "guidance", "work_category", "measures", "measure_period", "environment", "medical_care"])
+    );
     expect(SUMMARY_SCHEMA.required).toContain("company_share_draft");
     expect(SUMMARY_SCHEMA.required).toContain("reply_draft");
     expect(SUMMARY_SCHEMA.additionalProperties).toBe(false);
@@ -81,7 +87,7 @@ describe("事前問診: 選んで答える質問", () => {
   });
   it("会話の記録に残す文章に、質問と答えが入る", () => {
     const t = formatQuickAnswers({ ...calm, overtime: ["月80時間以上"] }, "担当が増えた");
-    expect(t).toContain("残業・休日出勤は、合わせてどのくらいですか: 月80時間以上");
+    expect(t).toContain("残業・休日出勤は、合わせて月にどのくらいですか: 月80時間以上");
     expect(t).toContain("いちばん困っていること: 担当が増えた");
   });
   it("死にたい気持ちが少しでもあれば緊急度は高、措置が要りそうな答えは中", () => {
@@ -93,19 +99,22 @@ describe("事前問診: 選んで答える質問", () => {
 });
 
 describe("事前問診: 往復の上限と進み具合", () => {
-  it("追加の質問は最大5問。選んで答える質問のあとから数える", () => {
-    expect(INTAKE_MAX_FOLLOWUPS).toBe(5);
-    expect(followupsLeft(1)).toBe(5);
-    expect(followupsLeft(3)).toBe(3);
-    expect(followupsLeft(6)).toBe(0);
-    expect(followupsLeft(9)).toBe(0);
+  it("AIの質問は最大25問。選んで答える質問のあとから数える", () => {
+    expect(INTAKE_MAX_FOLLOWUPS).toBe(25);
+    expect(followupsLeft(1)).toBe(25);
+    expect(followupsLeft(11)).toBe(15);
+    expect(followupsLeft(26)).toBe(0);
   });
-  it("進み具合は戻らず、終わるまで100にならない", () => {
+  it("進み具合は聞き終えた項目の割合で決まり、終わるまで100にならない", () => {
     expect(intakeProgress(0, false)).toBe(5);
-    expect(intakeProgress(1, false)).toBe(40);
-    expect(intakeProgress(2, false)).toBeGreaterThan(intakeProgress(1, false));
-    expect(intakeProgress(20, false)).toBe(95);
-    expect(intakeProgress(2, true)).toBe(100);
+    expect(intakeProgress(1, false, 0)).toBe(15);
+    expect(intakeProgress(5, false, 6)).toBeGreaterThan(intakeProgress(5, false, 3));
+    expect(intakeProgress(20, false, INTAKE_TOPICS.length)).toBe(95);
+    expect(intakeProgress(2, true, 1)).toBe(100);
+  });
+  it("聞き終えた項目は決まったキーだけを受け付ける", () => {
+    expect(validTopics(["chief", "work_hours", "chief", "unknown", 3])).toEqual(["chief", "work_hours"]);
+    expect(validTopics(null)).toEqual([]);
   });
 });
 
@@ -131,11 +140,11 @@ describe("事前問診: 途中でやめたときの要約", () => {
   });
 });
 
-describe("事前問診: 追加の質問の回数(必要なときだけ・上限あり)", () => {
+describe("事前問診: 質問の回数(終えるのはAIが判断・上限あり)", () => {
   // 選んで答える質問のあと、本人が答えるたびに decideTurn を呼び、終わるまでの追加の質問の数を数える
   async function run(ai: (turn: number) => boolean) {
     let questions = 0;
-    for (let userTurns = 1; userTurns <= 20; userTurns++) {
+    for (let userTurns = 1; userTurns <= 40; userTurns++) {
       const t = await decideTurn(userTurns, async () => {
         const done = ai(userTurns);
         return { reply: done ? "終わります" : `質問${userTurns}`, done, risk_level: "none" };
@@ -153,9 +162,9 @@ describe("事前問診: 追加の質問の回数(必要なときだけ・上限�
   it("AIが3問目で終えれば、3問で終わる", async () => {
     expect((await run((turn) => turn >= 4)).questions).toBe(3);
   });
-  it("AIが終えようとしなくても、5問で必ず終わる", async () => {
+  it("AIが終えようとしなくても、25問で必ず終わる", async () => {
     const r = await run(() => false);
-    expect(r.questions).toBe(5);
+    expect(r.questions).toBe(25);
     expect(r.last.reply).toBe(INTAKE_CLOSING);
   });
 });

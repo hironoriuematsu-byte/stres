@@ -69,7 +69,7 @@ export async function POST(req: Request) {
   if (body.retry !== true) {
     const { error } = await admin
       .from("interview_intakes")
-      .update({ messages: history, risk_level: risk, progress: intakeProgress(userTurns, false), updated_at: now() })
+      .update({ messages: history, risk_level: risk, progress: Math.max(intake.progress ?? 0, intakeProgress(Math.min(userTurns, 1), false)), updated_at: now() })
       .eq("id", intake.id)
       .eq("status", "in_progress");
     if (error) return fail(500, `保存できませんでした: ${error.message}`);
@@ -78,6 +78,7 @@ export async function POST(req: Request) {
 
   let reply: string;
   let done: boolean;
+  let covered: number | undefined;
   const left = followupsLeft(userTurns);
   if (crisis) {
     reply = CRISIS_MESSAGE;
@@ -87,6 +88,7 @@ export async function POST(req: Request) {
       const t = await decideTurn(userTurns, () => intakeTurn(history, left));
       reply = t.reply;
       done = t.done;
+      covered = t.covered?.length;
       risk = higherRisk(risk, t.risk_level);
     } catch (e) {
       console.error("intake turn failed", e);
@@ -96,7 +98,8 @@ export async function POST(req: Request) {
       );
     }
   }
-  const progress = intakeProgress(userTurns, done);
+  // 進み具合は聞き終えた項目の割合で決め、戻らないようにする
+  const progress = done ? 100 : Math.max(intake.progress ?? 0, intakeProgress(userTurns, false, covered));
 
   history.push({ role: "assistant", content: reply, at: now() });
   const { error } = await admin
