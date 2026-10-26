@@ -23,9 +23,20 @@ export async function loadRequest(admin: SupabaseClient, id: unknown): Promise<R
   return (data as RequestRow | null) ?? null;
 }
 
+// 企業名と面談ルームのURL。ストレスチェックWebで未登録なら、健康管理Webの産業医面談ルーム(hm_meet_rooms)を使う
 export async function companyInfo(admin: SupabaseClient, companyId: string): Promise<{ name: string; meet_room_url: string | null }> {
   const { data } = await admin.from("companies").select("name, meet_room_url").eq("id", companyId).maybeSingle();
-  return { name: (data?.name as string | undefined) ?? "(不明)", meet_room_url: (data?.meet_room_url as string | null | undefined) ?? null };
+  const name = (data?.name as string | undefined) ?? "(不明)";
+  const own = ((data?.meet_room_url as string | null | undefined) ?? "").trim();
+  if (own) return { name, meet_room_url: own };
+  return { name, meet_room_url: await kenkoMeetRoom(admin, companyId) };
+}
+
+// 健康管理Webの産業医面談ルーム(健康管理Webを使っていない環境では表がないので null)
+export async function kenkoMeetRoom(admin: SupabaseClient, companyId: string): Promise<string | null> {
+  const { data, error } = await admin.from("hm_meet_rooms").select("meeting_uri, enabled").eq("company_id", companyId).maybeSingle();
+  if (error || !data?.enabled) return null;
+  return ((data.meeting_uri as string | null) ?? "").trim() || null;
 }
 
 export async function userEmail(admin: SupabaseClient, userId: string): Promise<string | null> {
