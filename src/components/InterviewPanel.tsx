@@ -118,6 +118,13 @@ export function InterviewPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reload]);
 
+  // 実施済を取り消す(押し間違えたとき・面談管理に入れ直したいとき)。日程が決まっていれば日程調整済、なければ申出受付に戻す
+  const reopen = async (r: InterviewRequest) => {
+    const back: InterviewRequest["status"] = r.scheduled_at ? "scheduled" : "pending";
+    if (!window.confirm(`「実施済」を取り消して「${STATUS_LABEL[back]}」に戻します。よろしいですか？`)) return;
+    await updateStatus(r, back);
+  };
+
   const updateStatus = async (r: InterviewRequest, status: InterviewRequest["status"]) => {
     const { error } = await supabase.from("interview_requests").update({ status }).eq("id", r.id);
     if (error) {
@@ -345,6 +352,24 @@ export function InterviewPanel({
                       {STATUS_LABEL[s]}にする
                     </button>
                   ))}
+                  {r.status === "done" && (
+                    <button
+                      onClick={() => reopen(r)}
+                      style={{
+                        background: "#fff",
+                        border: `1px solid ${brand.line}`,
+                        color: "#5B6B6A",
+                        borderRadius: 8,
+                        padding: "4px 10px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        marginRight: 6,
+                      }}
+                    >
+                      実施済を取り消す
+                    </button>
+                  )}
                 </td>
               </tr>
               {!isOffice && openShare === r.id && shares[r.id] && (
