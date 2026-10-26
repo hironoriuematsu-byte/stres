@@ -4,7 +4,7 @@ import { requestUser } from "@/lib/supabase/server";
 import { adminClient, officeEmails, sendMails } from "@/lib/plan-server";
 import type { IntakeMessage, IntakeStatus, RiskLevel, ShareConsent } from "@/lib/intake";
 import { fillReplyNames, higherRisk, removeEmergencyCall, RISK_LABEL, surnameOf } from "@/lib/intake";
-import { intakeSummarize } from "@/lib/intake-server";
+import { intakeSummarize, type ScScores } from "@/lib/intake-server";
 
 // 事前問診のAPIで共通の処理(ログイン確認・記録の読み込み・実施者へのお知らせ)
 
@@ -42,6 +42,14 @@ export async function loadIntake(admin: SupabaseClient, id: unknown): Promise<In
   if (typeof id !== "string" || !id) return null;
   const { data } = await admin.from("interview_intakes").select("*").eq("id", id).maybeSingle();
   return (data as IntakeRow | null) ?? null;
+}
+
+// 申出のストレスチェックの点数(事前問診のAIと要約に渡す)
+export async function loadScores(admin: SupabaseClient, requestId: string): Promise<ScScores | null> {
+  const { data: request } = await admin.from("interview_requests").select("result_id").eq("id", requestId).maybeSingle();
+  if (!request) return null;
+  const { data } = await admin.from("results").select("score_a, score_b, score_c, high_stress").eq("id", request.result_id).maybeSingle();
+  return (data as ScScores | null) ?? null;
 }
 
 // 医師向けの要約・本人への返信の下書き・会社への共有の下書きを作って保存する。

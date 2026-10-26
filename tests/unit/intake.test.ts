@@ -17,6 +17,9 @@ import {
   intakeProgress,
   needsPartialSummary,
   QUICK_QUESTIONS,
+  activeQuestions,
+  bodyCheckScore,
+  depressiveSymptoms,
   quickRisk,
   SUMMARY_SCHEMA,
   TURN_SCHEMA,
@@ -76,27 +79,68 @@ describe("事前問診: 催促", () => {
   });
 });
 
-describe("事前問診: 選んで答える質問", () => {
-  const calm: QuickAnswers = Object.fromEntries(QUICK_QUESTIONS.map((q) => [q.key, [q.options[0]]]));
-  it("すべてに答えていれば受け付ける。未回答・選択肢にない値・1つだけの質問に複数は受け付けない", () => {
+describe("事前問診: 選んで答える質問(厚生労働省マニュアルの3つのシート)", () => {
+  // 落ち着いた答え: 体調チェックシートは4点、それ以外は最初の選択肢。自由記入は空
+  const calm: QuickAnswers = Object.fromEntries(
+    QUICK_QUESTIONS.filter((q) => (q.kind ?? "single") !== "text").map((q) => [q.key, [q.points ? q.options![q.points.indexOf(4)] : q.options![0]]])
+  );
+  it("3つのシートに分かれ、体調チェックシート14項目・体調の確認9項目がある", () => {
+    expect(QUICK_QUESTIONS.filter((q) => q.section === "body")).toHaveLength(14);
+    expect(QUICK_QUESTIONS.filter((q) => q.section === "check")).toHaveLength(9);
+  });
+  it("いま答えるべき質問がすべて答えられていれば受け付ける。未回答・選択肢にない値・1つだけの質問に複数は受け付けない", () => {
     expect(validQuickAnswers(calm)).toBe(true);
-    const { sleep: _omit, ...missing } = calm;
+    const { sleep_weekday: _omit, ...missing } = calm;
     expect(validQuickAnswers(missing)).toBe(false);
-    expect(validQuickAnswers({ ...calm, sleep: ["勝手な値"] })).toBe(false);
-    expect(validQuickAnswers({ ...calm, sleep: ["よく眠れている", "ほとんど眠れない日が多い"] })).toBe(false);
+    expect(validQuickAnswers({ ...calm, sleep_weekday: ["勝手な値"] })).toBe(false);
+    expect(validQuickAnswers({ ...calm, sleep_weekday: ["5時間未満", "7時間以上"] })).toBe(false);
     expect(validQuickAnswers({ ...calm, causes: ["仕事の量・時間", "上司との関係"] })).toBe(true);
+    expect(validQuickAnswers({ ...calm, note: ["担当が増えた"] })).toBe(true); // 自由記入は任意
     expect(validQuickAnswers(null)).toBe(false);
   });
-  it("会話の記録に残す文章に、質問と答えが入る", () => {
-    const t = formatQuickAnswers({ ...calm, overtime: ["月80時間以上"] }, "担当が増えた");
-    expect(t).toContain("残業・休日出勤は、合わせて月にどのくらいですか: 月80時間以上");
-    expect(t).toContain("いちばん困っていること: 担当が増えた");
+  it("前の答えによって出る質問: 通院中なら主治医・服薬の項目、飲酒する人は量の項目が必要になる", () => {
+    const keys = (a: QuickAnswers) => activeQuestions(a).map((q) => q.key);
+    expect(keys(calm)).not.toContain("b_doctor");
+    expect(keys({ ...calm, medical: ["いま通院している"] })).toEqual(expect.arrayContaining(["b_doctor", "b_medicine", "medical_detail"]));
+    const { b_doctor: _d, b_medicine: _m, ...noTreat } = calm;
+    expect(validQuickAnswers({ ...noTreat, medical: ["いま通院している"] })).toBe(false); // 主治医・服薬に未回答
+    expect(validQuickAnswers(noTreat)).toBe(true); // 通院していなければ不要
+    expect(keys({ ...calm, alcohol: ["毎日"] })).toEqual(expect.arrayContaining(["alcohol_amount", "alcohol_change"]));
+    expect(keys(calm)).not.toContain("alcohol_amount"); // 「飲まない」
   });
-  it("死にたい気持ちが少しでもあれば緊急度は高、措置が要りそうな答えは中", () => {
+  it("体調チェックシートの合計・平均点(薬を飲んでいない場合は点数に入れない)", () => {
+    expect(bodyCheckScore(calm)).toEqual({ total: 48, count: 12, average: 4 });
+    const treated = { ...calm, medical: ["いま通院している"], b_doctor: ["通院しているが、回数は不規則になっている"], b_medicine: ["薬は飲んでいない"] };
+    expect(bodyCheckScore(treated)).toEqual({ total: 50, count: 13, average: 3.8 });
+  });
+  it("体調の確認: 9つの症状の数とマニュアルの判断の目安(3つ以下・4つ・5つ以上)", () => {
+    expect(depressiveSymptoms(calm).count).toBe(0);
+    const four = { ...calm, c_mood: ["ときどきある"], c_sleep: ["少し困っている"], c_energy: ["少し落ちている"], c_focus: ["少し落ちている"] };
+    expect(depressiveSymptoms(four).count).toBe(4);
+    expect(depressiveSymptoms(four).advice).toMatch(/定期的なフォローアップ/);
+    expect(depressiveSymptoms({ ...four, c_guilt: ["よくある"] }).advice).toMatch(/受診を勧めた方がよい/);
+  });
+  it("会話の記録に残す文章: シートごとの答えと集計が入る", () => {
+    const t = formatQuickAnswers({ ...calm, overtime: ["月80時間以上"], note: ["担当が増えた"] });
+    expect(t).toContain("■ 勤務と生活について");
+    expect(t).toContain("残業・休日出勤は、合わせて月にどのくらいですか: 月80時間以上");
+    expect(t).toContain("心身や仕事のことで気になること: 担当が増えた");
+    expect(t).toContain("体調チェックシート: 合計48点/12項目、平均4点");
+    expect(t).toContain("体調の確認(9つの症状): 0つ");
+    expect(t).not.toContain("主治医との関係"); // 通院していない人には出さない
+  });
+  it("「生きているのがつらい」が少しでもあれば緊急度は高、症状5つ以上・長時間労働などは中", () => {
     expect(quickRisk(calm)).toBe("low");
     expect(quickRisk({ ...calm, crisis: ["ときどきある"] })).toBe("high");
     expect(quickRisk({ ...calm, overtime: ["月80時間以上"] })).toBe("moderate");
     expect(quickRisk({ ...calm, causes: ["ハラスメントと感じること"] })).toBe("moderate");
+    const five = { ...calm, c_mood: ["ときどきある"], c_sleep: ["少し困っている"], c_energy: ["少し落ちている"], c_focus: ["少し落ちている"], c_guilt: ["ときどきある"] };
+    expect(quickRisk(five)).toBe("moderate");
+  });
+  it("AIへの指示: マニュアルの言葉づかい(「うつ」「こころ」を使わない)と、業務外の要因を深追いしないこと", () => {
+    expect(INTERVIEW_SYSTEM).toMatch(/「精神的」「こころ」「うつ」/);
+    expect(INTERVIEW_SYSTEM).toMatch(/自分から話さない限り質問を重ねない/);
+    expect(INTAKE_TOPICS.map((t) => t.key)).toEqual(expect.arrayContaining(["past_stress", "sc_review", "continuity", "rewarding", "report_consent", "follow_up"]));
   });
 });
 
@@ -109,13 +153,13 @@ describe("事前問診: 往復の上限と進み具合", () => {
   });
   it("進み具合は聞き終えた項目の割合で決まり、終わるまで100にならない", () => {
     expect(intakeProgress(0, false)).toBe(5);
-    expect(intakeProgress(1, false, 0)).toBe(15);
+    expect(intakeProgress(1, false, 0)).toBe(25);
     expect(intakeProgress(5, false, 6)).toBeGreaterThan(intakeProgress(5, false, 3));
     expect(intakeProgress(20, false, INTAKE_TOPICS.length)).toBe(95);
     expect(intakeProgress(2, true, 1)).toBe(100);
   });
   it("聞き終えた項目は決まったキーだけを受け付ける", () => {
-    expect(validTopics(["chief", "work_hours", "chief", "unknown", 3])).toEqual(["chief", "work_hours"]);
+    expect(validTopics(["past_stress", "sc_review", "past_stress", "unknown", 3])).toEqual(["past_stress", "sc_review"]);
     expect(validTopics(null)).toEqual([]);
   });
 });

@@ -15,7 +15,9 @@ import {
   INTAKE_MAX_CHARS,
   INTAKE_MINUTES,
   QUICK_HEADER,
-  QUICK_NOTE_LABEL,
+  QUICK_SECTIONS,
+  activeQuestions,
+  validAnswer,
   QUICK_QUESTIONS,
   SHARE_OPTIONS,
   detectCrisis,
@@ -43,7 +45,6 @@ type Intake = {
 // 紹介用デモの台本(AIを使わず、決まった質問を順に出す)。steps[0] は選んで答える質問のあとの返答
 export type IntakeDemo = {
   quick: QuickAnswers;
-  quickNote: string;
   steps: { reply: string; sample: string }[];
   doctorReply: string;
   doctorHref: string;
@@ -100,7 +101,6 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
   const [shareNote, setShareNote] = useState("");
   const [sendPct, setSendPct] = useState(0);
   const [quick, setQuick] = useState<QuickAnswers>({});
-  const [quickNote, setQuickNote] = useState("");
   const [resumed, setResumed] = useState(false);
   const [needRetry, setNeedRetry] = useState(false);
   const draftsLoaded = useRef(false);
@@ -159,14 +159,13 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
     const q = readDraft<{ answers: QuickAnswers; note: string }>(draftKey("quick", requestId));
     if (q) {
       setQuick(q.answers ?? {});
-      setQuickNote(q.note ?? "");
     }
     const t = readDraft<string>(draftKey("text", requestId));
     if (t) setText(t);
   }, [demo, intake, requestId]);
   useEffect(() => {
-    if (!demo && draftsLoaded.current) writeDraft(draftKey("quick", requestId), { answers: quick, note: quickNote });
-  }, [demo, quick, quickNote, requestId]);
+    if (!demo && draftsLoaded.current) writeDraft(draftKey("quick", requestId), { answers: quick, note: "" });
+  }, [demo, quick, requestId]);
   useEffect(() => {
     if (!demo && draftsLoaded.current) writeDraft(draftKey("text", requestId), text || null);
   }, [demo, text, requestId]);
@@ -265,14 +264,14 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
 
   const submitQuick = async () => {
     if (!intake || !validQuickAnswers(quick)) return;
-    const mine: IntakeMessage = { role: "user", content: formatQuickAnswers(quick, quickNote), at: new Date().toISOString() };
+    const mine: IntakeMessage = { role: "user", content: formatQuickAnswers(quick), at: new Date().toISOString() };
     if (demo) {
-      const crisis = quickRisk(quick) === "high" || detectCrisis(quickNote);
+      const crisis = quickRisk(quick) === "high" || detectCrisis((quick.note ?? []).join(""));
       setIntake({ ...intake, messages: [...intake.messages, mine], progress: intakeProgress(1, false) });
       setBusy("send");
       return demoReply(1, crisis);
     }
-    if (await post({ quick, note: quickNote }, mine, () => {})) writeDraft(draftKey("quick", requestId), null);
+    if (await post({ quick }, mine, () => {})) writeDraft(draftKey("quick", requestId), null);
   };
 
   const send = async () => {
@@ -370,10 +369,10 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
           </p>
           <ul style={{ fontSize: 13, color: "#44534F", lineHeight: 1.9, margin: "0 0 12px", paddingLeft: 20 }}>
             <li>
-              最初に<strong>選んで答える質問({QUICK_QUESTIONS.length}問・約3分)</strong>、続いて<strong>AIが状況を詳しく伺います</strong>(15〜25問ほど)。できるだけ具体的にお答えください。<strong>音声入力</strong>を使うと、話すだけで詳しく入力できます。
+              最初に<strong>選んで答える質問(3つのシート・約10分)</strong>、続いて<strong>AIがお話を詳しく伺います</strong>(15〜25問ほど)。できるだけ具体的にお答えください。<strong>音声入力</strong>を使うと、話すだけで詳しく入力できます。
             </li>
             <li>追加の質問はAI(Anthropic社の Claude)が行います。AIは医師ではなく、診断や治療の指示はしません。</li>
-            <li>内容を見られるのは、あなたと実施者(産業医)だけです。会社の担当者に伝える範囲は、最後にあなたが選べます。</li>
+            <li>内容を見られるのは、あなたと実施者(産業医)だけです。ご本人の同意がなければ、上司や人事に伝えることはありません。会社の担当者に伝える範囲は、最後にあなたが選べます。</li>
             <li>AIの提供元に送った内容は、AIの学習には使われません(提供元の規約による)。</li>
             <li>
               <strong>回答は自動で保存されます</strong>。途中でやめても、あとでマイページやメールのリンクから続きを再開できます。途中までの回答も医師が確認します。
@@ -432,12 +431,10 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
         <QuickForm
           quick={quick}
           setQuick={setQuick}
-          note={quickNote}
-          setNote={setQuickNote}
           busy={busy !== ""}
           onSubmit={submitQuick}
           err={err}
-          demoFill={demo ? () => (setQuick(demo.quick), setQuickNote(demo.quickNote)) : undefined}
+          demoFill={demo ? () => setQuick(() => ({ ...demo.quick })) : undefined}
         />
       )}
       {userTurns > 0 && <Card>
@@ -486,7 +483,7 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
           <div style={{ marginTop: 14, borderTop: `1px solid ${brand.line}`, paddingTop: 12 }}>
             {demo && (
               <div style={{ fontSize: 12, color: "#8A6B2E", background: "#FBF3E3", border: "1px solid #EFD9A8", borderRadius: 8, padding: "8px 10px", lineHeight: 1.7, marginBottom: 8 }}>
-                (デモ)決まった順番の質問を出しているだけで、答えの内容は読み取りません。実際のAIは、選んだ答えと書いた内容に合わせて掘り下げ、意見書に必要な項目を一通り伺います。
+                (デモ)決まった順番の質問を出しているだけで、答えの内容は読み取りません。実際のAIは、厚生労働省のマニュアルの面接の流れに沿って、選んだ答えと書いた内容に合わせて掘り下げます。
               </div>
             )}
             <div style={{ fontSize: 12.5, color: brand.tealDark, background: "#F4FAF9", borderRadius: 8, padding: "8px 10px", lineHeight: 1.7, marginBottom: 8 }}>
@@ -598,12 +595,10 @@ export function IntakeChat({ requestId, demo }: { requestId: string; demo?: Inta
   );
 }
 
-// ① 選んで答える質問(1画面)。すべてに答えると送れる
+// ① 選んで答える質問(厚生労働省マニュアルの3つのシート)。シートごとに1画面で、すべてに答えると次へ進める
 function QuickForm({
   quick,
   setQuick,
-  note,
-  setNote,
   busy,
   onSubmit,
   err,
@@ -611,14 +606,36 @@ function QuickForm({
 }: {
   quick: QuickAnswers;
   setQuick: (f: (p: QuickAnswers) => QuickAnswers) => void;
-  note: string;
-  setNote: (v: string) => void;
   busy: boolean;
   onSubmit: () => void;
   err: string | null;
   demoFill?: () => void;
 }) {
-  const answered = QUICK_QUESTIONS.filter((q) => (quick[q.key] ?? []).length > 0).length;
+  // 最初は、まだ答えが足りないシートから始める(途中で閉じても続きのシートが開く)
+  const firstOpen = () => {
+    const i = QUICK_SECTIONS.findIndex((s) => activeQuestions(quick, s.key).some((q) => !validAnswer(q, quick[q.key])));
+    return i < 0 ? QUICK_SECTIONS.length - 1 : i;
+  };
+  const [page, setPage] = useState(firstOpen);
+  const [showMissing, setShowMissing] = useState(false);
+  const section = QUICK_SECTIONS[page];
+  const questions = activeQuestions(quick, section.key);
+  const missing = questions.filter((q) => !validAnswer(q, quick[q.key]));
+  const required = questions.filter((q) => !q.optional);
+  const answered = required.filter((q) => validAnswer(q, quick[q.key])).length;
+  const last = page === QUICK_SECTIONS.length - 1;
+  const top = useRef<HTMLDivElement>(null);
+  const go = (n: number) => {
+    setPage(n);
+    setShowMissing(false);
+    top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const next = () => {
+    if (missing.length > 0) return setShowMissing(true);
+    if (last) return onSubmit();
+    go(page + 1);
+  };
+
   const toggle = (key: string, opt: string, multi: boolean, none?: string) =>
     setQuick((p) => {
       const cur = p[key] ?? [];
@@ -628,64 +645,87 @@ function QuickForm({
       const next = opt === none ? [opt] : [...cur.filter((x) => x !== none), opt];
       return { ...p, [key]: next };
     });
+  const setText = (key: string, v: string) =>
+    setQuick((p) => {
+      const t = v.slice(0, 300);
+      if (!t.trim()) {
+        const { [key]: _drop, ...rest } = p;
+        return rest;
+      }
+      return { ...p, [key]: [t] };
+    });
+
   return (
     <Card>
-      <h2 style={{ fontSize: 16, color: brand.ink, margin: "0 0 4px" }}>選んで答える質問({QUICK_QUESTIONS.length}問・約2分)</h2>
+      <div ref={top} />
+      <div style={{ fontSize: 12, color: "#5B6B6A", marginBottom: 4 }}>
+        選んで答える質問 {page + 1}/{QUICK_SECTIONS.length}
+      </div>
+      <h2 style={{ fontSize: 16, color: brand.ink, margin: "0 0 4px" }}>{section.title}</h2>
       <p style={{ fontSize: 12.5, color: "#5B6B6A", margin: "0 0 12px", lineHeight: 1.7 }}>
-        あてはまるものを選んでください。選んだ答えは、この端末に自動で保存されます。
+        {section.desc}選んだ答えは、この端末に自動で保存されます。
       </p>
       <div style={{ display: "grid", gap: 16 }}>
-        {QUICK_QUESTIONS.map((q, i) => (
-          <fieldset key={q.key} style={{ border: 0, margin: 0, padding: 0 }}>
-            <legend style={{ fontSize: 14, fontWeight: 700, color: brand.ink, lineHeight: 1.6, marginBottom: 6, padding: 0 }}>
-              {i + 1}. {q.label}
-            </legend>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {q.options.map((o) => {
-                const on = (quick[q.key] ?? []).includes(o);
-                return (
-                  <button
-                    key={o}
-                    type="button"
-                    aria-pressed={on}
-                    disabled={busy}
-                    onClick={() => toggle(q.key, o, Boolean(q.multi), q.none)}
-                    style={{
-                      fontSize: 13.5,
-                      lineHeight: 1.5,
-                      padding: "7px 12px",
-                      borderRadius: 999,
-                      cursor: "pointer",
-                      textAlign: "left",
-                      border: `1px solid ${on ? brand.teal : brand.line}`,
-                      background: on ? brand.teal : "#fff",
-                      color: on ? "#fff" : brand.ink,
-                    }}
-                  >
-                    {o}
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-        ))}
-        <div>
-          <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: brand.ink, marginBottom: 6 }}>{QUICK_NOTE_LABEL}</label>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value.slice(0, 300))}
-            disabled={busy}
-            placeholder="例: 4月から担当が増えて、終わらない"
-            style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", fontSize: 15, border: `1px solid ${brand.line}`, borderRadius: 10 }}
-          />
-        </div>
+        {questions.map((q) => {
+          const bad = showMissing && !validAnswer(q, quick[q.key]);
+          return (
+            <fieldset key={q.key} style={{ border: 0, margin: 0, padding: 0 }}>
+              <legend style={{ fontSize: 14, fontWeight: 700, color: bad ? "#B02A2A" : brand.ink, lineHeight: 1.6, marginBottom: 6, padding: 0 }}>
+                {q.label}
+                {bad && <span style={{ fontSize: 12, marginLeft: 6 }}>(選んでください)</span>}
+              </legend>
+              {(q.kind ?? "single") === "text" ? (
+                <input
+                  value={(quick[q.key] ?? [])[0] ?? ""}
+                  onChange={(e) => setText(q.key, e.target.value)}
+                  disabled={busy}
+                  placeholder={q.placeholder}
+                  style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", fontSize: 15, border: `1px solid ${brand.line}`, borderRadius: 10 }}
+                />
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {(q.options ?? []).map((o) => {
+                    const on = (quick[q.key] ?? []).includes(o);
+                    return (
+                      <button
+                        key={o}
+                        type="button"
+                        aria-pressed={on}
+                        disabled={busy}
+                        onClick={() => toggle(q.key, o, q.kind === "multi", q.none)}
+                        style={{
+                          fontSize: 13.5,
+                          lineHeight: 1.5,
+                          padding: "7px 12px",
+                          borderRadius: 999,
+                          cursor: "pointer",
+                          textAlign: "left",
+                          border: `1px solid ${on ? brand.teal : bad ? "#E9B3B3" : brand.line}`,
+                          background: on ? brand.teal : "#fff",
+                          color: on ? "#fff" : brand.ink,
+                        }}
+                      >
+                        {o}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </fieldset>
+          );
+        })}
       </div>
-      <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", alignItems: "center" }}>
-        <Btn tone="orange" onClick={onSubmit} disabled={busy || answered < QUICK_QUESTIONS.length} style={{ padding: "12px 28px", fontSize: 16 }}>
-          {busy ? "送っています…" : "次へ(AIの聞き取りへ)"}
+      <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap", alignItems: "center" }}>
+        {page > 0 && (
+          <Btn tone="ghost" onClick={() => go(page - 1)} disabled={busy}>
+            戻る
+          </Btn>
+        )}
+        <Btn tone="orange" onClick={next} disabled={busy} style={{ padding: "12px 28px", fontSize: 16 }}>
+          {busy ? "送っています…" : last ? "次へ(AIの聞き取りへ)" : "次へ"}
         </Btn>
         <span style={{ fontSize: 12.5, color: "#5B6B6A" }}>
-          {answered}/{QUICK_QUESTIONS.length}問 回答済み
+          {answered}/{required.length}問 回答済み
         </span>
         {demoFill && (
           <Btn tone="ghost" disabled={busy} onClick={demoFill}>
@@ -693,6 +733,9 @@ function QuickForm({
           </Btn>
         )}
       </div>
+      {showMissing && missing.length > 0 && (
+        <div style={{ fontSize: 13, color: "#B02A2A", marginTop: 8 }}>まだ答えていない質問が{missing.length}問あります(赤い字の質問)。</div>
+      )}
       {busy && (
         <div style={{ marginTop: 10 }}>
           <ProgressBar value={null} label="回答を保存して、確認しています…" />

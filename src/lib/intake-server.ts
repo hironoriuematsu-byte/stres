@@ -50,11 +50,18 @@ export async function intakeEligible(
   return option === "mestate";
 }
 
+// ストレスチェックの点数の説明文(AIに渡す)
+export type ScScores = { score_a: number; score_b: number; score_c: number; high_stress: boolean };
+export const scoresText = (scores: ScScores | null): string =>
+  scores
+    ? `ストレスチェックの点数(合計点数法): A 仕事のストレス要因 ${scores.score_a}点/68、B 心身のストレス反応 ${scores.score_b}点/116、C 周囲のサポート ${scores.score_c}点/36(高いほどサポートが乏しい)。判定: ${scores.high_stress ? "高ストレス" : "高ストレスに該当せず"}。`
+    : "ストレスチェックの点数: なし";
+
 // 会話の記録を Claude に渡す形にする(最初は本人の発言から始める必要があるため、開始の合図を置く)。
 // 最後の本人の発言には、質問できる残りの回数を添える(本人には表示されず、記録にも残らない)
-function toParams(history: IntakeMessage[], questionsLeft: number, crisisSign: boolean): Anthropic.Beta.BetaMessageParam[] {
+function toParams(history: IntakeMessage[], questionsLeft: number, crisisSign: boolean, scores: ScScores | null): Anthropic.Beta.BetaMessageParam[] {
   const msgs: Anthropic.Beta.BetaMessageParam[] = [
-    { role: "user", content: "(面接指導を申し出ました。事前問診を始めてください)" },
+    { role: "user", content: `(面接指導を申し出ました。事前問診を始めてください)\n(システムからの連絡: ${scoresText(scores)} ステップ④の振り返りに使ってください。本人には点数そのものより、どんな傾向かをやさしく伝えてください)` },
   ];
   history.forEach((m, i) => {
     const note =
@@ -76,14 +83,14 @@ function jsonText(res: Anthropic.Beta.BetaMessage): string {
 }
 
 // 聞き取りの1往復。本人の発言(history の最後)に対する返答と、聞き終えた項目を返す
-export async function intakeTurn(history: IntakeMessage[], questionsLeft: number, crisisSign = false): Promise<TurnResult> {
+export async function intakeTurn(history: IntakeMessage[], questionsLeft: number, crisisSign = false, scores: ScScores | null = null): Promise<TurnResult> {
   const res = await claude().beta.messages.create({
     model: MODEL,
     max_tokens: 4000,
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
     system: [{ type: "text", text: INTERVIEW_SYSTEM, cache_control: { type: "ephemeral" } }],
-    messages: toParams(history, questionsLeft, crisisSign),
+    messages: toParams(history, questionsLeft, crisisSign, scores),
     output_config: { effort: "medium", format: { type: "json_schema", schema: TURN_SCHEMA as unknown as Record<string, unknown> } },
   });
   const parsed = JSON.parse(jsonText(res)) as { reply: string; done: boolean; risk_level: RiskLevel; covered?: unknown };
@@ -103,9 +110,7 @@ export async function intakeSummarize(
   partial = false
 ): Promise<{ summary: IntakeSummary; reply_draft: string; company_share_draft: string }> {
   const transcript = history.map((m) => `${m.role === "user" ? "本人" : "AI"}: ${m.content}`).join("\n");
-  const scoreText = scores
-    ? `ストレスチェックの点数(合計点数法): A 仕事のストレス要因 ${scores.score_a}点/68、B 心身のストレス反応 ${scores.score_b}点/116、C 周囲のサポート ${scores.score_c}点/36(高いほどサポートが乏しい)。判定: ${scores.high_stress ? "高ストレス" : "高ストレスに該当せず"}。`
-    : "ストレスチェックの点数: なし";
+  const scoreText = scoresText(scores);
   const shareText =
     share && share.keys.length > 0
       ? `共有してよい範囲: ${SHARE_OPTIONS.filter((o) => share.keys.includes(o.key)).map((o) => o.label).join(" / ")}${share.note ? `\n伝えてほしくないこと・補足: ${share.note}` : ""}`

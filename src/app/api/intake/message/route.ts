@@ -14,7 +14,7 @@ import {
   type RiskLevel,
 } from "@/lib/intake";
 import { intakeTurn } from "@/lib/intake-server";
-import { fail, intakeContext, loadIntake, notifyUrgent, siteOrigin } from "@/lib/intake-api";
+import { fail, intakeContext, loadIntake, loadScores, notifyUrgent, siteOrigin } from "@/lib/intake-api";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -50,10 +50,11 @@ export async function POST(req: Request) {
   } else if (body.quick !== undefined) {
     if (answered) return fail(400, "選んで答える質問は回答済みです");
     if (!validQuickAnswers(body.quick)) return fail(400, "すべての質問に答えてください");
-    const note = typeof body.note === "string" ? body.note.trim().slice(0, 300) : "";
-    history.push({ role: "user", content: formatQuickAnswers(body.quick, note), at: now() });
-    risk = higherRisk(risk, quickRisk(body.quick));
-    crisis = risk === "high" || detectCrisis(note);
+    const quick = body.quick;
+    history.push({ role: "user", content: formatQuickAnswers(quick), at: now() });
+    risk = higherRisk(risk, quickRisk(quick));
+    // 自由記入の欄にサインの言葉があるときも確かめる
+    crisis = risk === "high" || detectCrisis([...(quick.note ?? []), ...(quick.medical_detail ?? []), ...(quick.job ?? [])].join("\n"));
   } else {
     if (!answered) return fail(400, "先に、選んで答える質問に回答してください");
     const text = typeof body.text === "string" ? body.text.trim() : "";
@@ -83,7 +84,8 @@ export async function POST(req: Request) {
   // 死にたい気持ちのサインがあっても聞き取りは続け、AIが落ち着いて詳しく確かめる(医師には上で至急知らせている)。
   // いまにも実行しそうな様子のときだけ、AIが相談窓口につないで終える
   try {
-    const t = await decideTurn(userTurns, () => intakeTurn(history, left, crisis));
+    const scores = await loadScores(admin, intake.request_id);
+    const t = await decideTurn(userTurns, () => intakeTurn(history, left, crisis, scores));
     reply = t.reply;
     done = t.done;
     covered = t.covered?.length;
