@@ -29,6 +29,8 @@ export async function POST(req: Request) {
   if (!admin) return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY が未設定です" }, { status: 500 });
 
   const session = event.data.object;
+  // 同じ Stripe アカウントで決済する健康管理Web(健診結果の医師意見聴取Web)の決済は、あちらの Webhook で処理する
+  if (session.metadata?.app === "kenko-iken") return NextResponse.json({ ignored: true });
   const orderId = session.metadata?.order_id;
   if (!orderId) return NextResponse.json({ ignored: true });
 
