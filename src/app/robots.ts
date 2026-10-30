@@ -16,6 +16,8 @@ export default function robots(): MetadataRoute.Robots {
           "/plan/*.jpg$",
           "/demo",
           "/privacy",
+          // ログイン画面は noindex を付けているので、検索エンジンがそれを読めるように巡回は許可する
+          "/login",
           // サイトマップ本体と、ページの表示に使う画像・CSS・JS(検索エンジンが画面を正しく描画できるように)
           "/sitemap.xml",
           "/_next/static/",
