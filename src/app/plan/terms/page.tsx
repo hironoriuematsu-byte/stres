@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER, SELLER } from "@/lib/org";
-import { INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, pricingFor } from "@/lib/plan";
+import { exTax, INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, pricingFor } from "@/lib/plan";
 import { getFiscalYear } from "@/lib/fiscal";
 import { loadPlanPrices } from "@/lib/plan-prices";
 import { createClient } from "@/lib/supabase/server";
@@ -68,7 +68,7 @@ export default async function TermsPage() {
       <h2 style={h}>第4条(料金と支払い)</h2>
       <ol style={ol}>
         <li>
-          料金は、当社のサービスのご案内ページに掲載する、受検開始日の属する年度の料金とします(本規約の掲載時点では、受検者1名あたり {pricing.unitPrice}円(税込)、最低料金 {pricing.minTotal.toLocaleString()}円(税込。{minSeats(pricing)}名まで))。集団分析の料金を含みます。
+          料金は、当社のサービスのご案内ページに掲載する、受検開始日の属する年度の料金とします(本規約の掲載時点では、受検者1名あたり {exTax(pricing.unitPrice)}円(税別。税込{pricing.unitPrice}円)、最低料金 {exTax(pricing.minTotal).toLocaleString()}円(税別。税込{pricing.minTotal.toLocaleString()}円。{minSeats(pricing)}名まで))。集団分析の料金を含みます。
         </li>
         <li>事業者は、年度ごとの申込時に受検予定人数分の料金を、{PAYMENT_METHODS_TEXT}により前払いします。</li>
         <li>受検者が申込人数に達した後は受検できません。事業者は、受検期間中に1名単位で人数を追加購入できます。</li>
@@ -86,7 +86,7 @@ export default async function TermsPage() {
       <h2 style={h}>第6条(面接指導)</h2>
       <ol style={ol}>
         <li>医師面接指導の担当は、事業者が申込時に、事業者が医師を探して依頼するか、当社に依頼するかを選びます。事業者は、申込後も担当者の画面から変更できます。</li>
-        <li>当社の医師が面接指導を行う場合の料金は、1回 {INTERVIEW_FEE.toLocaleString()}円(税込。意見書の作成を含みます)とし、実施後に事業者に請求書を送付して請求します。</li>
+        <li>当社の医師が面接指導を行う場合の料金は、1回 {exTax(INTERVIEW_FEE).toLocaleString()}円(税別。税込{INTERVIEW_FEE.toLocaleString()}円。意見書の作成を含みます)とし、実施後に事業者に請求書を送付して請求します。</li>
       </ol>
 
       <h2 style={h}>第7条(キャンセル・返金)</h2>
