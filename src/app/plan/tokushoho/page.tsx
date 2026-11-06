@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { SELLER } from "@/lib/org";
-import { minSeats, PAYMENT_METHODS_TEXT, pricingFor } from "@/lib/plan";
+import { exTax, minSeats, PAYMENT_METHODS_TEXT, pricingFor } from "@/lib/plan";
 import { getFiscalYear } from "@/lib/fiscal";
 import { loadPlanPrices } from "@/lib/plan-prices";
 import { createClient } from "@/lib/supabase/server";
@@ -17,7 +17,7 @@ function rowsFor(unitPrice: number, minTotal: number, seats: number): [string, s
   ["所在地", SELLER.address],
   ["電話番号", "ご請求があれば遅滞なく開示します(下記メールアドレスまでご連絡ください)"],
   ["メールアドレス", SELLER.email],
-  ["販売価格", `受検者1名あたり ${unitPrice}円(税込)、最低料金 ${minTotal.toLocaleString()}円(税込・${seats}名まで)。お申込み時点の料金をお申込み画面に表示します(申込後に料金を改定しても、お申込み済みの料金は変わりません)`],
+  ["販売価格", `受検者1名あたり ${exTax(unitPrice)}円(税別。税込${unitPrice}円)、最低料金 ${exTax(minTotal).toLocaleString()}円(税別。税込${minTotal.toLocaleString()}円・${seats}名まで)。お支払い金額は税込です。お申込み時点の料金をお申込み画面に表示します(申込後に料金を改定しても、お申込み済みの料金は変わりません)`],
   ["商品代金以外の必要料金", "なし(インターネットの通信料はお客さまのご負担となります)"],
   ["支払方法", PAYMENT_METHODS_TEXT],
   ["支払時期", "お申込み時に決済されます"],

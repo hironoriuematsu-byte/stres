@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER, IMPLEMENTER_PROFILE, SELLER } from "@/lib/org";
-import { formatJpDate, minSeats, pricingFor, upcomingPriceChange } from "@/lib/plan";
+import { exTax, formatJpDate, minSeats, pricingFor, upcomingPriceChange } from "@/lib/plan";
 import { getFiscalYear } from "@/lib/fiscal";
 import { loadPlanPrices } from "@/lib/plan-prices";
 import { createClient } from "@/lib/supabase/server";
@@ -77,9 +77,10 @@ export default async function PlanPage() {
     },
     offers: {
       "@type": "Offer",
-      price: pricing.unitPrice,
+      price: exTax(pricing.unitPrice),
       priceCurrency: "JPY",
-      description: `受検者1名あたり${pricing.unitPrice}円(税込・実施者込み・集団分析込み。${minSeats(pricing)}名までは${pricing.minTotal.toLocaleString()}円)。会社の登録は無料。`,
+      priceSpecification: { "@type": "UnitPriceSpecification", price: exTax(pricing.unitPrice), priceCurrency: "JPY", valueAddedTaxIncluded: false },
+      description: `受検者1名あたり${exTax(pricing.unitPrice)}円(税別。税込${pricing.unitPrice}円。実施者込み・集団分析込み。${minSeats(pricing)}名までは${exTax(pricing.minTotal).toLocaleString()}円)。会社の登録は無料。`,
       url: "https://stres.mestate.jp/plan",
     },
   };
@@ -102,16 +103,16 @@ export default async function PlanPage() {
           ))}
         </div>
         <p style={{ fontSize: 15, color: brand.ink, margin: "16px 0 4px" }}>
-          受検者1名 <strong style={{ fontSize: 26, color: brand.tealDark }}>{pricing.unitPrice}円</strong>
+          受検者1名 <strong style={{ fontSize: 26, color: brand.tealDark }}>{exTax(pricing.unitPrice)}円</strong>
           <span style={{ fontSize: 13, color: "#5B6B6A" }}>
             {" "}
-            (税込・集団分析込み。{minSeats(pricing)}名までは{pricing.minTotal.toLocaleString()}円)
+            (税別・集団分析込み。{minSeats(pricing)}名までは{exTax(pricing.minTotal).toLocaleString()}円。税込は1名{pricing.unitPrice}円)
           </span>
         </p>
         {change && (
           <p style={{ fontSize: 12.5, color: "#8A5A00", margin: "0 0 4px" }}>
             料金改定のお知らせ: {change.fiscal_year}年度({formatJpDate(`${change.fiscal_year}-04-01`)}以降に受検を始めるお申込み)から、1名
-            {change.pricing.unitPrice}円・最低料金{change.pricing.minTotal.toLocaleString()}円になります。
+            {exTax(change.pricing.unitPrice)}円・最低料金{exTax(change.pricing.minTotal).toLocaleString()}円(税別)になります。
           </p>
         )}
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
@@ -135,7 +136,7 @@ export default async function PlanPage() {
       <Card style={{ background: "#FFFBF2", borderColor: "#F0D9A8" }}>
         <h2 style={{ ...h2, color: "#8A5A00" }}>{OBLIGATION_DATE}から、50人未満の事業場も義務化</h2>
         <p style={{ fontSize: 14, color: "#44534F", lineHeight: 1.9, margin: 0 }}>
-          {OBLIGATION}このサービスなら、実施者を含めて1名{pricing.unitPrice}円から準備できます。
+          {OBLIGATION}このサービスなら、実施者を含めて1名{exTax(pricing.unitPrice)}円(税別)から準備できます。
         </p>
       </Card>
 
@@ -169,7 +170,7 @@ export default async function PlanPage() {
 
       {/* 4. 料金(例) */}
       <Card>
-        <h2 style={h2}>料金の例(税込)</h2>
+        <h2 style={h2}>料金の例(税別)</h2>
         <div style={{ overflowX: "auto" }}>
           <table style={{ borderCollapse: "collapse", fontSize: 14, minWidth: 360 }}>
             <thead>
@@ -183,7 +184,10 @@ export default async function PlanPage() {
               {priceExamples(pricing).map((r) => (
                 <tr key={r.seats} style={{ borderBottom: `1px solid ${brand.line}` }}>
                   <td style={{ padding: "7px 14px 7px 10px" }}>{r.seats}名</td>
-                  <td style={{ padding: "7px 14px 7px 10px", fontWeight: 700, color: brand.tealDark }}>{r.total.toLocaleString()}円</td>
+                  <td style={{ padding: "7px 14px 7px 10px", fontWeight: 700, color: brand.tealDark }}>
+                    {exTax(r.total).toLocaleString()}円
+                    <span style={{ fontSize: 11.5, fontWeight: 400, color: "#5B6B6A" }}> (税込{r.total.toLocaleString()}円)</span>
+                  </td>
                   <td style={{ padding: "7px 10px", fontSize: 12.5, color: "#5B6B6A" }}>{r.note}</td>
                 </tr>
               ))}

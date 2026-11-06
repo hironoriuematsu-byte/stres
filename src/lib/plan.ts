@@ -42,6 +42,11 @@ export const QUOTE_MAILTO = `mailto:support@mestate.jp?subject=${encodeURICompon
 // 産業医面接指導(うえまつ産業医事務所が担当する場合。1回・オンライン可・意見書込み・税込)
 export const INTERVIEW_FEE = 22000;
 
+// 案内ページでは税別の金額を主に表示する(決済・領収書は税込のまま)。税込金額から税別金額へ(10%)
+export const exTax = (total: number): number => Math.round((total * 100) / 110);
+// 「300円(税別。税込330円)」の形
+export const yenExTax = (total: number): string => `${exTax(total).toLocaleString()}円(税別。税込${total.toLocaleString()}円)`;
+
 export const DEFAULT_PERIOD_DAYS = 28; // 受検期間の標準(4週間)
 export const MAX_PERIOD_MONTHS = 3; // 締切を延ばせるのは開始から3か月まで(年度末を超えない)
 export const MAX_START_AHEAD_DAYS = 180; // 開始日は申込日から半年先まで
@@ -57,7 +62,7 @@ export const INTERVIEW_OPTIONS: { value: InterviewOption; label: string; desc: s
   },
   {
     value: "mestate",
-    label: `うえまつ産業医事務所に依頼する(1回 ${INTERVIEW_FEE.toLocaleString()}円・税込)`,
+    label: `うえまつ産業医事務所に依頼する(1回 ${yenExTax(INTERVIEW_FEE)})`,
     desc: "オンライン可・意見書込み。申出の通知は当事務所(実施者)と会社の担当者に届き、日程は当事務所からご連絡します。料金は面接指導の実施後に、請求書をメールでお送りします。",
   },
 ];

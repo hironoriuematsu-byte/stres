@@ -1,5 +1,5 @@
 import { IMPLEMENTER } from "@/lib/org";
-import { INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, PRICE_EXAMPLES, priceNew, seatsGranted, WEB_MAX_SEATS, type Pricing } from "@/lib/plan";
+import { exTax, INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, PRICE_EXAMPLES, priceNew, seatsGranted, WEB_MAX_SEATS, type Pricing } from "@/lib/plan";
 
 // 宣伝ページ(/plan)と社内検討用資料(/plan/brochure)で共通の文面。
 // どちらにも同じことを書くので、内容を変えるときはここだけを直す
@@ -32,22 +32,22 @@ export const compareRows = (pr: Pricing): string[][] => [
   ["個人の結果", "社内の担当者が管理", "サービスにより異なる", "実施者のもとで法令に沿って管理(会社へは集団分析と本人同意分)"],
   ["始め方", "パソコンにインストール", "見積り・契約・名簿登録の場合も", "申込当日から。QRコードを配るだけ"],
   ["調査票", "57項目・23項目", "57項目が中心", "57項目・80項目(同じ料金)"],
-  ["費用", "無料", "サービス・人数により異なる", `1名${pr.unitPrice}円・集団分析込み`],
+  ["費用", "無料", "サービス・人数により異なる", `1名${exTax(pr.unitPrice)}円(税別)・集団分析込み`],
 ];
 export const COMPARE_NOTE =
   "ほかの提供会社の内容は各社・プランにより異なり、上の表は一般的な傾向です。社内に産業医・保健師がいて実施者や個人情報の管理を担える場合は、無料の方法も有力な選択肢です。";
 
-// 料金の例(税込)
+// 料金の例(税別。totalは税込)
 export const priceExamples = (pr: Pricing) =>
   PRICE_EXAMPLES.map((n) => ({
     seats: n,
     total: priceNew(n, pr).total,
-    note: n < minSeats(pr) ? `最低料金(${seatsGranted(n, pr)}名まで)` : `${pr.unitPrice}円 × ${n}名`,
+    note: n < minSeats(pr) ? `最低料金(${seatsGranted(n, pr)}名まで)` : `${exTax(pr.unitPrice)}円 × ${n}名`,
   }));
 export const priceNotes = (pr: Pricing) => [
-  `受検者1名 ${pr.unitPrice}円・最低料金 ${pr.minTotal.toLocaleString()}円(${minSeats(pr)}名まで)。集団分析・結果の5年保存込み(税込)`,
+  `受検者1名 ${exTax(pr.unitPrice)}円・最低料金 ${exTax(pr.minTotal).toLocaleString()}円(${minSeats(pr)}名まで)。集団分析・結果の5年保存込み。金額は税別です(税込は1名${pr.unitPrice}円・最低${pr.minTotal.toLocaleString()}円)`,
   `人数を追加したい場合は1名から追加できます(QRコードはそのまま使えます)。${WEB_MAX_SEATS}名を超える場合はお見積り(割引あり)`,
-  `面接指導を当事務所の医師が行う場合は、申出があった方のみ1回 ${INTERVIEW_FEE.toLocaleString()}円(税込)`,
+  `面接指導を当事務所の医師が行う場合は、申出があった方のみ1回 ${exTax(INTERVIEW_FEE).toLocaleString()}円(税別。税込${INTERVIEW_FEE.toLocaleString()}円)`,
   "お申込み後のお客さまのご都合によるキャンセル・返金はお受けできません",
 ];
 
@@ -79,7 +79,7 @@ export const FAQ: [string, string][] = [
   ],
   [
     "高ストレスの人が出たら？",
-    `本人が面接指導を申し出ると、担当者に通知が届きます。医師面接指導は、自社で医師を探して依頼する(自社の産業医など)か、当事務所に依頼する(1回 ${INTERVIEW_FEE.toLocaleString()}円・税込)かを選べ、あとで変更もできます。`,
+    `本人が面接指導を申し出ると、担当者に通知が届きます。医師面接指導は、自社で医師を探して依頼する(自社の産業医など)か、当事務所に依頼する(1回 ${exTax(INTERVIEW_FEE).toLocaleString()}円・税別)かを選べ、あとで変更もできます。`,
   ],
   [
     "衛生委員会や労働基準監督署への報告は？",
