@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Badge, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
@@ -56,6 +56,10 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
   const [year, setYear] = useState(getFiscalYear());
   // 覗き見対策: ログイン直後は結果を表示せず、メニュー画面から選択する
   const [tab, setTab] = useState<Tab | null>(null);
+  // 健康管理Webの「事務所の設定」からの「ログを見る」(/office?tab=log)は、ログの画面を開く
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tab") === "log") setTab("ログ");
+  }, []);
 
   const company = companies.find((c) => c.id === companyId);
 
