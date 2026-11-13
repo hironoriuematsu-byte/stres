@@ -16,6 +16,8 @@ const HM_TABLE_LABEL: Record<string, string> = {
   hm_meet_rooms: "面談ルーム",
   hm_interviews: "産業医面談",
   hm_interview_opinions: "意見書",
+  hm_pneumo_workers: "じん肺健康管理台帳",
+  hm_pneumo_exams: "じん肺健診の記録",
   interview_intakes: "事前問診",
   results: "ストレスチェック結果",
   profiles: "アカウント",
