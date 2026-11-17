@@ -1,0 +1,153 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>メール・スマホのない方の受検 手順書</title><style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans CJK JP', sans-serif; color: #22333B; font-size: 10.5pt; line-height: 1.75; }
+  /* 画面表示では上下左右に余白を取り、PDF(印刷)は build-manuals.js 側の14mm余白に任せる */
+  .page { padding: 28px 36px 48px; max-width: 960px; margin: 0 auto; }
+  @media print { .page { padding: 0; max-width: none; margin: 0; } }
+  .cover { border-bottom: 4px solid #0F9B8E; padding-bottom: 12px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .cover .brand { font-size: 20pt; font-weight: 900; color: #0B7268; }
+  .cover .brand span { color: #E8792B; }
+  .cover h1 { font-size: 15pt; margin-top: 4px; }
+  .cover .meta { font-size: 9pt; color: #7A8886; margin-top: 4px; }
+  .cover img { height: 58px; }
+  h2 { font-size: 12.5pt; color: #0B7268; border-left: 6px solid #0F9B8E; padding-left: 10px; margin: 20px 0 8px; page-break-after: avoid; }
+  p { margin: 4px 0; }
+  ul, ol { margin: 4px 0 8px 22px; }
+  li { margin: 2px 0; }
+  .step { border: 1px solid #DCE8E6; border-radius: 8px; padding: 10px 14px; margin: 8px 0; page-break-inside: avoid; }
+  .step .n { display: inline-block; background: #0F9B8E; color: #fff; font-weight: 700; border-radius: 999px; width: 22px; height: 22px; text-align: center; line-height: 22px; margin-right: 8px; font-size: 10pt; }
+  .step .t { font-weight: 700; }
+  .url { font-family: monospace; background: #EDF6F5; padding: 1px 6px; border-radius: 4px; font-size: 9.5pt; }
+  .warn { background: #FBF3E3; border: 1px solid #EFD9A8; border-radius: 8px; padding: 8px 12px; margin: 8px 0; color: #8A6B2E; page-break-inside: avoid; }
+  .info { background: #E2F3F1; border-radius: 8px; padding: 8px 12px; margin: 8px 0; color: #0B7268; page-break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0; page-break-inside: avoid; }
+  th { background: #EDF6F5; color: #0B7268; text-align: left; padding: 5px 8px; border: 1px solid #DCE8E6; }
+  td { padding: 5px 8px; border: 1px solid #DCE8E6; vertical-align: top; }
+  .contact { background: #EDF6F5; border: 1px solid #BFE3DE; border-radius: 10px; padding: 14px 16px; margin: 10px 0; page-break-inside: avoid; }
+  .contact .mail { font-family: monospace; font-size: 11pt; font-weight: 700; color: #0B7268; }
+  .flow { display: flex; gap: 8px; margin: 8px 0; page-break-inside: avoid; }
+  .flow > div { flex: 1; border: 2px solid #0F9B8E; border-radius: 10px; padding: 8px 10px; font-size: 9.5pt; }
+  .flow > div b.h { display: block; color: #0B7268; font-size: 10.5pt; margin-bottom: 2px; }
+  .flow > div.base { border-color: #C9D6D4; background: #F7FAF9; }
+  ul.chk { list-style: none; margin-left: 4px; }
+  ul.chk li::before { content: '□ '; font-weight: 700; color: #0B7268; }
+  .foot { margin-top: 24px; padding-top: 8px; border-top: 1px solid #DCE8E6; font-size: 8.5pt; color: #8A9694; }
+</style></head>
+<body><div class="page">
+<div class="cover">
+  <div>
+    <div class="brand">ストレスチェック<span>Web</span> 手順書</div>
+    <h1>メールアドレス・スマートフォンのない方の受検(実施事務従事者向け)</h1>
+    <div class="meta">発行: うえまつ産業医事務所(Mestate LLC) / アプリURL: https://stres.mestate.jp</div>
+  </div>
+  <img src="/logo.png" alt="mestate">
+</div>
+
+<h2>0. 考え方 ― 基本はメール、難しい方だけ別の方法で</h2>
+<p>受検の基本は、これまでどおり<b>ご本人のメールアドレスでの受検(配布URL・QRコード)</b>です。メールアドレスやスマートフォンがない方、画面の操作が難しい方だけ、次の2つの方法で受けていただけます。どの方法でも、結果は同じように結果一覧・集団分析・労基署報告の数字に入ります。</p>
+<div class="flow">
+  <div class="base"><b class="h">ふつうの方法(基本)</b>ご本人のスマホ・パソコンとメールアドレスで受検。<br>→ 配布URL・QRコードを案内</div>
+  <div><b class="h">方法A: ログインIDで受検</b>メールアドレスの代わりに、<b>ログインIDと合言葉の紙</b>を渡します。ご本人が職場の共用パソコン・タブレットなどで受検します。</div>
+  <div><b class="h">方法B: 紙で回答</b><b>専用の回答用紙</b>に書いてもらい、実施事務従事者が回答を登録します。結果票は印刷して渡します。</div>
+</div>
+<table>
+  <tr><th style="width:52%">その方の状況</th><th>おすすめの方法</th></tr>
+  <tr><td>自分のスマホ・パソコンとメールアドレスがある</td><td>ふつうの方法(配布URL・QRコード)</td></tr>
+  <tr><td>スマホはあるが、メールアドレスがない・使っていない</td><td><b>方法A</b>(IDの紙のQRコードを、ご自分のスマホで読み取って受検できます)</td></tr>
+  <tr><td>スマホはないが、職場のパソコン・タブレットなら操作できる</td><td><b>方法A</b>(共用の端末で受検)</td></tr>
+  <tr><td>画面の操作そのものが難しい/端末を用意できない職場</td><td><b>方法B</b>(紙)</td></tr>
+</table>
+<div class="info">方法Aは、結果がその場でご本人に表示され、入力の手間もないため、<b>できるだけ方法Aを先にご検討ください</b>。紙(方法B)は、回答の登録と結果票の受け渡しに手間がかかる分、最後の手段とお考えください。</div>
+<div class="warn">この作業は、回答という健康情報を扱うため、<b>実施者(産業医)と、誓約を済ませた実施事務従事者だけ</b>が行えます。人事権を持つ方(上司・人事の責任者など)が、回答用紙の回収や登録を行うことはできません。操作はすべて記録されます。</div>
+
+<h2>1. 事前の準備</h2>
+<ul>
+  <li><b>方法A用:</b> 共用のパソコンかタブレットを1台、<b>周りから画面が見えない場所</b>(会議室・休憩室の隅など)に用意します。インターネットにつながり、ブラウザ(Chrome・Edge・Safari)が使えれば十分です。</li>
+  <li><b>方法B用:</b> 封筒(人数分×2。回収用と、結果票をお返しする用)と、ホチキスをご用意ください。</li>
+  <li>どちらも、対象の方の<b>氏名・生年月日・部署</b>が分かる名簿をお手元にご用意ください。</li>
+</ul>
+
+<h2>2. 対象の方を登録する(方法A・B 共通)</h2>
+<div class="step"><span class="n">1</span><span class="t">メニューの「🪪 メール・スマホのない方」を開く</span></div>
+<div class="step"><span class="n">2</span><span class="t">氏名・生年月日・部署を入れて「登録する」</span><br>メールアドレスは不要です。生年月日は数字8けた(例: 19850304)で入力します。続けて何人でも登録できます。登録した方は下の一覧に並び、<b>ログインID(数字8けた)</b>が自動で付きます。</div>
+<div class="info">すでにご自分のメールアドレスでアカウントを作った方が「やはり紙で」と希望された場合は、この登録は不要です。画面のいちばん下「メールで登録済みの方が、紙での回答を希望したとき」から進めてください(→ 4 の手順)。</div>
+
+<h2>3. 方法A ― ログインIDで受検してもらう</h2>
+<div class="step"><span class="n">1</span><span class="t">一覧で「IDの紙を印刷」を押す</span><br>その方のログインIDと<b>合言葉</b>(英字4つ+数字4つ)が入った案内の紙が出ます(A4に2名分。点線で切り取ります)。何人分かまとめて印刷することもできます(「まだ渡していない◯名のIDの紙をまとめて印刷」)。</div>
+<div class="warn"><b>合言葉は、この画面でしか表示されません</b>(システムにも残していません)。かならずその場で印刷してください。印刷に失敗したとき・紙をなくしたときは「IDの紙を出し直す」で新しい合言葉を発行できます(前の合言葉は使えなくなります)。</div>
+<div class="step"><span class="n">2</span><span class="t">紙をご本人に直接渡す</span><br>ほかの人の目にふれないよう、封筒に入れるか、二つ折りにして手渡してください。机の上に置いておくことはお控えください。</div>
+<div class="step"><span class="n">3</span><span class="t">ご本人が受検する</span><br>紙に書いてある手順どおりです。① ログイン画面で「ログインIDで」を選ぶ → ② ログインIDと合言葉を入れる → ③ はじめに<b>生年月日</b>を入れる(ご本人の確認) → ④ 質問に答える(約10〜15分) → ⑤ 結果がその場で表示される → ⑥ ログアウト。</div>
+<div class="step"><span class="n">4</span><span class="t">操作に不安のある方へのお手伝い</span><br>端末の前までご案内し、<b>ログインと生年月日の入力まで</b>はお手伝いいただいてかまいません。質問が始まったら<b>席を離れ、回答の内容は見ない</b>ようにしてください。終わったらログアウトされているか、だけご確認ください。</div>
+<div class="step"><span class="n">5</span><span class="t">受検できたかを確認する</span><br>一覧の表示が「これから」→「IDの紙を渡し済み」→「ログイン済み・回答待ち」→「受検済み(ID)」と変わります。</div>
+<div class="info">方法Aの方は、結果の確認・会社への提供の同意・面接指導の申出を、<b>ご本人が画面から</b>行えます(ふつうの方法と同じです)。結果票を紙でほしいと言われたときは、一覧の「結果票を印刷」から印刷し、封筒に入れて封をしてお渡しください。</div>
+
+<h2>4. 方法B ― 紙で回答してもらう</h2>
+<div class="step"><span class="n">1</span><span class="t">回答用紙を印刷する</span><br>一覧のその方の行の「回答用紙を印刷」(氏名・部署が入った表紙つき)、または右上の「白紙の回答用紙を印刷」(必要な部数をコピー)。A4・白黒で、表紙1枚+回答2〜3枚です。</div>
+<div class="step"><span class="n">2</span><span class="t">表紙と回答のページをホチキスでとめ、封筒を添えて渡す</span><br>提出の期限と提出先(実施事務従事者のお名前)を表紙に書き込んでからお渡しください。ご本人は、あてはまる番号を○で囲み、<b>封筒に入れて封をして</b>提出します。</div>
+<div class="step"><span class="n">3</span><span class="t">回収する</span><br>かならず<b>実施事務従事者が直接</b>受け取ってください(上司経由の回収はお控えください)。受け取った封筒は、登録するまで鍵のかかる場所で保管します。</div>
+<div class="step"><span class="n">4</span><span class="t">一覧で「紙の回答を登録」を押し、回答を入れる</span><br>
+  はじめに表紙を見て<b>部署と性別</b>を選びます。回答の入れ方は2通りです。
+  <ul>
+    <li><b>手で入れる:</b> 用紙を上から順に見ながら、キーボードの <b>1〜4</b> を押すだけで次の設問へ進みます(57問で2〜3分)。マウスで番号を押してもかまいません。</li>
+    <li><b>写真・スキャンから読み取る:</b> <b>回答のページだけ</b>(氏名のある表紙は除く)をスマホで撮るかスキャンして選び、「AIで読み取る」を押すと、○の付いた番号が自動で入ります。<b>読み取りは下書きです。かならず用紙と見比べて</b>、ちがうところを直してください。黄色の行は読み取りに自信がない設問、赤い行は空欄です。</li>
+  </ul>
+</div>
+<div class="step"><span class="n">5</span><span class="t">用紙と見比べてから「この内容で結果を登録する」</span><br>登録すると、Webで受検したときと同じ計算で結果が確定します。<b>用紙に空欄や、2つに○が付いた設問があるとき</b>は、推測で埋めず、封筒に戻してご本人に書き直してもらってください。</div>
+<div class="step"><span class="n">6</span><span class="t">結果票を印刷し、封筒に入れて封をして、ご本人に渡す</span><br>これが法律上の「結果の通知」にあたります。登録したら<b>日をおかずに</b>お渡しください。結果票と一緒に<b>同意書</b>(「同意書を印刷」)も同封します。</div>
+<div class="step"><span class="n">7</span><span class="t">同意書が出てきたら「同意書を受け取った」を押す</span><br>会社(事業者)への結果の提供に同意する方だけが、結果を見たあとで同意書を出します。受け取ったら、一覧の「同意書を受け取った」を押してください(会社の担当者がその方の結果を見られるようになります)。出されなければ「同意なし」のままです。催促はお控えください。</div>
+<div class="step"><span class="n">8</span><span class="t">回答用紙・同意書を保管する</span><br>書いてもらった用紙と同意書は、結果と同じく<b>5年間</b>、鍵のかかる場所で保管します。撮影した写真は、登録が済んだらスマホ・パソコンから消してください(システムには保存されません)。</div>
+<div class="warn"><b>同意は「結果を見たあと」にもらいます。</b>回答用紙を配るとき・回収するときに、会社への結果の提供について同意を取ることはできません(国の指針で決められています)。そのため、回答用紙には同意の欄がありません。</div>
+
+<h2>5. 高ストレスと判定された方がいたとき</h2>
+<ul>
+  <li>結果票に、産業医の面接指導の案内が出ます。<b>方法Aの方</b>は、ご本人が画面から申し出できます。日程の連絡メールは届かないため、日程が決まったら実施事務従事者から口頭か書面でお伝えください。</li>
+  <li><b>方法B(紙)の方</b>は、画面から申し出ができません。面接を希望されたら、実施事務従事者がうかがって、<b>うえまつ産業医事務所にご連絡ください</b>(氏名や結果の内容はメールに書かず、「面接指導の希望が1名あります」とだけお知らせください)。</li>
+  <li>申し出をされた方は、結果を会社へ提供することに同意したものとして扱われます。申し出を理由とする不利益な取り扱いは法律で禁止されています。</li>
+</ul>
+
+<h2>6. お控えいただきたいこと</h2>
+<ul>
+  <li><b>回答の内容や結果を、上司・人事・同僚に見せたり話したりすること</b>(守秘義務があります)。</li>
+  <li>ご本人の代わりに回答を書いたり、推測で空欄を埋めたりすること。読み書きが難しい方など、特別な配慮が必要なときは、実施者にご相談ください。</li>
+  <li>受検を強くすすめること。ストレスチェックの受検は任意です。「紙でも受けられます」というご案内にとどめてください。</li>
+  <li>IDの紙・回答用紙・結果票を、机の上やコピー機に置いたままにすること。</li>
+  <li>氏名の書かれた表紙を、写真の読み取りに含めること(回答のページだけを撮ってください)。</li>
+</ul>
+
+<h2>7. 困ったときは</h2>
+<table>
+  <tr><th style="width:38%">こんなとき</th><th>対処</th></tr>
+  <tr><td>合言葉を忘れた・紙をなくした</td><td>一覧の「IDの紙を出し直す」で新しい紙を印刷して渡します(前の合言葉は使えなくなります)</td></tr>
+  <tr><td>一覧に「本人確認で停止中」と出ている</td><td>生年月日の入力を5回まちがえると止まります。登録した生年月日が正しいかを確かめ、「IDの紙を出し直す」で新しい紙を渡してください。登録の生年月日がまちがっていたときは、「取り消し」をして登録し直します</td></tr>
+  <tr><td>ログインできない</td><td>ログイン画面で「ログインIDで」を選んでいるか、合言葉の英字と数字を見まちがえていないかをご確認ください(まぎらわしい文字 l・o・i・0・1 は使っていません。大文字で打っても通ります)</td></tr>
+  <tr><td>まちがえて登録した(紙の回答の入力ミス)</td><td>「📋 結果一覧」でその方の行を開き、「再受検のため削除」を押してから、もう一度「紙の回答を登録」を行います</td></tr>
+  <tr><td>まちがえて別の人を登録した</td><td>受検前であれば、一覧の「取り消し」で登録を消せます</td></tr>
+  <tr><td>写真の読み取りがうまくいかない</td><td>1ページずつ、真上から、明るい場所で、用紙全体が写るように撮り直してください。うまくいかないときは手で入力します(57問で2〜3分です)</td></tr>
+  <tr><td>「受検期間ではありません」「人数の上限です」と出る</td><td>Webからお申込みの企業では、受検期間と人数の枠が紙の登録にも適用されます。期間の延長・人数の追加は、ダッシュボードの最初の画面から行えます</td></tr>
+  <tr><td>メールで受けた方と同じ人を、二重に登録してしまった</td><td>同じ年度の結果は1人1つだけです。受検前の方の登録を「取り消し」てください。判断に迷うときは実施者へご連絡ください</td></tr>
+</table>
+
+<h2>8. チェックリスト</h2>
+<ul class="chk">
+  <li>対象の方(メール・スマホのない方)を名簿で確認し、方法A・Bのどちらにするか決めた</li>
+  <li>「メール・スマホのない方」に、氏名・生年月日・部署を登録した</li>
+  <li>(方法A)共用の端末を、画面が見えない場所に用意した/IDの紙を本人に直接渡した</li>
+  <li>(方法B)回答用紙と封筒を渡した/封をした封筒で直接回収した</li>
+  <li>(方法B)用紙と見比べて回答を登録した/結果票と同意書を封筒で本人に渡した</li>
+  <li>(方法B)出された同意書を記録した/用紙と同意書を鍵のかかる場所に保管した</li>
+  <li>一覧で、全員が「受検済み」になっていることを確認した</li>
+  <li>高ストレスの方から面接指導の希望があれば、実施者に連絡した</li>
+</ul>
+
+<h2>9. お問い合わせ先</h2>
+<div class="contact">
+  <div style="font-weight:700; font-size:11pt; color:#0B7268;">うえまつ産業医事務所</div>
+  <div>実施者: 医師(産業医) 上松 弘典</div>
+  <div style="margin-top:6px;">メール: <span class="mail">support@mestate.jp</span></div>
+  <div style="margin-top:6px; font-size:9.5pt; color:#5B6B6A;">
+    ※ 個人の結果に関するご相談は、メールに氏名や結果の内容をご記載にならず、お電話またはご面談にてお伺いいたします。
+  </div>
+</div>
+
+<div class="foot">ストレスチェックWeb メール・スマホのない方の受検 手順書 / 発行: うえまつ産業医事務所(Mestate LLC) / 実施者: 医師(産業医) 上松 弘典 / お問い合わせ: support@mestate.jp Copyright © Mestate LLC All Rights Reserved.</div>
+</div></body></html>

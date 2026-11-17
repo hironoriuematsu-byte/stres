@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { Profile, ResultRow } from "@/lib/types";
+import { EXAM_METHOD_LABEL, type ExamMethod } from "@/lib/no-email";
 import { downloadCsv, resultsCsv } from "@/lib/csv";
 import { logAccess } from "@/lib/log";
 import { LoadingCard } from "@/components/LoadingCard";
@@ -30,6 +31,8 @@ export function ResultsPanel({
   const [people, setPeople] = useState<Record<string, Profile>>({});
   const [otherYears, setOtherYears] = useState<Record<number, number>>({});
   const [interviewResultIds, setInterviewResultIds] = useState<Set<string>>(new Set());
+  // 受検方法(ID・紙)。メールで受検した方には何も出さない
+  const [methods, setMethods] = useState<Record<string, ExamMethod>>({});
   const [onlyHigh, setOnlyHigh] = useState(false);
   const [openDetail, setOpenDetail] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -77,6 +80,14 @@ export function ResultsPanel({
       setInterviewResultIds(new Set(((irs as { result_id: string }[]) ?? []).map((x) => x.result_id)));
       setDeptOptions(((ds as { name: string }[]) ?? []).map((d) => d.name));
       setRows((rs as ResultRow[]) ?? []);
+      // 受検方法の列は SQL 0034 から。列がない環境では何も出さない(一覧はそのまま出る)
+      supabase
+        .from("results")
+        .select("id, exam_method")
+        .eq("company_id", companyId)
+        .eq("fiscal_year", fiscalYear)
+        .neq("exam_method", "web")
+        .then(({ data }) => setMethods(Object.fromEntries(((data as { id: string; exam_method: ExamMethod }[] | null) ?? []).map((x) => [x.id, x.exam_method]))));
       logAccess(supabase, "view_results", `${companyName}/${fiscalYear}`, companyId);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -263,6 +274,11 @@ export function ResultsPanel({
                   </td>
                   <td style={{ padding: "9px 10px", fontWeight: 700, color: brand.ink }}>
                     {people[r.user_id]?.name ?? "(不明)"}
+                    {methods[r.id] && (
+                      <span title={methods[r.id] === "paper" ? "紙の回答用紙で受検(担当者が登録)" : "ログインIDで受検"} style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: "#5B6B6A", border: "1px solid #C9D6D4", borderRadius: 999, padding: "1px 7px", whiteSpace: "nowrap" }}>
+                        {EXAM_METHOD_LABEL[methods[r.id]]}
+                      </span>
+                    )}
                   </td>
                   <td style={{ padding: "9px 10px" }}>{people[r.user_id]?.emp_id ?? ""}</td>
                   <td style={{ padding: "9px 10px" }}>{r.dept}</td>

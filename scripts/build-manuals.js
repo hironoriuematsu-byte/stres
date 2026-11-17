@@ -21,9 +21,10 @@ const PUB_DIR = path.join(ROOT, "public", "manuals");
 const PUBLISH = {
   "manual-jimu-start": "jimu-start",
   "manual-jimu": "jimu",
+  "manual-jimu-noemail": "jimu-noemail",
 };
 
-const MANUALS = ["manual-jimu-start", "manual-jimu", "manual-office", "manual-employee"];
+const MANUALS = ["manual-jimu-start", "manual-jimu", "manual-jimu-noemail", "manual-office", "manual-employee"];
 
 (async () => {
   fs.mkdirSync(PUB_DIR, { recursive: true });

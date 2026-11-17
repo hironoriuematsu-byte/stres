@@ -56,6 +56,13 @@ const ACTION_LABEL: Record<string, string> = {
   dept_master_renamed: "部署名の変更(マスタ)",
   dept_master_removed: "部署の削除(マスタ)",
   company_hm_changed: "健康管理Webの併用設定の変更",
+  no_email_person_created: "メールのない方の登録",
+  no_email_passcode_issued: "ログインID・合言葉の発行",
+  no_email_person_removed: "メールのない方の登録の取り消し",
+  paper_result_registered: "紙の回答の登録",
+  paper_ai_read: "紙の回答のAI読み取り",
+  paper_consent_recorded: "紙の同意書の記録(同意)",
+  paper_consent_withdrawn: "紙の同意の取り消し",
   hm_view_high_stress: "高ストレス者一覧の閲覧(健康管理Web)",
   hm_view_stress_history: "受検歴の閲覧(健康管理Web)",
 };

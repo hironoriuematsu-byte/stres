@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { startNavigationProgress } from "@/lib/navigate";
+import { idEmail, normalizeLoginId, normalizePasscode, validLoginId } from "@/lib/no-email";
 
 const input = {
   width: "100%",
@@ -17,13 +18,17 @@ const input = {
   borderRadius: 10,
 };
 
-export function LoginForm() {
+export function LoginForm({ idDomain }: { idDomain: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/";
   const timedOut = params.get("reason") === "timeout";
   // メール内リンク(招待・パスワード再設定)が無効・期限切れ・使用済みだったとき
   const badLink = params.get("error") === "link";
+  // メールアドレスのない方は、担当者から受け取った紙のログインIDと合言葉でログインする(?mode=id で最初からこの表示)
+  const [mode, setMode] = useState<"email" | "id">(params.get("mode") === "id" ? "id" : "email");
+  const [loginId, setLoginId] = useState("");
+  const [passcode, setPasscode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -59,6 +64,27 @@ export function LoginForm() {
     setUnconfirmed(false);
     setResent(false);
     const supabase = createClient();
+    if (mode === "id") {
+      const id = normalizeLoginId(loginId);
+      if (!validLoginId(id)) {
+        setLoading(false);
+        return setErr("ログインIDは数字8けたです。紙に書かれた番号をもう一度ご確認ください。");
+      }
+      const { error } = await supabase.auth.signInWithPassword({ email: idEmail(id, idDomain), password: normalizePasscode(passcode) });
+      setLoading(false);
+      if (error) {
+        return setErr(
+          error.message.toLowerCase().includes("invalid login credentials")
+            ? "ログインIDまたは合言葉が正しくありません。紙をもう一度ご確認ください。分からないときは、会社のストレスチェック担当者にお尋ねください。"
+            : `ログインに失敗しました: ${error.message}`
+        );
+      }
+      startNavigationProgress();
+      // IDの方は受検が目的なので、行き先の指定がなければ受検の画面へ
+      router.push(next === "/" ? "/exam" : next);
+      router.refresh();
+      return;
+    }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
@@ -132,25 +158,98 @@ export function LoginForm() {
           メールのリンクが無効か、期限切れ(1時間)または使用済みです。パスワードをまだ設定していない方は、下の「パスワードを忘れた方」から再設定メールを申し込み、届いたメールのボタンを1時間以内に押してください。
         </div>
       )}
+      {/* ログインの方法の切り替え(メールアドレス / 紙でもらったID) */}
+      <div role="tablist" style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+        {(
+          [
+            ["email", "メールアドレスで"],
+            ["id", "ログインID(紙)で"],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={mode === k}
+            onClick={() => {
+              setMode(k);
+              setErr(null);
+            }}
+            style={{
+              flex: 1,
+              padding: "9px 8px",
+              fontSize: 13.5,
+              fontWeight: 700,
+              borderRadius: 10,
+              cursor: "pointer",
+              border: `1px solid ${mode === k ? brand.teal : brand.line}`,
+              background: mode === k ? brand.teal : "#fff",
+              color: mode === k ? "#fff" : brand.tealDark,
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <form onSubmit={submit}>
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
-            メールアドレス
-          </label>
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={input} />
-        </div>
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
-            パスワード
-          </label>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={input}
-          />
-        </div>
+        {mode === "id" ? (
+          <>
+            <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.7, margin: "0 0 12px" }}>
+              会社の担当者から受け取った紙に書かれている「ログインID」と「合言葉」を入力してください。
+            </p>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>ログインID(数字8けた)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="username"
+                required
+                value={loginId}
+                onChange={(e) => setLoginId(e.target.value)}
+                placeholder="例: 1234 5678"
+                maxLength={12}
+                style={{ ...input, fontSize: 20, letterSpacing: "0.08em" }}
+              />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>合言葉(英字4文字+数字4けた)</label>
+              <input
+                type="text"
+                autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                required
+                value={passcode}
+                onChange={(e) => setPasscode(e.target.value)}
+                placeholder="例: abcd2345"
+                maxLength={12}
+                style={{ ...input, fontSize: 20, letterSpacing: "0.08em" }}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
+                メールアドレス
+              </label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} style={input} />
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>
+                パスワード
+              </label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={input}
+              />
+            </div>
+          </>
+        )}
         {err && (
           <div
             style={{
@@ -207,9 +306,13 @@ export function LoginForm() {
           <Btn type="submit" disabled={loading}>
             {loading ? "ログイン中…" : "ログイン"}
           </Btn>
-          <Link href="/reset-password" style={{ fontSize: 13, color: brand.tealDark, fontWeight: 700 }}>
-            パスワードを忘れた方
-          </Link>
+          {mode === "email" ? (
+            <Link href="/reset-password" style={{ fontSize: 13, color: brand.tealDark, fontWeight: 700 }}>
+              パスワードを忘れた方
+            </Link>
+          ) : (
+            <span style={{ fontSize: 12.5, color: "#5B6B6A" }}>紙をなくした方は、会社の担当者にお知らせください</span>
+          )}
         </div>
       </form>
       {/* 個人情報保護法第32条に基づく安全管理措置の概要(保存先・外部事業者)の案内 */}

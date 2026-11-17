@@ -129,12 +129,17 @@ export async function unexaminedMembers(
   companyId: string,
   fiscalYear: number
 ): Promise<{ registered: number; members: Unexamined[] }> {
-  const [{ data: profs }, { data: results }] = await Promise.all([
-    admin.from("profiles").select("user_id, name, dept").eq("company_id", companyId).eq("role", "employee"),
+  const [withId, { data: results }] = await Promise.all([
+    admin.from("profiles").select("user_id, name, dept, login_id").eq("company_id", companyId).eq("role", "employee"),
     admin.from("results").select("user_id").eq("company_id", companyId).eq("fiscal_year", fiscalYear),
   ]);
+  // login_id の列がない環境(SQL 0034 の実行前)でも動くようにする
+  const profs = withId.error
+    ? (await admin.from("profiles").select("user_id, name, dept").eq("company_id", companyId).eq("role", "employee")).data
+    : withId.data;
   const done = new Set((results ?? []).map((r) => r.user_id as string));
-  const all = (profs ?? []) as { user_id: string; name: string | null; dept: string | null }[];
+  // メールアドレスのない方(IDでの受検・紙)は、メールが届かないのでリマインドの対象に含めない
+  const all = ((profs ?? []) as { user_id: string; name: string | null; dept: string | null; login_id?: string | null }[]).filter((p) => !p.login_id);
   const members = all
     .filter((p) => !done.has(p.user_id))
     .map((p) => ({ user_id: p.user_id, name: p.name && p.name !== "未設定" ? p.name : "(氏名未登録)", dept: p.dept }))

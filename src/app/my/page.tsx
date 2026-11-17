@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionProfile, roleHome } from "@/lib/auth-server";
+import { requireIdConfirmed } from "@/lib/id-gate";
 import { createClient } from "@/lib/supabase/server";
 import { MyPage } from "./MyPage";
 
@@ -9,6 +10,8 @@ export default async function My() {
   if (!user) redirect("/login?next=/my");
   // 従業員に加えて実施事務従事者も自分の受検・結果の確認ができる
   if (!profile || (profile.role !== "employee" && profile.role !== "jimu")) redirect(roleHome(profile?.role));
+  // IDでログインした方は、最初に生年月日で本人確認を済ませる
+  await requireIdConfirmed(user.id, "/my");
 
   const supabase = createClient();
   const { data: company } = await supabase

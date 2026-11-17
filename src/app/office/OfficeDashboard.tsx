@@ -29,12 +29,13 @@ const ExamReminderPanel = dynamic(() => import("@/components/ExamReminderPanel")
 const CompanyAdminPanel = dynamic(() => import("@/components/CompanyAdminPanel").then((m) => m.CompanyAdminPanel), { loading: panelLoading, ssr: false });
 const WebCompaniesPanel = dynamic(() => import("@/components/WebCompaniesPanel").then((m) => m.WebCompaniesPanel), { loading: panelLoading, ssr: false });
 const PlanStatusPanel = dynamic(() => import("@/components/PlanStatusPanel").then((m) => m.PlanStatusPanel), { ssr: false });
+const NoEmailPanel = dynamic(() => import("@/components/NoEmailPanel").then((m) => m.NoEmailPanel), { loading: panelLoading, ssr: false });
 const DeptAdminPanel = dynamic(() => import("@/components/DeptAdminPanel").then((m) => m.DeptAdminPanel), { loading: panelLoading, ssr: false });
 
 // 企業を選ばないと表示できないタブ(ユーザー管理・企業管理・ログは企業横断)
-const NEEDS_COMPANY: readonly string[] = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "部署管理"];
+const NEEDS_COMPANY: readonly string[] = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "メールのない方", "部署管理"];
 
-const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "ユーザー管理", "企業管理", "部署管理", "Web申込", "ログ"] as const;
+const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "メールのない方", "ユーザー管理", "企業管理", "部署管理", "Web申込", "ログ"] as const;
 type Tab = (typeof TABS)[number];
 
 const MENU_ITEMS: MenuItem<Tab>[] = [
@@ -42,6 +43,7 @@ const MENU_ITEMS: MenuItem<Tab>[] = [
   { key: "面接指導申出", icon: "🩺", title: "面接指導申出", desc: "産業医面接指導の申出の確認と対応状況の管理" },
   { key: "集団分析", icon: "📊", title: "集団分析", desc: "部署別集計・健康リスク・集団分析報告書" },
   { key: "配布URL・QR", icon: "🔗", title: "配布URL・QR", desc: "受検用URL・QRコードの発行・停止・再発行と、未受検の方へのリマインド" },
+  { key: "メールのない方", icon: "🪪", title: "メール・スマホのない方", desc: "ログインIDと合言葉での受検、紙の回答用紙の印刷と回答の登録" },
   { key: "ユーザー管理", icon: "✉️", title: "ユーザー管理", desc: "招待・メンバー一覧・ロール変更" },
   { key: "企業管理", icon: "🏢", title: "企業管理", desc: "契約企業の追加・名称変更" },
   { key: "部署管理", icon: "🗂️", title: "部署管理", desc: "受検時に選択できる部署名の登録・編集" },
@@ -57,8 +59,16 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
   // 覗き見対策: ログイン直後は結果を表示せず、メニュー画面から選択する
   const [tab, setTab] = useState<Tab | null>(null);
   // 健康管理Webの「事務所の設定」からの「ログを見る」(/office?tab=log)は、ログの画面を開く
+  // 紙の回答の登録画面から戻ったとき(/office?tab=noemail&c=企業)は、その企業の「メールのない方」を開く
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("tab") === "log") setTab("ログ");
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("tab") === "log") setTab("ログ");
+    if (q.get("tab") === "noemail") {
+      const c = q.get("c");
+      if (c && companies.some((x) => x.id === c)) setCompanyId(c);
+      setTab("メールのない方");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const company = companies.find((c) => c.id === companyId);
@@ -186,6 +196,7 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
             <CampaignPanel companyId={company.id} companyName={company.name} fiscalYear={year} manage />
           )}
           {tab === "配布URL・QR" && company && <ExamReminderPanel companyId={company.id} companyName={company.name} />}
+          {tab === "メールのない方" && company && <NoEmailPanel companyId={company.id} companyName={company.name} guideHref="/manuals/jimu-noemail.html" />}
           {/* key: 上部で企業を切り替えたら、招待先・メンバー一覧も選び直した状態にする */}
           {tab === "ユーザー管理" && (
             <UserAdminPanel key={companyId} companies={companies} defaultCompanyId={companyId} />

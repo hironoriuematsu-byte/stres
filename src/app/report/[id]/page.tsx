@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile, roleHome } from "@/lib/auth-server";
+import { requireIdConfirmed } from "@/lib/id-gate";
 import { Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { ReportView } from "./ReportView";
@@ -11,6 +12,8 @@ import { fetchBirthDate } from "@/lib/birth-date-db";
 export default async function ReportPage({ params }: { params: { id: string } }) {
   const { user, profile } = await getSessionProfile();
   if (!user) redirect(`/login?next=/report/${params.id}`);
+  // IDでログインした方は、最初に生年月日で本人確認を済ませる
+  if (profile?.role === "employee") await requireIdConfirmed(user.id, `/report/${params.id}`);
 
   // 「戻る」の代わりに、閲覧者のロールに応じた固定の行き先を用意する
   // (ブラウザ履歴で戻ると受検フローの途中に戻ってしまうため)

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { brand } from "@/lib/brand";
 import { ROLE_LABEL, Role } from "@/lib/types";
 import { startNavigationProgress } from "@/lib/navigate";
+import { isIdEmail } from "@/lib/no-email";
 
 export function Header({
   email,
@@ -95,7 +96,7 @@ export function Header({
             }}
           >
             {roleLabel ? `${roleLabel} / ` : ""}
-            {name || email}
+            {name || (isIdEmail(email) ? "ログインIDで利用中" : email)}
           </span>
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <Link

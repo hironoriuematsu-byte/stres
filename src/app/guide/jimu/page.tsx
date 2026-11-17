@@ -35,6 +35,9 @@ export default async function JimuGuidePage() {
           <a href="/manuals/jimu.html" target="_blank" rel="noopener noreferrer">
             <Btn tone="ghost">操作マニュアル(別冊)</Btn>
           </a>
+          <a href="/manuals/jimu-noemail.html" target="_blank" rel="noopener noreferrer">
+            <Btn tone="ghost">メール・スマホのない方の手順書</Btn>
+          </a>
           <Link href={backTo}>
             <Btn tone="ghost">ダッシュボードへ戻る</Btn>
           </Link>
