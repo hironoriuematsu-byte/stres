@@ -35,7 +35,7 @@ const DeptAdminPanel = dynamic(() => import("@/components/DeptAdminPanel").then(
 // 企業を選ばないと表示できないタブ(ユーザー管理・企業管理・ログは企業横断)
 const NEEDS_COMPANY: readonly string[] = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "メールのない方", "部署管理"];
 
-const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "メールのない方", "ユーザー管理", "企業管理", "部署管理", "Web申込", "ログ"] as const;
+const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "ユーザー管理", "企業管理", "部署管理", "メールのない方", "Web申込", "ログ"] as const;
 type Tab = (typeof TABS)[number];
 
 const MENU_ITEMS: MenuItem<Tab>[] = [
@@ -43,10 +43,11 @@ const MENU_ITEMS: MenuItem<Tab>[] = [
   { key: "面接指導申出", icon: "🩺", title: "面接指導申出", desc: "産業医面接指導の申出の確認と対応状況の管理" },
   { key: "集団分析", icon: "📊", title: "集団分析", desc: "部署別集計・健康リスク・集団分析報告書" },
   { key: "配布URL・QR", icon: "🔗", title: "配布URL・QR", desc: "受検用URL・QRコードの発行・停止・再発行と、未受検の方へのリマインド" },
-  { key: "メールのない方", icon: "🪪", title: "メール・スマホのない方", desc: "ログインIDと合言葉での受検、紙の回答用紙の印刷と回答の登録" },
   { key: "ユーザー管理", icon: "✉️", title: "ユーザー管理", desc: "招待・メンバー一覧・ロール変更" },
   { key: "企業管理", icon: "🏢", title: "企業管理", desc: "契約企業の追加・名称変更" },
   { key: "部署管理", icon: "🗂️", title: "部署管理", desc: "受検時に選択できる部署名の登録・編集" },
+  // 受検の基本はメール。メール・スマホのない方への対応は例外なので、メールでの案内のメニューより後ろに置く
+  { key: "メールのない方", icon: "🪪", title: "メール・スマホのない方(例外の対応)", desc: "受検の基本はメールです。どうしても難しい方だけ、ログインIDの紙や紙の回答用紙で対応します" },
   { key: "Web申込", icon: "💳", title: "Web申込の企業", desc: "カード決済で利用中の企業の一覧・今年度の状況・申込と支払い・売上明細(選任・顧問とは別に管理)" },
   { key: "ログ", icon: "📝", title: "ログ", desc: "閲覧・操作の記録(アクセスログ)の確認" },
 ];

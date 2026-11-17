@@ -125,7 +125,7 @@ export function LoginForm({ idDomain }: { idDomain: string }) {
 
   return (
     <Card style={{ maxWidth: 440, margin: "0 auto" }}>
-      <h2 style={{ fontSize: 20, color: brand.ink, margin: "0 0 14px" }}>ログイン</h2>
+      <h2 style={{ fontSize: 20, color: brand.ink, margin: "0 0 14px" }}>{mode === "id" ? "ログインIDでログイン" : "ログイン"}</h2>
       {timedOut && (
         <div
           style={{
@@ -158,44 +158,11 @@ export function LoginForm({ idDomain }: { idDomain: string }) {
           メールのリンクが無効か、期限切れ(1時間)または使用済みです。パスワードをまだ設定していない方は、下の「パスワードを忘れた方」から再設定メールを申し込み、届いたメールのボタンを1時間以内に押してください。
         </div>
       )}
-      {/* ログインの方法の切り替え(メールアドレス / 紙でもらったID) */}
-      <div role="tablist" style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-        {(
-          [
-            ["email", "メールアドレスで"],
-            ["id", "ログインID(紙)で"],
-          ] as const
-        ).map(([k, label]) => (
-          <button
-            key={k}
-            type="button"
-            role="tab"
-            aria-selected={mode === k}
-            onClick={() => {
-              setMode(k);
-              setErr(null);
-            }}
-            style={{
-              flex: 1,
-              padding: "9px 8px",
-              fontSize: 13.5,
-              fontWeight: 700,
-              borderRadius: 10,
-              cursor: "pointer",
-              border: `1px solid ${mode === k ? brand.teal : brand.line}`,
-              background: mode === k ? brand.teal : "#fff",
-              color: mode === k ? "#fff" : brand.tealDark,
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
       <form onSubmit={submit}>
         {mode === "id" ? (
           <>
             <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.7, margin: "0 0 12px" }}>
-              会社の担当者から受け取った紙に書かれている「ログインID」と「合言葉」を入力してください。
+              メールアドレスをお持ちでない方のための画面です。会社の担当者から受け取った紙に書かれている「ログインID」と「合言葉」を入力してください。
             </p>
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 13, fontWeight: 700, color: brand.ink, display: "block", marginBottom: 5 }}>ログインID(数字8けた)</label>
@@ -315,8 +282,24 @@ export function LoginForm({ idDomain }: { idDomain: string }) {
           )}
         </div>
       </form>
+      {/* ログインの基本はメールアドレス。ログインIDは、メールアドレスのない方だけの例外なので、目立たせずに下に置く
+          (担当者が渡す紙のQRコード・URLからは、最初からログインIDの画面が開く) */}
+      <p style={{ fontSize: 12.5, color: "#7A8886", lineHeight: 1.7, margin: "18px 0 0", paddingTop: 12, borderTop: `1px solid ${brand.line}` }}>
+        {mode === "email" ? "メールアドレスをお持ちでなく、会社の担当者から「ログインIDの紙」を受け取った方は" : "メールアドレスで登録した方は"}
+        <button
+          type="button"
+          onClick={() => {
+            setMode(mode === "email" ? "id" : "email");
+            setErr(null);
+            setUnconfirmed(false);
+          }}
+          style={{ background: "none", border: 0, padding: 0, marginLeft: 4, color: brand.tealDark, fontSize: 12.5, fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}
+        >
+          {mode === "email" ? "こちら" : "メールアドレスでログイン"}
+        </button>
+      </p>
       {/* 個人情報保護法第32条に基づく安全管理措置の概要(保存先・外部事業者)の案内 */}
-      <p style={{ fontSize: 12, color: "#7A8886", lineHeight: 1.7, margin: "16px 0 0" }}>
+      <p style={{ fontSize: 12, color: "#7A8886", lineHeight: 1.7, margin: "10px 0 0" }}>
         回答と結果は暗号化のうえ日本国内（東京）のサーバーに保存します。保存と画面処理には米国の事業者（Supabase、Vercel）のサービスを利用しています。
         <Link href="/privacy" style={{ color: brand.tealDark, fontWeight: 700, marginLeft: 4 }}>
           個人情報の取扱いについて

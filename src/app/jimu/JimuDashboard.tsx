@@ -28,7 +28,7 @@ const ExamReminderPanel = dynamic(() => import("@/components/ExamReminderPanel")
 const NoEmailPanel = dynamic(() => import("@/components/NoEmailPanel").then((m) => m.NoEmailPanel), { loading: panelLoading, ssr: false });
 const DeptAdminPanel = dynamic(() => import("@/components/DeptAdminPanel").then((m) => m.DeptAdminPanel), { loading: panelLoading, ssr: false });
 
-const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "メールのない方", "従業員招待", "部署管理"] as const;
+const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "従業員招待", "部署管理", "メールのない方"] as const;
 type Tab = (typeof TABS)[number];
 
 type MenuKey = Tab | "使い方ガイド";
@@ -38,9 +38,10 @@ const MENU_ITEMS: MenuItem<MenuKey>[] = [
   { key: "面接指導申出", icon: "🩺", title: "面接指導申出", desc: "産業医面接指導の申出の確認と対応状況の管理" },
   { key: "集団分析", icon: "📊", title: "集団分析", desc: "部署別集計・健康リスク・集団分析報告書" },
   { key: "配布URL・QR", icon: "🔗", title: "配布URL・QR", desc: "従業員に配布する受検用URL・QRコードの確認と、未受検の方へのリマインド" },
-  { key: "メールのない方", icon: "🪪", title: "メール・スマホのない方", desc: "ログインIDと合言葉での受検、紙の回答用紙の印刷と回答の登録" },
   { key: "従業員招待", icon: "✉️", title: "従業員招待", desc: "従業員への招待メールの送信(個別・CSV一括)" },
   { key: "部署管理", icon: "🗂️", title: "部署管理", desc: "受検時に選択できる部署名の登録・編集" },
+  // 受検の基本はメール(配布URL・QR、招待)。メール・スマホのない方への対応は例外なので、最後に置く
+  { key: "メールのない方", icon: "🪪", title: "メール・スマホのない方(例外の対応)", desc: "受検の基本はメールです。どうしても難しい方だけ、ログインIDの紙や紙の回答用紙で対応します" },
   // タブではなく別ページ(マニュアル)へ移動する
   { key: "使い方ガイド", icon: "📘", title: "使い方ガイド", desc: "はじめての運用の手引き・操作マニュアル", href: "/guide/jimu" },
 ];

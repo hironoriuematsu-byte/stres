@@ -472,7 +472,7 @@ export function SlipSheet({ slips, companyName, fiscalYear, onClose }: { slips: 
                   職場のパソコンやタブレットで <strong>{shortUrl}</strong> を開きます(右のQRコードからも開けます)。
                 </li>
                 <li>
-                  「<strong>ログインIDで</strong>」を選び、上のログインIDと合言葉を入れます(合言葉は英字4つ+数字4つ)。
+                  「<strong>ログインIDでログイン</strong>」の画面で、上のログインIDと合言葉を入れます(合言葉は英字4つ+数字4つ)。
                 </li>
                 <li>最初に、ご本人の確認のため<strong>生年月日</strong>を入れます。</li>
                 <li>質問に答えます(約10〜15分)。終わると、その場で結果が表示されます。</li>
