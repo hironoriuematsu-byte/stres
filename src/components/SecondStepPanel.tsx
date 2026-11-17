@@ -17,6 +17,16 @@ type Settings = {
   counts: { office: number; staff: number };
 };
 
+type Timing = {
+  startedAt: number; // ボタンを押した時刻
+  ms: number | null; // アプリがメール送信サービスに渡し終えるまで(ミリ秒)
+  mailId: string | null;
+  event: string | null; // メール送信サービスから見た配信状況
+  deliveredSec: number | null; // 相手のメールサーバーが受け取るまで(ボタンを押してからの秒数)
+  elapsed: number; // 計測を続けている秒数
+  state: "measuring" | "delivered" | "slow" | "failed" | "unknown";
+};
+
 const OFF_SQL = "select public.second_step_enable('office', false);\nselect public.second_step_enable('staff', false);";
 
 // 二段階認証(ログインの確認コード)の設定。事務所だけが使う。
@@ -29,6 +39,8 @@ export function SecondStepPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  // 試しに送ったメールが届くまでの時間(どこで遅れているかを見分ける)
+  const [timing, setTiming] = useState<Timing | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/second-step?settings=1", { cache: "no-store" });
@@ -58,6 +70,45 @@ export function SecondStepPanel() {
     await load();
     return true;
   };
+
+  // 確認コードを自分に送り、届くまでの時間を測る
+  const testSend = async () => {
+    setBusy("test-send");
+    setErr(null);
+    setMsg(null);
+    const startedAt = Date.now();
+    const res = await fetch("/api/second-step", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "test-send" }) });
+    const j = (await res.json().catch(() => ({}))) as { error?: string; ms?: number | null; mailId?: string | null };
+    setBusy(null);
+    if (!res.ok) {
+      setErr(j.error ?? "確認コードを送れませんでした");
+      return;
+    }
+    setSent(true);
+    setMsg("確認コードを送りました。メールに届いた6けたの数字を入力してください。");
+    setTiming({ startedAt, ms: j.ms ?? null, mailId: j.mailId ?? null, event: null, deliveredSec: null, elapsed: 0, state: j.mailId ? "measuring" : "unknown" });
+  };
+
+  // 相手のメールサーバーに届いたかを、2秒おきに確かめる(最長2分)
+  useEffect(() => {
+    if (!timing || timing.state !== "measuring" || !timing.mailId) return;
+    const t = setTimeout(async () => {
+      const res = await fetch("/api/second-step", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "mail-status", id: timing.mailId }) });
+      const j = (await res.json().catch(() => ({}))) as { event?: string | null };
+      const event = res.ok ? (j.event ?? null) : null;
+      const elapsed = Math.round((Date.now() - timing.startedAt) / 1000);
+      setTiming((cur) => {
+        if (!cur || cur.mailId !== timing.mailId || cur.state !== "measuring") return cur;
+        if (event === "delivered" || event === "opened" || event === "clicked") return { ...cur, event, elapsed, deliveredSec: elapsed, state: "delivered" };
+        if (event === "bounced" || event === "complained" || event === "failed" || event === "canceled") return { ...cur, event, elapsed, state: "failed" };
+        // 状況を取得できない(送信専用のキーなど)ときは、最初の数回で見切る
+        if (event === null && elapsed >= 8) return { ...cur, event, elapsed, state: "unknown" };
+        if (elapsed >= 120) return { ...cur, event, elapsed, state: "slow" };
+        return { ...cur, event, elapsed };
+      });
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [timing]);
 
   if (loadErr) return <Card><p style={{ margin: 0, color: "#B02A2A", fontSize: 14 }}>{loadErr}</p></Card>;
   if (!s) return <LoadingCard />;
@@ -126,10 +177,15 @@ export function SecondStepPanel() {
           有効にする前に、確認コードのメールが実際に届くことを確かめます({s.email} あてに送ります)。
         </p>
         {s.tested ? (
-          <p style={{ margin: 0, fontSize: 14, color: brand.tealDark, fontWeight: 700 }}>✅ このログインで、確認コードを受け取って入力できました。</p>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <p style={{ margin: 0, fontSize: 14, color: brand.tealDark, fontWeight: 700 }}>✅ このログインで、確認コードを受け取って入力できました。</p>
+            <Btn tone="ghost" disabled={busy !== null || !s.applied || !s.ready || timing?.state === "measuring"} onClick={testSend} style={{ padding: "8px 14px", fontSize: 13.5 }}>
+              {busy === "test-send" ? "送っています…" : "届く速さを測る(もう一度送る)"}
+            </Btn>
+          </div>
         ) : (
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <Btn tone={sent ? "ghost" : "teal"} disabled={busy !== null || !s.applied || !s.ready} onClick={async () => { if (await run("test-send", { action: "test-send" }, "確認コードを送りました。メールに届いた6けたの数字を入力してください。")) setSent(true); }}>
+            <Btn tone={sent ? "ghost" : "teal"} disabled={busy !== null || !s.applied || !s.ready} onClick={testSend}>
               {busy === "test-send" ? "送っています…" : sent ? "もう一度送る" : "確認コードを自分に送る"}
             </Btn>
             {sent && (
@@ -152,6 +208,29 @@ export function SecondStepPanel() {
                 </Btn>
               </>
             )}
+          </div>
+        )}
+        {timing && (
+          <div style={{ marginTop: 14, background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 10, padding: "12px 14px", fontSize: 13.5, lineHeight: 1.9, color: brand.ink }}>
+            <strong style={{ color: brand.tealDark }}>⏱ いま送ったメールが届くまで</strong>
+            <div>
+              ① このアプリ → メール送信サービス: <strong>{timing.ms == null ? "—" : `${(timing.ms / 1000).toFixed(1)}秒`}</strong>
+            </div>
+            <div>
+              ② メール送信サービス → 相手のメールサーバー:{" "}
+              <strong>
+                {timing.state === "measuring" && `測定中…(${timing.elapsed}秒経過)`}
+                {timing.state === "delivered" && `ボタンを押してから約${timing.deliveredSec}秒で届きました`}
+                {timing.state === "slow" && "2分たっても受け取られていません(相手のメールサーバーが受け取りを遅らせています)"}
+                {timing.state === "failed" && "届きませんでした(宛先のアドレスや、送信元ドメインの設定をご確認ください)"}
+                {timing.state === "unknown" && "ここからは測れませんでした(Resend の管理画面「Emails」で、Sent と Delivered の時刻を確認できます)"}
+              </strong>
+            </div>
+            <div>③ 相手のメールサーバー → メールソフトの画面: メールソフトが新着を取りに行くまでの時間です(ここは測れません)。</div>
+            <p style={{ margin: "6px 0 0", fontSize: 12.5, color: "#5B6B6A", lineHeight: 1.8 }}>
+              ①②が数秒なのに画面に出るのが遅いときは、③(メールソフトの更新の間隔や、別のアドレスへの転送)が原因です。メールソフトの「更新」「送受信」を押すと、すぐ表示されます。
+              ②が遅いときは、相手のメールサーバーの迷惑メール対策(初めての送信元からのメールをいったん保留する など)か、送信元ドメインの設定(SPF・DKIM・DMARC)が原因のことが多いです。
+            </p>
           </div>
         )}
       </Card>

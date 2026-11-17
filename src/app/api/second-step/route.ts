@@ -7,6 +7,7 @@ import {
   checkCode,
   currentLogin,
   issueAndSend,
+  mailStatus,
   serverReady,
   sessionVerified,
   setDeviceCookie,
@@ -26,6 +27,7 @@ const fail = (status: number, error: string, extra: Record<string, unknown> = {}
 //   POST { action: "send" }                      確認コードを送る(不要な方・確認済みの方は done を返す)
 //        { action: "verify", code, remember }    確認コードを照合する
 //        { action: "test-send" | "test-verify" } 有効にする前に、事務所が自分で試す
+//        { action: "mail-status", id }           試しに送ったメールが、相手のメールサーバーに届いたか(事務所)
 //        { action: "enable", group, on }         スイッチを切り替える(事務所。オンにするのは、自分で試したあとだけ)
 export async function GET(req: Request) {
   const q = new URL(req.url).searchParams;
@@ -71,7 +73,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  let body: { action?: unknown; code?: unknown; remember?: unknown; group?: unknown; on?: unknown };
+  let body: { action?: unknown; code?: unknown; remember?: unknown; group?: unknown; on?: unknown; id?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -119,8 +121,14 @@ export async function POST(req: Request) {
 
   if (action === "test-send") {
     const r = await issueAndSend(user, APP_NAME);
-    if (r.ok) return NextResponse.json({ sent: true, to: maskEmail(user.email), wait: r.done ? 0 : r.wait });
+    // 届くのが遅いときに、どこで時間がかかったかを見分けられるよう、送信にかかった時間と受付番号も返す
+    if (r.ok) return NextResponse.json({ sent: true, to: maskEmail(user.email), wait: r.done ? 0 : r.wait, ms: r.done ? null : r.ms, mailId: r.done ? null : (r.mailId ?? null) });
     return fail(r.status, r.error, { wait: r.wait });
+  }
+
+  // 試しに送ったメールの配信状況(相手のメールサーバーに届いたか)
+  if (action === "mail-status") {
+    return NextResponse.json({ event: await mailStatus(String(body.id ?? "")) });
   }
 
   if (action === "enable") {

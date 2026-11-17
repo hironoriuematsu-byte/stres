@@ -60,7 +60,7 @@ export const mailReady = (): boolean => Boolean(process.env.RESEND_API_KEY && pr
 export const serverReady = (): boolean => Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY) && mailReady();
 
 // 確認コードをメールで送る。本文には、コードのほかに個人の情報を入れない
-export async function sendCodeMail(to: string, code: string, appName: string): Promise<{ ok: boolean; detail?: string }> {
+export async function sendCodeMail(to: string, code: string, appName: string): Promise<{ ok: boolean; detail?: string; id?: string }> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.SENDER_EMAIL;
   if (!key || !from) return { ok: false, detail: "RESEND_API_KEY / SENDER_EMAIL が未設定です" };
@@ -81,7 +81,7 @@ export async function sendCodeMail(to: string, code: string, appName: string): P
 
 export type SendResult =
   | { ok: true; done: true } // 確認は不要、またはすでに確認済み(覚えた端末を含む)
-  | { ok: true; done: false; wait: number } // コードを送った。wait 秒たつと送り直せる
+  | { ok: true; done: false; wait: number; mailId?: string; ms: number } // コードを送った。wait 秒たつと送り直せる。ms は送信サービスに渡すまでの時間
   | { ok: false; status: number; error: string; wait?: number };
 
 // 確認コードを発行して送る(対象でない方が、事務所の設定画面から試しに受け取るときにも使う)
@@ -98,13 +98,14 @@ export async function issueAndSend(user: { id: string; email?: string }, appName
       ? { ok: false, status: 429, error: `確認コードは送信済みです。届かないときは、${r.wait ?? 60}秒ほど待ってから送り直してください。`, wait: r.wait ?? 60 }
       : { ok: false, status: 429, error: "確認コードの送信回数が上限に達しました。1時間ほど待ってからお試しください。", wait: r.wait ?? 3600 };
   }
+  const started = Date.now();
   const mail = await sendCodeMail(user.email, code, appName);
   if (!mail.ok) {
     console.error("second step mail failed", mail.detail);
     await admin.rpc("second_step_issue_failed", { p_user: user.id });
     return { ok: false, status: 502, error: "確認コードのメールを送れませんでした。少し待ってから「コードを送り直す」を押してください。" };
   }
-  return { ok: true, done: false, wait: 60 };
+  return { ok: true, done: false, wait: 60, mailId: mail.id, ms: Date.now() - started };
 }
 
 // 確認コードを照合する。合っていれば、データベースがこのログインを確認済みにする。
@@ -130,4 +131,21 @@ export async function sessionVerified(userId: string, sessionId: string): Promis
   if (!admin) return false;
   const { data } = await admin.from("login_verified_sessions").select("session_id").eq("session_id", sessionId).eq("user_id", userId).maybeSingle();
   return Boolean(data);
+}
+
+// 送ったメールの配信状況(メール送信サービス Resend に問い合わせる)。
+//   delivered: 相手のメールサーバーが受け取った / sent: 送信済みで、相手の受け取り待ち /
+//   delivery_delayed: 相手のサーバーが受け取りを遅らせている / bounced: 届かなかった
+// 送信専用のキーでは問い合わせられないことがある(そのときは null)
+export async function mailStatus(id: string): Promise<string | null> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key || !/^[0-9a-fA-F-]{20,60}$/.test(id)) return null;
+  try {
+    const res = await fetch(`https://api.resend.com/emails/${id}`, { headers: { Authorization: `Bearer ${key}` }, cache: "no-store", signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const j = (await res.json()) as { last_event?: unknown };
+    return typeof j.last_event === "string" ? j.last_event : null;
+  } catch {
+    return null;
+  }
 }
