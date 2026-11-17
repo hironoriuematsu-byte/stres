@@ -4,6 +4,8 @@ import { Card } from "@/components/ui";
 import { ReceiptSheet } from "@/components/ReceiptSheet";
 import { adminClient, registrationNo } from "@/lib/plan-server";
 import { receiptFromOrder } from "@/lib/receipt";
+import { stepBlocked } from "@/lib/second-step-state";
+import { SS_GATE_PATH } from "@/lib/second-step";
 
 export const metadata = { title: "領収書 | ストレスチェックWeb" };
 export const dynamic = "force-dynamic";
@@ -15,6 +17,8 @@ export default async function ReceiptPage({ params }: { params: { id: string } }
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect(`/login?next=/plan/receipt/${params.id}`);
+  // 二段階認証の対象の方は、確認コードの入力が済んでから
+  if (await stepBlocked(supabase)) redirect(`${SS_GATE_PATH}?next=${encodeURIComponent(`/plan/receipt/${params.id}`)}`);
 
   const admin = adminClient();
   const notFound = (

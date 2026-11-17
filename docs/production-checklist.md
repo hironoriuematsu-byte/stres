@@ -380,3 +380,22 @@ Resend のログで **Delivery Delayed** が繰り返されるのは、宛先の
 - 列を足すだけなので実行は一瞬で終わり、受検中の従業員には影響しない
 - あわせて事業者担当者(company)が自社の従業員プロフィール(氏名・社員番号・部署・生年月日)を読めるポリシーを追加
   (健康管理Webのカルテで本人のアカウントを選ぶため。受検結果は含まない)
+
+## 二段階認証(メールの確認コード + この端末を30日間覚える)
+
+ストレスチェックWeb・健康管理Webの両方に効く(同じデータベースのため)。対象は 事務所 / 実施事務従事者・会社の担当者
+(健康管理Webの担当を兼ねる方を含む)。従業員・メールのない方(ID受検)は対象外。
+
+- SQL: `supabase/migrations/0035_second_step.sql`(実行しただけでは何も変わらない。スイッチは最初はオフ)
+- 環境変数(両方の Vercel プロジェクト): `SUPABASE_SERVICE_ROLE_KEY` / `RESEND_API_KEY` / `SENDER_EMAIL`。
+  ストレスチェックWebには `NEXT_PUBLIC_KENKO_URL`(健康管理Webの準備状況を設定画面から確かめるため)
+- 有効にする: 事務所ダッシュボード「🔒 二段階認証」→ 準備の状況を確認 → 自分のメールで試す → 有効にする
+  (自分で確認コードを受け取れたログインでしかオンにできない)。まず事務所、次に担当者の順
+- 緊急停止: SQL Editor で `select public.second_step_enable('office', false); select public.second_step_enable('staff', false);`
+- しくみ: 確認が済んでいないログインでは、すべての表の制限ポリシー(`second_step`)と権限の関数
+  (`my_role` / `my_company` / `my_attested` / `hm_my_role` / `hm_my_company` / `hm_is_office`)が権限を返さない。
+  画面の誘導は `src/middleware.ts` → `/api/second-step/gate` → `/verify`。service_role を使うAPIは
+  `requestUser` / `stepBlocked` で未確認のログインを弾く
+- 新しい表を追加したら、SQL の最後に `select public.second_step_apply_policies();` を実行する(制限を付け直す)
+- 新しいAPIで service_role を使うときは、入口で `requestUser`(または `stepBlocked`)を通す
+

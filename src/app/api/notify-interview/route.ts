@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { stepBlocked, STEP_BLOCKED_MESSAGE } from "@/lib/second-step-state";
 import { createClient } from "@/lib/supabase/server";
 import { IMPLEMENTER } from "@/lib/org";
 import { sendViaResend, sleep } from "@/lib/mail";
@@ -22,6 +23,10 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+  }
+  // 二段階認証の対象の方は、確認コードの入力が済んでから
+  if (await stepBlocked(supabase)) {
+    return NextResponse.json({ error: STEP_BLOCKED_MESSAGE }, { status: 401 });
   }
 
   let requestId: string | undefined;

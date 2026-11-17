@@ -1,5 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { stepBlocked } from "@/lib/second-step-state";
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
@@ -42,16 +44,23 @@ export function createClient(options?: { headers?: Record<string, string> }) {
   );
 }
 
-// APIでログイン中の利用者を取り出す。Cookie で確認できないときは、ブラウザが送ったアクセストークン(Authorization: Bearer)で確認する
+// APIでログイン中の利用者を取り出す。Cookie で確認できないときは、ブラウザが送ったアクセストークン(Authorization: Bearer)で確認する。
+// 二段階認証の対象の方で、確認コードの入力がまだ済んでいないログインは、ログインしていないものとして扱う
+// (このあと service_role で処理を進めるAPIが、未確認のログインから使われないようにする)
 export async function requestUser(req: Request) {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user) return user;
+  if (user) return (await stepBlocked(supabase)) ? null : user;
   const auth = req.headers.get("authorization") ?? "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
   if (!token) return null;
   const { data } = await supabase.auth.getUser(token);
-  return data.user ?? null;
+  if (!data.user) return null;
+  const asUser = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return (await stepBlocked(asUser)) ? null : data.user;
 }
