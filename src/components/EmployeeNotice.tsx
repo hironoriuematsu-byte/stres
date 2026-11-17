@@ -57,6 +57,7 @@ export function EmployeeNotice({
 ■ 受検期間: ${formatJpDate(examStart)} 〜 ${formatJpDate(examEnd)}
 ■ 受検方法: 下の受検用URLまたはQRコードから、スマートフォンまたはパソコンで回答してください(${minutes})。
    初めての方は、メールアドレスとパスワードを登録してから受検します。昨年度に受検した方は、同じアカウントでログインしてください。
+   メールアドレスやスマートフォンをお持ちでない方、画面での回答が難しい方は、ストレスチェック担当者にお申し出ください(ログインIDの紙、または紙の回答用紙で受検できます)。
 ■ 受検用URL: ${urlLine}`;
   const after = `■ 実施者: ${IMPLEMENTER.full}(${IMPLEMENTER.officeName})
 ■ 結果の取扱い:

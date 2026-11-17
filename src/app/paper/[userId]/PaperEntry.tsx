@@ -289,6 +289,8 @@ export function PaperEntry({
               <strong>回答のページだけ</strong>(氏名のある表紙は除く)を、スマホで撮るかスキャンして選ぶと、AIが○の付いた番号を読み取って下の表に入れます。
               1ページずつ、まっすぐ・明るく・全体が写るように撮ってください。読み取りはあくまで下書きです。<strong>かならず用紙と見比べてから登録</strong>してください。
               <br />
+              <strong style={{ color: "#B45415" }}>表紙の「AIでの読み取りを希望しません」に✓がある方は、読み取りを使わず、手で入力してください。</strong>
+              <br />
               <span style={{ fontSize: 12 }}>写真は読み取りにだけ使い、保存しません。読み取り1回ごとにAIの利用料(1人あたり10円前後)がかかります。</span>
             </p>
             <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple onChange={(e) => addFiles(e.target.files)} style={{ display: "none" }} />

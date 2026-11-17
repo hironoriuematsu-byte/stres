@@ -257,7 +257,15 @@ export function PaperSheet({
             </li>
             <li>回答は実施事務従事者がシステムに登録し、結果票を封筒に入れてお渡しします。個人が特定されない形での職場ごとの集計(10名以上)には使われます。</li>
             <li>高ストレスと判定された方は、産業医の面接指導を申し出ることができます(結果票に案内があります)。</li>
+            <li>
+              回答の登録を正確に行うため、回答のページ(氏名は書きません)を、AI(米国 Anthropic社)で読み取ることがあります。画像は保存されず、AIの学習にも使われません。
+              <strong>希望しない方は、下の□に✓を付けてください</strong>(担当者が手で入力します)。
+            </li>
           </ul>
+          <div style={{ marginTop: "2.5mm", display: "flex", alignItems: "center", gap: "3mm", fontSize: "10.5pt" }}>
+            <span style={{ display: "inline-block", width: "5.5mm", height: "5.5mm", border: "1.5px solid #111" }} />
+            AIでの読み取りを希望しません
+          </div>
         </div>
 
         <div style={{ marginTop: "6mm", fontSize: "10.5pt" }}>
