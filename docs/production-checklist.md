@@ -354,7 +354,8 @@ Supabase の Authentication → Rate Limits(制限値は「IPアドレスごと�
 
 Authentication → Providers → Email:
 - **Confirm email** が ON(自己登録は確認メールで本人確認する前提)
-- **Email OTP Expiration** は 3600秒(1時間)。短くしすぎるとメールを後で開く人が期限切れになる
+- **Email OTP Expiration** は 86400秒(24時間。設定できる上限)。招待メールを翌日に開く方でも期限切れにならないようにするため
+  (2026年11月に 3600秒から変更。画面とメールの文言「24時間有効」と合わせてある。変えるときは文言も直す)
 - **Minimum password length** は 8 以上(アプリ側も8文字以上で統一)。文字種の要件(Password Requirements)を付けると、
   エラー文が英語のまま表示されるため付けない
 

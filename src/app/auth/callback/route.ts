@@ -65,7 +65,7 @@ function confirmPage(tokenHash: string, type: string, next: string): Response {
 <input type="hidden" name="next" value="${escapeHtml(next)}" />
 <button type="submit">${button}</button>
 </form>
-<p class="note">このリンクはメールが届いてから1時間有効です。期限が切れた場合は、ログイン画面の「パスワードを忘れた方」から再度お手続きください。</p>
+<p class="note">このリンクはメールが届いてから24時間有効です。期限が切れた場合は、ログイン画面の「パスワードを忘れた方」から再度お手続きください。</p>
 </div></div>
 </body>
 </html>`;
