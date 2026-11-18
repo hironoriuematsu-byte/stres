@@ -13,7 +13,7 @@ type Settings = {
   staff: boolean;
   tested: boolean; // このログインで、確認コードを受け取って入力できたか
   email: string;
-  kenko: { url: string; ready: boolean; applied: boolean } | null;
+  kenko: { url: string; ready: boolean; applied: boolean; missing?: string[] } | null;
   counts: { office: number; staff: number };
 };
 
@@ -166,7 +166,21 @@ export function SecondStepPanel() {
           <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8, margin: "8px 0 0" }}>
             {!s.applied && "SQL 0035 を Supabase の SQL Editor で実行してください。"}
             {s.applied && !s.ready && "Vercel(ストレスチェックWeb)の環境変数 SUPABASE_SERVICE_ROLE_KEY・RESEND_API_KEY・SENDER_EMAIL を確かめてください。"}
-            {s.kenko && !kenkoOk && " 健康管理Webは、Vercel(健康管理Web)の環境変数 SUPABASE_SERVICE_ROLE_KEY・RESEND_API_KEY・SENDER_EMAIL を設定し、再デプロイしてください。"}
+            {s.kenko && !kenkoOk && (
+              <>
+                {" "}
+                健康管理Webは、
+                {s.kenko.missing && s.kenko.missing.length > 0 ? (
+                  <>
+                    Vercel の<strong>健康管理Webのプロジェクト</strong>(stres とは別のプロジェクト)の環境変数に <strong>{s.kenko.missing.join("・")}</strong> が入っていません。追加して、再デプロイしてください。
+                  </>
+                ) : s.kenko.ready ? (
+                  "SUPABASE_SERVICE_ROLE_KEY の値が合っていないようです。Supabase でコピーし直して、健康管理Webのプロジェクトに入れ直してください。"
+                ) : (
+                  "Vercel の健康管理Webのプロジェクト(stres とは別のプロジェクト)の環境変数 SUPABASE_SERVICE_ROLE_KEY・RESEND_API_KEY・SENDER_EMAIL を設定し、再デプロイしてください。"
+                )}
+              </>
+            )}
           </p>
         )}
       </Card>

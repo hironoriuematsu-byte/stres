@@ -41,14 +41,15 @@ export async function GET(req: Request) {
   const { user, sessionId } = await currentLogin();
   const value = (applied ? settings!.data : {}) as { office?: boolean; staff?: boolean };
   // もう一方のアプリ(健康管理Web)の準備状況
-  let kenko: { url: string; ready: boolean; applied: boolean } | null = null;
+  let kenko: { url: string; ready: boolean; applied: boolean; missing: string[] } | null = null;
   if (KENKO_URL) {
     try {
       const res = await fetch(`${KENKO_URL.replace(/\/$/, "")}/api/second-step`, { cache: "no-store", signal: AbortSignal.timeout(6000) });
-      const j = res.ok ? ((await res.json()) as { ready?: boolean; applied?: boolean }) : {};
-      kenko = { url: KENKO_URL, ready: Boolean(j.ready), applied: Boolean(j.applied) };
+      const j = res.ok ? ((await res.json()) as { ready?: boolean; applied?: boolean; missing?: unknown }) : {};
+      const missing = Array.isArray(j.missing) ? j.missing.filter((x): x is string => typeof x === "string" && /^[A-Z_]{3,40}$/.test(x)) : [];
+      kenko = { url: KENKO_URL, ready: Boolean(j.ready), applied: Boolean(j.applied), missing };
     } catch {
-      kenko = { url: KENKO_URL, ready: false, applied: false };
+      kenko = { url: KENKO_URL, ready: false, applied: false, missing: [] };
     }
   }
   // 対象になる人数
