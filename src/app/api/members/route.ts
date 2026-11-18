@@ -131,6 +131,9 @@ export async function POST(req: Request) {
     members: (profiles ?? []).map((p) => ({
       ...p,
       email: userById.get(p.user_id)?.email ?? "",
+      // まだログインしていない方に、招待メールを送り直せるようにする
+      last_sign_in_at: userById.get(p.user_id)?.lastSignIn ?? null,
+      confirmed: userById.get(p.user_id)?.confirmed ?? false,
     })),
   });
 }
