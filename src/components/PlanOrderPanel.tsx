@@ -7,7 +7,9 @@ import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { postJson } from "@/lib/api-client";
 import { usePlanPrices } from "@/components/usePlanPrices";
+import { BANK_TRANSFER_DAYS } from "@/lib/bank-transfer";
 import {
+  bankTransferOn,
   defaultEndOf,
   fiscalYearOf,
   formatJpDate,
@@ -43,6 +45,7 @@ export function PlanOrderPanel({
   const [plans, setPlans] = useState<PlanRow[] | null>(null);
   const prices = usePlanPrices();
   const [web, setWeb] = useState(false);
+  const [awaiting, setAwaiting] = useState(false); // 銀行振込のお振込み待ちの申込がある(その間は、新しく申し込まない)
   const today = jstToday();
   const firstStart = today; // 受検期間の開始日の初期値は申込日当日(支払い後すぐに受検できる)
   const [f, setF] = useState({
@@ -75,7 +78,9 @@ export function PlanOrderPanel({
         .eq("company_id", companyId)
         .order("fiscal_year", { ascending: false }),
       supabase.from("companies").select("web_signup, workers, questionnaire").eq("id", companyId).maybeSingle(),
-    ]).then(([{ data, error }, { data: c }]) => {
+      supabase.from("plan_orders").select("id").eq("company_id", companyId).in("kind", ["new", "renew"]).eq("status", "pending").eq("pay_method", "bank_transfer").limit(1),
+    ]).then(([{ data, error }, { data: c }, { data: wait }]) => {
+      setAwaiting(Boolean(wait && wait.length > 0));
       const rows = error ? [] : ((data as PlanRow[]) ?? []);
       setPlans(rows);
       setWeb(Boolean((c as { web_signup?: boolean } | null)?.web_signup));
@@ -93,6 +98,7 @@ export function PlanOrderPanel({
   }, [companyId]);
 
   if (!plans || !web) return null; // Web申込の企業ではない(産業医契約のある企業など)
+  if (awaiting) return null; // お振込み待ちの申込は、上の「お振込み待ちのお申込み」の欄に出る
   const firstYear = plans.length === 0;
   const cur = plans.find((p) => p.fiscal_year === currentYear);
   const nextYear = fiscalYearOf(f.examStart || firstStart);
@@ -252,6 +258,11 @@ export function PlanOrderPanel({
               {busy ? "決済画面を準備しています…" : "お支払いに進む"}
             </Btn>
           </div>
+          {bankTransferOn() && (
+            <p style={{ ...small, margin: 0 }}>
+              お支払い方法は、次の画面でクレジットカードまたは銀行振込から選べます。銀行振込を選ぶと、貴社専用の振込先口座と請求書を表示します。ご入金の確認後に受検の準備が整います(お振込みの期限は、お申込みから{BANK_TRANSFER_DAYS}日以内)。
+            </p>
+          )}
           {err && <p style={{ fontSize: 13, color: "#B02A2A", margin: 0 }}>{err}</p>}
         </div>
       )}

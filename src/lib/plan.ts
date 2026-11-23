@@ -12,8 +12,11 @@ export const UNIT_PRICE = 330; // 受検者1名あたり(税込)
 export const MIN_TOTAL = 3300; // 最低料金(税込)
 export const MIN_TOTAL_SEATS = Math.ceil(MIN_TOTAL / UNIT_PRICE); // 最低料金で受検できる人数(10名)
 
-// お支払い方法の表示(Stripe の管理画面で有効にした支払い方法に合わせて変える)
-export const PAYMENT_METHODS_TEXT = "クレジットカード";
+// 銀行振込でのお支払いを受け付けるか(Vercel の環境変数 NEXT_PUBLIC_BANK_TRANSFER=1 のとき)。
+// 入れる前に、Stripe の管理画面で銀行振込を有効にし、SQL 0036 を実行しておく(docs/production-checklist.md)
+export const bankTransferOn = (): boolean => process.env.NEXT_PUBLIC_BANK_TRANSFER === "1";
+// お支払い方法の表示
+export const PAYMENT_METHODS_TEXT = bankTransferOn() ? "クレジットカードまたは銀行振込" : "クレジットカード";
 
 // 年度の料金
 export type Pricing = { unitPrice: number; minTotal: number };
@@ -338,6 +341,7 @@ export type SalesOrder = {
   paid_at: string | null;
   stripe_payment_intent: string | null;
   stripe_invoice_id: string | null;
+  pay_method?: string | null; // お支払い方法(SQL 0036 以降。記録がなければカード)
 };
 
 // 日時(UTC)を日本時間の日付(YYYY-MM-DD)にする
@@ -358,6 +362,7 @@ export const SALES_HEADERS = [
   "申込ID",
   "Stripe決済ID",
   "Stripe請求書ID",
+  "支払方法",
 ];
 
 // 支払い済みの申込を、決済日が from〜to(日本時間・両端を含む。空なら制限なし)のものだけ行にする
@@ -384,6 +389,7 @@ export function salesRows(orders: SalesOrder[], from = "", to = ""): (string | n
         o.id,
         o.stripe_payment_intent ?? "",
         o.stripe_invoice_id ?? "",
+        o.pay_method === "bank_transfer" ? "銀行振込" : "クレジットカード",
       ];
     });
 }

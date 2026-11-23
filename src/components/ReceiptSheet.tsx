@@ -11,10 +11,11 @@ export type ReceiptData = {
   amount: number; // 税込
   purpose: string; // 但し書き
   registrationNo: string;
+  method?: "card" | "bank_transfer"; // お支払い方法(記録がなければカード)
 };
 
 // Web申込の領収書(適格請求書の記載事項を満たす)。画面で表示し、印刷・PDF保存できる。
-// クレジットカード決済のため、収入印紙は不要
+// 画面・PDFで発行する(紙で交付しない)ため、収入印紙は不要
 export function ReceiptSheet({ r, stripeHref }: { r: ReceiptData; stripeHref?: string }) {
   const tax = taxIncluded(r.amount);
   const td = { padding: "8px 12px", border: `1px solid #B9C9C6`, fontSize: 14 } as const;
@@ -90,7 +91,7 @@ export function ReceiptSheet({ r, stripeHref }: { r: ReceiptData; stripeHref?: s
         </table>
 
         <p style={{ fontSize: 13, color: "#44534F", margin: "0 0 28px" }}>
-          お支払方法: クレジットカード決済(決済日 {formatJpDate(r.paidDate)})
+          お支払方法: {r.method === "bank_transfer" ? "銀行振込" : "クレジットカード決済"}({r.method === "bank_transfer" ? "ご入金の確認日" : "決済日"} {formatJpDate(r.paidDate)})
         </p>
 
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -103,7 +104,8 @@ export function ReceiptSheet({ r, stripeHref }: { r: ReceiptData; stripeHref?: s
         </div>
 
         <p style={{ fontSize: 12, color: "#5B6B6A", margin: "28px 0 0", lineHeight: 1.7 }}>
-          ※ 本書は適格請求書(インボイス)を兼ねます。クレジットカード決済によるお支払いのため、収入印紙は貼付しておりません。
+          ※ 本書は適格請求書(インボイス)を兼ねます。
+          {r.method === "bank_transfer" ? "電子的に発行しているため、収入印紙は貼付しておりません。" : "クレジットカード決済によるお支払いのため、収入印紙は貼付しておりません。"}
         </p>
       </div>
     </div>

@@ -11,6 +11,7 @@ import { DashboardMenu, MenuItem } from "@/components/DashboardMenu";
 import { KenkoLink } from "@/components/KenkoLink";
 import { PlanStatusPanel } from "@/components/PlanStatusPanel";
 import { PlanOrderPanel } from "@/components/PlanOrderPanel";
+import { BankTransferPanel } from "@/components/BankTransferPanel";
 
 // 各パネルはタブを開いたときに初めて読み込む(初期表示の高速化)
 // タブの部品を読み込む間も、上端の進行バーを出す(LoadingCard が表示中に出す)
@@ -151,6 +152,8 @@ export function JimuDashboard({
       {/* Web申込の企業のみ: 受検期間・受検者数(人数のみで個人の情報は含まない) */}
       {(tab === null || tab === "配布URL・QR") && <PlanStatusPanel companyId={companyId} fiscalYear={year} canEdit />}
       {/* Web申込の企業のみ: 年度の申込(初年度・今年度の申込がない・受検期間が終わったとき) */}
+      {/* Web申込の企業のみ: 銀行振込を選んだお申込みのうち、入金の確認待ちのもの(振込先・期限・請求書) */}
+      {tab === null && webSignup && <BankTransferPanel companyId={companyId} canEdit />}
       {tab === null && webSignup && <PlanOrderPanel companyId={companyId} currentYear={getFiscalYear()} />}
       {tab === null && <DashboardMenu
           items={webSignup ? MENU_ITEMS.map((m) => (m.key === "従業員招待" ? { ...m, desc: "従業員への招待メールの送信と、ほかの担当者(実施事務従事者)の追加" } : m)) : MENU_ITEMS}

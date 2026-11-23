@@ -1,5 +1,6 @@
 import { IMPLEMENTER } from "@/lib/org";
-import { exTax, INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, PRICE_EXAMPLES, priceNew, seatsGranted, WEB_MAX_SEATS, type Pricing } from "@/lib/plan";
+import { bankTransferOn, exTax, INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, PRICE_EXAMPLES, priceNew, seatsGranted, WEB_MAX_SEATS, type Pricing } from "@/lib/plan";
+import { BANK_TRANSFER_DAYS } from "@/lib/bank-transfer";
 
 // 宣伝ページ(/plan)と社内検討用資料(/plan/brochure)で共通の文面。
 // どちらにも同じことを書くので、内容を変えるときはここだけを直す
@@ -93,5 +94,10 @@ export const FAQ: [string, string][] = [
     "翌年度も使えますか？",
     "はい。ログイン後の画面から同じ操作で申し込めます。更新の時期にはご案内メールをお送りし、従業員のアカウントと過去の結果は引き継がれます。",
   ],
-  ["請求書払いはできますか？", `Web申込のお支払いは${PAYMENT_METHODS_TEXT}です。請求書払いをご希望の場合はお問い合わせください。`],
+  bankTransferOn()
+    ? [
+        "請求書・銀行振込で支払えますか？",
+        `はい。お支払いは${PAYMENT_METHODS_TEXT}から選べます。銀行振込を選ぶと、貴社専用の振込先口座と、経理の方へお渡しいただける請求書(振込先入り)を表示します。お申込みから${BANK_TRANSFER_DAYS}日以内にお振込みください(振込手数料はお客さまのご負担です)。ご入金の確認後に受検の準備が整い、適格請求書(インボイス)を兼ねた領収書を発行します。`,
+      ]
+    : ["請求書払いはできますか？", `Web申込のお支払いは${PAYMENT_METHODS_TEXT}です。請求書払いをご希望の場合はお問い合わせください。`],
 ];
