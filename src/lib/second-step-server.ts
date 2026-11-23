@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/plan-server";
 import { sendViaResend } from "@/lib/mail";
-import { SS_DEVICE_COOKIE, SS_DEVICE_DAYS, SS_HINT_COOKIE, sessionIdOf } from "@/lib/second-step";
+import { SS_DEVICE_COOKIE, SS_DEVICE_DAYS, SS_HINT_COOKIE, mailLinkProves, sessionIdOf } from "@/lib/second-step";
 
 export { stepState, stepBlocked, STEP_BLOCKED_MESSAGE, type StepState } from "@/lib/second-step-state";
 
@@ -53,6 +53,34 @@ export async function tryDevice(userId: string, sessionId: string): Promise<bool
   if (!token || !admin) return false;
   const { data, error } = await admin.rpc("second_step_device", { p_user: userId, p_session: sessionId, p_device_hash: hashDevice(token) });
   return !error && data === true;
+}
+
+// メールのリンク(会社登録の確認・招待・パスワードの再設定)を開いてログインした方は、
+// 届いたメールを開けることを確かめたばかりなので、このログインを確認コードなしで確認済みにする
+// (リンクを開いた直後に、同じ宛先へ確認コードのメールをもう1通送らないため)。
+// 対象でない方(従業員など)には何もしない。うまくいかなかったときは false(いつもどおり確認コードの画面に進む)
+export async function verifyByMailLink(userId: string, accessToken: string | null | undefined, type: string): Promise<boolean> {
+  if (!mailLinkProves(type)) return false;
+  const sessionId = sessionIdOf(accessToken);
+  const admin = adminClient();
+  if (!sessionId || !admin) return false;
+  try {
+    const { data: required, error } = await admin.rpc("second_step_required", { p_user: userId });
+    if (error || required !== true) return false;
+    const { error: failed } = await admin
+      .from("login_verified_sessions")
+      .upsert({ session_id: sessionId, user_id: userId, method: "code", verified_at: new Date().toISOString() }, { onConflict: "session_id" });
+    if (failed) {
+      console.error("second step: mail link could not be recorded", failed.message);
+      return false;
+    }
+    // 記録には、確認コードではなくメールのリンクで確認したことを残す
+    await admin.from("login_security_events").insert({ user_id: userId, event: "verified_mail_link", detail: { type } });
+    return true;
+  } catch (e) {
+    console.error("second step: mail link check failed", e);
+    return false;
+  }
 }
 
 // メールの準備ができているか(確認コードを送れるか)

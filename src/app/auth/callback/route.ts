@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { clientIpHeaders, createClient } from "@/lib/supabase/server";
+import { verifyByMailLink } from "@/lib/second-step-server";
 
 // 遷移先はサイト内のパスに限定する(外部サイトへの転送を防ぐ)
 function safeNext(value: string | null): string {
@@ -114,9 +115,12 @@ export async function POST(request: Request) {
   }
 
   const supabase = createClient({ headers: clientIpHeaders(request) });
-  const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as EmailOtpType });
+  const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as EmailOtpType });
   if (error) {
     return NextResponse.redirect(`${origin}/login?error=link`, 303);
   }
+  // 二段階認証の対象の方(担当者・実施事務従事者・事務所): メールのリンクを開けたこと自体が確認になるので、
+  // このログインは確認コードなしで通す(同じ宛先に、確認コードのメールをもう1通送らない)
+  if (data.user && data.session) await verifyByMailLink(data.user.id, data.session.access_token, type);
   return NextResponse.redirect(`${origin}${next}`, 303);
 }

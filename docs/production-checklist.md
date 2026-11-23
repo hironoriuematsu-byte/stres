@@ -398,5 +398,10 @@ Resend のログで **Delivery Delayed** が繰り返されるのは、宛先の
   画面の誘導は `src/middleware.ts` → `/api/second-step/gate` → `/verify`。service_role を使うAPIは
   `requestUser` / `stepBlocked` で未確認のログインを弾く
 - 新しい表を追加したら、SQL の最後に `select public.second_step_apply_policies();` を実行する(制限を付け直す)
+- メールのリンクでログインした直後は、確認コードを送らない(`verifyByMailLink`、`src/app/auth/callback/route.ts`)。
+  会社登録の確認(signup)・招待(invite)・パスワードの再設定(recovery)のリンクは、届いたメールを開けることの確認になるため、
+  そのログインを確認済みとして記録する(記録: `login_security_events` の `verified_mail_link`)。端末は覚えないので、
+  次にパスワードでログインするときは確認コードが要る。メールアドレスの変更(email_change)は対象外。
+  記録に失敗したときは、今までどおり確認コードの画面に進む
 - 新しいAPIで service_role を使うときは、入口で `requestUser`(または `stepBlocked`)を通す
 

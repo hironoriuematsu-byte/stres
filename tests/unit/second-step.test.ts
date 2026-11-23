@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkMessage, isCode, maskEmail, normalizeCode, safeNext, sessionIdOf } from "@/lib/second-step";
+import { checkMessage, isCode, mailLinkProves, maskEmail, normalizeCode, safeNext, sessionIdOf } from "@/lib/second-step";
 
 const b64url = (o: unknown) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const jwt = (payload: unknown) => `${b64url({ alg: "HS256" })}.${b64url(payload)}.sig`;
@@ -51,5 +51,18 @@ describe("二段階認証: 共通の処理", () => {
     expect(checkMessage("expired")).toContain("有効期限");
     expect(checkMessage("none")).toContain("送り直す");
     expect(checkMessage("error")).toContain("もう一度");
+  });
+
+  it("メールのリンクでのログインを、確認コードの代わりにしてよい種類", () => {
+    // 会社登録の確認・招待・パスワードの再設定は、届いたメールを開けることを確かめたばかり
+    expect(mailLinkProves("signup")).toBe(true);
+    expect(mailLinkProves("invite")).toBe(true);
+    expect(mailLinkProves("recovery")).toBe(true);
+    // メールアドレスの変更(新しいアドレスの確認)や、そのほかの種類は代わりにしない
+    expect(mailLinkProves("email_change")).toBe(false);
+    expect(mailLinkProves("magiclink")).toBe(false);
+    expect(mailLinkProves("email")).toBe(false);
+    expect(mailLinkProves("")).toBe(false);
+    expect(mailLinkProves(null)).toBe(false);
   });
 });

@@ -25,6 +25,13 @@ export function sessionIdOf(accessToken: string | null | undefined): string | nu
   }
 }
 
+// メールのリンクを開いてログインしたとき、そのログインを「確認コード済み」として扱ってよい種類か。
+//   会社登録の確認(signup)・招待(invite)・パスワードの再設定(recovery)は、
+//   届いたメールを開けること(= 確認コードで確かめるのと同じこと)を、いま確かめたばかりなので、もう一度コードを送らない。
+//   メールアドレスの変更(email_change)は、新しいアドレスの確認であって、登録済みのアドレスの持ち主である確認ではないので含めない
+export const MAIL_LINK_TYPES = ["signup", "invite", "recovery"] as const;
+export const mailLinkProves = (type: string | null | undefined): boolean => (MAIL_LINK_TYPES as readonly string[]).includes(type ?? "");
+
 // 入力された確認コードをそろえる(全角数字・空白・ハイフンが混ざっていてもよい)
 export function normalizeCode(input: string): string {
   return input
