@@ -19,7 +19,7 @@ import { IMPLEMENTER, SELLER } from "@/lib/org";
 import { formatJpDate, taxIncluded } from "@/lib/plan";
 
 // 契約書の文面の版。文面(条文)を変えたときは +1 する。送信済みの契約書は送信時の文面を保存しているので影響しない
-export const CONTRACT_TEMPLATE_VERSION = 5;
+export const CONTRACT_TEMPLATE_VERSION = 6;
 
 // 署名用リンクの有効期間(日)。期限が切れたら実施者が再送する
 export const SIGN_LINK_DAYS = 14;
@@ -368,7 +368,8 @@ export type ContractDoc = {
 };
 
 export const OFFICE_PARTY = {
-  name: `${SELLER.name}(${IMPLEMENTER.officeName})`,
+  name: `${SELLER.name}(${IMPLEMENTER.officeName})`, // 前文の定義用
+  signName: `${SELLER.name}\n${IMPLEMENTER.officeName}`, // 署名欄用(法人名の次の行に事務所名。括弧は付けない)
   address: SELLER.address,
   repTitle: "代表社員",
   repName: SELLER.representative,
@@ -642,7 +643,7 @@ function renderMain(f: ContractFields, meta: { contractNo: string; templateVersi
       label: "乙",
       role: "産業医事務所",
       address: OFFICE_PARTY.address,
-      name: OFFICE_PARTY.name,
+      name: OFFICE_PARTY.signName,
       rep: `${OFFICE_PARTY.repTitle} ${OFFICE_PARTY.repName}`,
       note: `担当医師: ${OFFICE_PARTY.doctor}`,
     },
@@ -711,7 +712,7 @@ function renderMemo(f: ContractFields, meta: { contractNo: string; templateVersi
       label: "乙",
       role: "産業医事務所",
       address: OFFICE_PARTY.address,
-      name: OFFICE_PARTY.name,
+      name: OFFICE_PARTY.signName,
       rep: `${OFFICE_PARTY.repTitle} ${OFFICE_PARTY.repName}`,
       note: `担当医師: ${OFFICE_PARTY.doctor}`,
     },
@@ -838,7 +839,7 @@ function renderCoop(f: ContractFields, meta: { contractNo: string; templateVersi
       label: "甲",
       role: "委託者(産業医事務所)",
       address: OFFICE_PARTY.address,
-      name: OFFICE_PARTY.name,
+      name: OFFICE_PARTY.signName,
       rep: `${OFFICE_PARTY.repTitle} ${OFFICE_PARTY.repName}`,
       note: `代表医師: ${OFFICE_PARTY.doctor}`,
     },
@@ -869,7 +870,7 @@ export function contractText(doc: ContractDoc): string {
   }
   lines.push(doc.closing, "");
   for (const p of [doc.ko, doc.otsu]) {
-    lines.push(`${p.label}: ${p.address} / ${p.name} / ${p.rep}${p.note ? ` / ${p.note}` : ""}`);
+    lines.push(`${p.label}: ${p.address} / ${p.name.replace(/\n/g, " ")} / ${p.rep}${p.note ? ` / ${p.note}` : ""}`);
   }
   return lines.join("\n");
 }
