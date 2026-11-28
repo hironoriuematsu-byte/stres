@@ -275,6 +275,8 @@ describe("契約書の文面", () => {
     expect(labels).toEqual({ party: "乙", office: "甲" });
     expect(eventLabel("sent", labels)).toBe("送信・甲の合意(電子署名)");
     expect(eventLabel("viewed", labels)).toBe("乙が閲覧");
+    expect(eventLabel("review_ok", labels)).toBe("乙が案文に「問題なし」と回答");
+    expect(eventLabel("review_sent", labels)).toBe("確認用リンクを送付(署名なし・案文の確認)");
   });
   it("既定値は下書きとして成立しない(入力が必要)", () => {
     expect(parseContractFields(DEFAULT_FIELDS as unknown as Record<string, unknown>).ok).toBe(false);

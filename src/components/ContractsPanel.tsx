@@ -34,7 +34,7 @@ import {
 type Row = Omit<ContractRow, "document" | "template_version" | "completion_hash" | "service_signature" | "document_hash" | "signed_name" | "signed_title">;
 
 const COLS =
-  "id, contract_no, kind, status, company_id, fields, party_name, signer_name, signer_email, signer_title, monthly_fee, fee_period, start_date, token_expires_at, sent_at, viewed_at, signed_at, declined_at, decline_reason, cancelled_at, note, created_at, updated_at";
+  "id, contract_no, kind, status, company_id, fields, party_name, signer_name, signer_email, signer_title, monthly_fee, fee_period, start_date, token_expires_at, sent_at, viewed_at, signed_at, declined_at, decline_reason, cancelled_at, note, created_at, updated_at, review_sent_at, review_viewed_at, review_feedback_at, review_feedback_kind, review_feedback";
 
 // フォームの入力(数値も文字列のまま持ち、保存時に parseContractFields で確認する)
 type Form = { [K in keyof ContractFields]: ContractFields[K] extends boolean ? boolean : string };
@@ -180,6 +180,18 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
     await load();
   };
 
+  // 確認用リンク(署名なし)。すでに送っていれば同じリンクで送り直す
+  const reviewSend = async (r: Row) => {
+    const message = window.prompt(
+      r.review_sent_at
+        ? `${r.signer_name} 様に、同じ確認用リンクをもう一度送ります(直した案文が見られます)。メールに添えるひとことがあれば入力してください(任意)。`
+        : `${r.signer_name} 様(${r.signer_email})に、署名なしで案文を確認できるリンクをメールで送ります。メールに添えるひとことがあれば入力してください(任意)。`,
+      ""
+    );
+    if (message === null) return;
+    await run("確認用リンクを送信", "/api/contracts/review-send", { id: r.id, message });
+  };
+
   const resend = async (r: Row) => {
     const code = window.prompt(
       `${r.signer_name} 様に新しい署名用リンクを送ります(以前のリンクは無効になります)。\nアクセスコードを新しく設定する場合は4〜8桁の数字を入力してください。変えない場合は空のまま OK を押してください。`,
@@ -237,7 +249,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
             <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>電子契約</h3>
             <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8, margin: 0 }}>
               顧問先との契約(選任契約・顧問契約・協力医師の覚書)と、協力医師との業務委託契約を、クラウドサイン型の電子署名で締結します。
-              契約内容を入力して署名者にメールで送ると、署名者はリンクを開いて内容を確認し、電子署名(同意)します。送信の時点で文面が確定し、当事務所の合意も記録されます。
+              下書きの段階では「確認用リンク(署名なし)」を相手に送って案文を詰められます(相手は「問題なし / 修正希望」を返せます)。内容が固まったら署名用リンクを送ると、署名者はリンクを開いて内容を確認し、電子署名(同意)します。送信の時点で文面が確定し、当事務所の合意も記録されます。
               署名が完了すると双方にメールが届き、契約書と合意締結証明をいつでも閲覧・印刷できます。書面・押印・収入印紙は不要です。
             </p>
           </div>
@@ -571,6 +583,24 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                         {r.viewed_at && !r.signed_at ? ` / 閲覧 ${formatJst(r.viewed_at)}` : ""}
                         {r.signed_at ? ` / 締結 ${formatJst(r.signed_at)}` : ""}
                         {st === "sent" ? ` / 期限 ${formatJst(r.token_expires_at)}` : ""}
+                        {r.status === "draft" && r.review_sent_at ? (
+                          <>
+                            <br />
+                            <span style={{ color: brand.tealDark }}>
+                              確認用リンク送付 {formatJst(r.review_sent_at)}
+                              {r.review_viewed_at ? ` / 閲覧 ${formatJst(r.review_viewed_at)}` : " / 未閲覧"}
+                            </span>
+                          </>
+                        ) : null}
+                        {r.status === "draft" && r.review_feedback_kind ? (
+                          <>
+                            <br />
+                            <span style={{ color: r.review_feedback_kind === "ok" ? brand.tealDark : "#B45415", fontWeight: 700 }}>
+                              相手の回答({formatJst(r.review_feedback_at)}): {r.review_feedback_kind === "ok" ? "この内容で問題なし → 署名用リンクを送れます" : "修正を希望"}
+                            </span>
+                            {r.review_feedback ? <span style={{ color: "#44534F" }}> / {r.review_feedback}</span> : null}
+                          </>
+                        ) : null}
                         {r.decline_reason ? (
                           <>
                             <br />
@@ -593,6 +623,9 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                         <>
                           <button onClick={() => startEdit(r)} disabled={busy} style={small}>
                             直す
+                          </button>
+                          <button onClick={() => reviewSend(r)} disabled={busy} style={{ ...small, background: "#fff", color: "#B45415", border: `1px solid ${brand.orange}` }}>
+                            {r.review_sent_at ? "確認用リンクを再送" : "確認用リンクを送る(署名なし)"}
                           </button>
                           <button onClick={() => run("送信", "/api/contracts/send", { id: r.id }, `${r.signer_name} 様(${r.signer_email})に署名用リンクを送ります。よろしいですか？`)} disabled={busy} style={{ ...small, background: brand.orange }}>
                             送信

@@ -34,7 +34,16 @@ export type ContractDbRow = ContractRow & {
   sent_by: string | null;
   signed_ip: string | null;
   created_by: string | null;
+  review_token: string | null;
 };
+
+export async function loadContractByReviewToken(admin: SupabaseClient, token: unknown): Promise<ContractDbRow | null> {
+  if (typeof token !== "string" || token.length < 20 || token.length > 100) return null;
+  const { data } = await admin.from("contracts").select("*").eq("review_token", token).maybeSingle();
+  return (data as ContractDbRow | null) ?? null;
+}
+
+export const reviewUrl = (origin: string, token: string): string => `${origin}/review/${token}`;
 
 export const fail = (status: number, error: string) => NextResponse.json({ error }, { status });
 
@@ -320,3 +329,55 @@ export async function mailSentNotice(admin: SupabaseClient, c: ContractDbRow, or
 }
 
 export type { ContractDoc };
+
+// 確認用リンク(署名なし)の案内。契約は成立しないことを明記する
+export async function mailReviewRequest(c: ContractDbRow, url: string, message: string): Promise<void> {
+  const f = c.fields;
+  const title = kindTitle(f.kind);
+  await sendMails(
+    [c.signer_email],
+    `【うえまつ産業医事務所】${title}の案文のご確認(署名ではありません)`,
+    [
+      f.partyName,
+      `${c.signer_name} 様`,
+      "",
+      `${IMPLEMENTER.officeName}(${SELLER.name})です。`,
+      `${title}の案文(下書き)ができましたので、下のリンクからご確認ください。`,
+      "",
+      url,
+      "",
+      ...(message ? [message, ""] : []),
+      "■ このリンクについて",
+      "・案文を読むためのリンクです。電子署名はできず、このリンクで契約が成立することはありません。",
+      "・内容に問題がなければ画面の「この内容で問題ありません」を、直してほしい点があれば「修正を希望する」からコメントをお送りください。",
+      "・こちらで案文を直した場合も、同じリンクで最新の内容が見られます。",
+      "・内容が固まりましたら、改めて電子署名用のリンクをメールでお送りします。",
+      "",
+      "■ 案文の概要",
+      ...summaryLines(f),
+      "",
+      ...footer,
+    ].join("\n")
+  );
+}
+
+export async function mailReviewFeedback(admin: SupabaseClient, c: ContractDbRow, kind: "ok" | "revise", comment: string, origin: string): Promise<void> {
+  const title = kindTitle(c.fields.kind);
+  await sendMails(
+    await officeEmails(admin),
+    kind === "ok"
+      ? `【電子契約】案文に「問題なし」の回答: ${partyDisplayName(c.fields)}(${c.contract_no})`
+      : `【電子契約】案文の修正希望: ${partyDisplayName(c.fields)}(${c.contract_no})`,
+    [
+      kind === "ok"
+        ? `${title}の案文について、相手方から「この内容で問題ない」と回答がありました。実施者ダッシュボードの「電子契約」から署名用リンクを送れます。`
+        : `${title}の案文について、相手方から修正の希望が届きました。下書きを直して、確認用リンクを送り直すか、署名用リンクを送ってください。`,
+      "",
+      `相手方: ${partyDisplayName(c.fields)}`,
+      `回答者: ${c.signer_name}(${c.signer_email})`,
+      `コメント: ${comment || "(記載なし)"}`,
+      "",
+      `${origin}/office`,
+    ].join("\n")
+  );
+}
