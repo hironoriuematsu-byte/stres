@@ -46,7 +46,7 @@ export function CompanyContractsPanel({ companyName }: { companyName: string }) 
     <Card>
       <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>契約書(電子契約)</h3>
       <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 14px" }}>
-        {companyName} とうえまつ産業医事務所との間の契約書(産業医選任契約・産業医顧問契約)です。締結済みの契約書は、合意締結証明(署名の記録)とあわせていつでも閲覧・印刷(PDF保存)できます。
+        {companyName} とうえまつ産業医事務所との間の契約書(産業医選任契約・産業医顧問契約・覚書)です。締結済みの契約書は、合意締結証明(署名の記録)とあわせていつでも閲覧・印刷(PDF保存)できます。
         署名は、契約書の送付先の方がメールのリンクから行います。
       </p>
       {error && <p style={{ fontSize: 13, color: "#B02A2A" }}>読み込めませんでした: {error}</p>}
@@ -67,7 +67,7 @@ export function CompanyContractsPanel({ companyName }: { companyName: string }) 
                   </div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: brand.ink, marginTop: 6 }}>{kindTitle(r.kind)}</div>
                   <div style={{ fontSize: 13, color: "#44534F", lineHeight: 1.8 }}>
-                    契約開始 {formatJpDate(r.start_date)} / {feeShort(r.monthly_fee, r.fee_period, r.fields?.feeTax)} / 署名者 {r.signer_name}
+                    {r.kind === "memo_coop" ? "効力発生" : "契約開始"} {formatJpDate(r.start_date)}{r.monthly_fee != null ? ` / ${feeShort(r.monthly_fee, r.fee_period, r.fields?.feeTax)}` : ""} / 署名者 {r.signer_name}
                     {r.signed_at ? ` / 締結 ${formatJst(r.signed_at)}` : r.sent_at ? ` / 送付 ${formatJst(r.sent_at)}` : ""}
                   </div>
                 </div>

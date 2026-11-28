@@ -5,9 +5,11 @@ import {
   contractText,
   DEFAULT_FIELDS,
   displayStatus,
+  eventLabel,
   feeText,
   formatJst,
   isExpired,
+  partyLabels,
   parseAccessCode,
   parseContractFields,
   renderContract,
@@ -203,6 +205,74 @@ describe("契約書の文面", () => {
     expect(text).toContain("月1回、1回あたり1時間");
     expect(text).toContain("衛生推進者(法第12条の2)");
     expect(text).toContain("第3条(訪問および相談)");
+  });
+  it("覚書: 原契約の特定・復委任の承諾・原契約と一体", () => {
+    const p = parseContractFields({ ...VALID, kind: "memo_coop", originalTitle: "産業医選任契約書", originalDate: "2025-04-01", coopDoctorName: "佐藤 一郎", fee: "45000", feeTax: "excluded", termMonths: "", hoursPerVisit: "" });
+    if (!p.ok) throw new Error(p.error);
+    const doc = renderContract(p.value, { contractNo: "E2026-TEST0007" });
+    const text = contractText(doc);
+    expect(doc.title).toBe("産業医の業務の分担に関する覚書");
+    expect(doc.ko.label).toBe("甲");
+    expect(text).toContain("2025年4月1日付「産業医選任契約書」(以下「原契約」という)");
+    expect(text).toContain("第1条(協力医師による業務の分担の承諾)");
+    expect(text).toContain("民法第644条の2第1項の承諾を含む");
+    expect(text).toContain("分担業務については本覚書が優先する");
+    expect(text).toContain("協力医師を甲の事業場の産業医として追加して選任し");
+    expect(text).toContain("原契約に定める報酬(月額 45,000円(消費税別))は変わらない");
+    expect(text).toContain("原契約が終了したときは、本覚書も終了する");
+    expect(text).toContain("本覚書の電磁的記録を原本として保管");
+    expect(parseContractFields({ ...VALID, kind: "memo_coop", originalTitle: "", coopDoctorName: "佐藤 一郎" })).toMatchObject({ ok: false, error: expect.stringContaining("原契約の名称") });
+  });
+  it("協力医師(個人・給与扱い): 事務所が甲、医師が乙。フリーランス法の明示・源泉徴収・直接契約の事前協議", () => {
+    const p = parseContractFields({ ...VALID, kind: "coop_individual", partyName: "佐藤 一郎", partyAddress: "大阪市北区1-1", partyRepName: "", partyRepTitle: "", coopClientName: "株式会社テスト 本社", fee: "30000", coopWithholding: true, coopExtraIncluded: true, coopTravel: "actual", signerName: "佐藤 一郎", signerEmail: "sato@example.com" });
+    if (!p.ok) throw new Error(p.error);
+    const doc = renderContract(p.value, { contractNo: "E2026-TEST0008" });
+    const text = contractText(doc);
+    expect(doc.title).toBe("協力医師業務委託契約書");
+    expect(doc.ko.label).toBe("乙");
+    expect(doc.otsu.label).toBe("甲");
+    expect(text).toContain("メステート合同会社(うえまつ産業医事務所)(以下「甲」という)と、佐藤 一郎(以下「乙」という)");
+    expect(text).toContain("株式会社テスト 本社(以下「顧問先」という)");
+    expect(text).toContain("自ら本業務を行う");
+    expect(text).toContain("月額 30,000円とする");
+    expect(text).toContain("所得税法上の給与等として取り扱う");
+    expect(text).toContain("源泉徴収税額表の乙欄");
+    expect(text).toContain("翌月末日(受領日から60日以内)");
+    expect(text).toContain("特定受託事業者に係る取引の適正化等に関する法律第3条");
+    expect(text).toContain("少なくとも終了日の30日前までに本契約の終了を予告");
+    expect(text).toContain("終了後1年間、甲を通じて担当した顧問先");
+    expect(text).toContain("ハラスメント");
+    expect(text).toContain("交通費は、実費を報酬と併せて支払う");
+    expect(text).toContain("その対価は第6条の報酬に含む");
+    expect(doc.articles[5].title).toBe("報酬および支払");
+    expect(text).not.toContain("__FEE__");
+    expect(text).not.toContain("うち消費税");
+  });
+  it("協力医師(法人): 担当医師の特定・適格請求書・臨時対応は1件あたり", () => {
+    const p = parseContractFields({ ...VALID, kind: "coop_corporate", partyName: "医療法人テスト会", partyOfficeName: "テストクリニック", partyRepTitle: "理事長", partyRepName: "高橋 次郎", coopDoctorName: "佐藤 一郎", coopClientName: "株式会社テスト 本社", coopInvoiceNo: "t1234567890123", fee: "33000", feeTax: "included", coopExtraIncluded: false, coopExtraFee: "22000", coopTravel: "included" });
+    if (!p.ok) throw new Error(p.error);
+    expect(p.value.coopInvoiceNo).toBe("T1234567890123");
+    expect(p.value.coopWithholding).toBe(false);
+    const text = contractText(renderContract(p.value, { contractNo: "E2026-TEST0009" }));
+    expect(text).toContain("医療法人テスト会 テストクリニック(以下「乙」という)");
+    expect(text).toContain("佐藤 一郎(以下「担当医師」という)に本業務を行わせる");
+    expect(text).toContain("適格請求書(登録番号 T1234567890123)");
+    expect(text).toContain("月額 33,000円(税込。うち消費税 3,000円)");
+    expect(text).toContain("1件あたり22,000円(税込)を第6条の報酬に加えて支払う");
+    expect(text).toContain("交通費は、報酬に含む");
+    expect(parseContractFields({ ...VALID, kind: "coop_corporate", coopDoctorName: "", coopClientName: "X" })).toMatchObject({ ok: false, error: expect.stringContaining("担当医師") });
+    expect(parseContractFields({ ...VALID, kind: "coop_corporate", coopDoctorName: "A", coopClientName: "X", coopInvoiceNo: "123" })).toMatchObject({ ok: false, error: expect.stringContaining("登録番号") });
+  });
+  it("当事者の呼び方と記録の表記は種類で切り替わる", () => {
+    const main = renderContract(fields(), { contractNo: "E" });
+    expect(partyLabels(main)).toEqual({ party: "甲", office: "乙" });
+    expect(eventLabel("signed", partyLabels(main))).toBe("甲の合意(電子署名)");
+    const coop = parseContractFields({ ...VALID, kind: "coop_individual", partyName: "佐藤 一郎", coopClientName: "X" });
+    if (!coop.ok) throw new Error(coop.error);
+    const labels = partyLabels(renderContract(coop.value, { contractNo: "E" }));
+    expect(labels).toEqual({ party: "乙", office: "甲" });
+    expect(eventLabel("sent", labels)).toBe("送信・甲の合意(電子署名)");
+    expect(eventLabel("viewed", labels)).toBe("乙が閲覧");
   });
   it("既定値は下書きとして成立しない(入力が必要)", () => {
     expect(parseContractFields(DEFAULT_FIELDS as unknown as Record<string, unknown>).ok).toBe(false);

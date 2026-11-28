@@ -19,26 +19,56 @@ import { IMPLEMENTER, SELLER } from "@/lib/org";
 import { formatJpDate, taxIncluded } from "@/lib/plan";
 
 // 契約書の文面の版。文面(条文)を変えたときは +1 する。送信済みの契約書は送信時の文面を保存しているので影響しない
-export const CONTRACT_TEMPLATE_VERSION = 3;
+export const CONTRACT_TEMPLATE_VERSION = 4;
 
 // 署名用リンクの有効期間(日)。期限が切れたら実施者が再送する
 export const SIGN_LINK_DAYS = 14;
 // アクセスコードの入力ミスの上限(超えたら実施者が再送して新しいリンクにする)
 export const CODE_MAX_ATTEMPTS = 10;
 
-export type ContractKind = "appointed" | "advisory";
-export const KIND_OPTIONS: { value: ContractKind; label: string; title: string; desc: string }[] = [
+// 契約の種類:
+//   appointed / advisory : 顧問先(事業者)との契約。甲 = 顧問先、乙 = 事務所
+//   memo_coop            : 既存の顧問先との覚書(協力医師に業務を分担させることの承諾・追加選任)。甲 = 顧問先、乙 = 事務所
+//   coop_individual / coop_corporate : 協力医師(個人 / 医療法人など)との業務委託契約。甲 = 事務所(委託者)、乙 = 協力医師(受託者)
+export type ContractKind = "appointed" | "advisory" | "memo_coop" | "coop_individual" | "coop_corporate";
+export const isCoopKind = (k: string | null | undefined): boolean => k === "coop_individual" || k === "coop_corporate";
+// 事務所が「甲」になる種類(協力医師との契約)。それ以外は契約先が甲
+export const officeIsKo = (k: string | null | undefined): boolean => isCoopKind(k);
+export const KIND_OPTIONS: { value: ContractKind; label: string; title: string; desc: string; group: "顧問先との契約" | "協力医師との契約" }[] = [
   {
     value: "appointed",
     label: "選任契約",
     title: "産業医選任契約書",
     desc: "常時50人以上の労働者を使用する事業場。担当医師を法第13条の産業医として選任し、規則第14条の職務・第15条の職場巡視・衛生委員会への参画(委員)を行います。選任報告が必要です。",
+    group: "顧問先との契約",
   },
   {
     value: "advisory",
     label: "顧問契約",
     title: "産業医顧問契約書",
     desc: "産業医の選任義務のない事業場(50人未満)など。法第13条の2の努力義務に沿って、健康管理の助言・面接指導・ストレスチェックの実施者などを担います。選任・選任報告は行いません。",
+    group: "顧問先との契約",
+  },
+  {
+    value: "memo_coop",
+    label: "覚書(協力医師の分担)",
+    title: "産業医の業務の分担に関する覚書",
+    desc: "すでに契約のある顧問先向け。協力医師に職場巡視・衛生委員会などを分担させることの承諾(復委任)、追加選任、役割分担、料金と責任は変わらないこと、守秘、指揮命令をしないことを定めます。原契約と一体になります。",
+    group: "顧問先との契約",
+  },
+  {
+    value: "coop_individual",
+    label: "協力医師(個人)",
+    title: "協力医師業務委託契約書",
+    desc: "個人の医師に、特定の顧問先の職場巡視・衛生委員会などを委託する契約。事務所が甲(委託者)、医師が乙(受託者)。フリーランス法の明示事項(条件・60日以内の支払・30日前予告・相談窓口)、報酬の給与扱い(源泉徴収)の選択、直接契約の事前協議を含みます。",
+    group: "協力医師との契約",
+  },
+  {
+    value: "coop_corporate",
+    label: "協力医師(法人)",
+    title: "協力医師業務委託契約書(法人)",
+    desc: "医療法人などに、所属医師を担当医師として特定の顧問先の職場巡視・衛生委員会などを委託する契約。事務所が甲(委託者)、法人が乙(受託者)。消費税・適格請求書(インボイス)の定めを含みます。",
+    group: "協力医師との契約",
   },
 ];
 export const kindLabel = (k: string | null | undefined): string => KIND_OPTIONS.find((o) => o.value === k)?.label ?? "選任契約";
@@ -50,8 +80,8 @@ export type FeePeriod = "monthly" | "yearly";
 export type FeeTax = "included" | "excluded"; // 税込 / 税別
 
 export const VISIT_OPTIONS: { value: VisitFrequency; label: string; kinds: ContractKind[] }[] = [
-  { value: "monthly", label: "月1回", kinds: ["appointed", "advisory"] },
-  { value: "bimonthly", label: "2か月に1回", kinds: ["appointed", "advisory"] },
+  { value: "monthly", label: "月1回", kinds: ["appointed", "advisory", "coop_individual", "coop_corporate"] },
+  { value: "bimonthly", label: "2か月に1回", kinds: ["appointed", "advisory", "coop_individual", "coop_corporate"] },
   { value: "quarterly", label: "3か月に1回", kinds: ["advisory"] },
   { value: "on_request", label: "定期の訪問なし(必要なときに別途)", kinds: ["advisory"] },
 ];
@@ -101,6 +131,16 @@ export type ContractFields = {
   coopDoctorName: string; // 協力医師の氏名
   coopDoctorNote: string; // 所属・資格など(任意)
   coopDuties: string; // 協力医師が分担する業務
+  // 覚書(memo_coop): 原契約の特定
+  originalTitle: string; // 原契約の名称(例: 産業医選任契約書)
+  originalDate: string; // 原契約の締結日 YYYY-MM-DD
+  // 協力医師との契約(coop_*)
+  coopClientName: string; // 担当する顧問先(会社名・事業場)
+  coopWithholding: boolean; // 個人: 報酬を給与として扱い源泉徴収する(国税庁の質疑応答事例に沿う。税理士確認前提)
+  coopExtraIncluded: boolean; // 臨時の面接指導・意見書の作成を報酬に含める
+  coopExtraFee: number; // 含めない場合の1件あたりの額(円)
+  coopTravel: "included" | "actual"; // 交通費: 報酬に含む / 実費
+  coopInvoiceNo: string; // 法人: 適格請求書発行事業者の登録番号(任意)
 };
 
 export const DEFAULT_COOP_DUTIES = "職場巡視、衛生委員会への参画(委員としての調査審議)";
@@ -131,7 +171,19 @@ export const DEFAULT_FIELDS: ContractFields = {
   coopDoctorName: "",
   coopDoctorNote: "",
   coopDuties: DEFAULT_COOP_DUTIES,
+  originalTitle: "産業医選任契約書",
+  originalDate: "",
+  coopClientName: "",
+  coopWithholding: true,
+  coopExtraIncluded: true,
+  coopExtraFee: 20000,
+  coopTravel: "actual",
+  coopInvoiceNo: "",
 };
+export const COOP_TRAVEL_OPTIONS: { value: ContractFields["coopTravel"]; label: string }[] = [
+  { value: "actual", label: "実費を別に支払う" },
+  { value: "included", label: "報酬に含む" },
+];
 
 const str = (v: unknown, max: number): string => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const num = (v: unknown): number => (typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN);
@@ -148,7 +200,9 @@ export function validDate(s: string): boolean {
 // 以前の形(kind なし・monthlyFee)で保存された下書きも読めるようにする
 export function parseContractFields(raw: Record<string, unknown>): { ok: true; value: ContractFields } | { ok: false; error: string } {
   const workersN = num(raw.workers);
-  const kind: ContractKind = raw.kind === "advisory" ? "advisory" : "appointed";
+  const kind: ContractKind = (["advisory", "memo_coop", "coop_individual", "coop_corporate"] as const).find((k) => k === raw.kind) ?? "appointed";
+  const memo = kind === "memo_coop";
+  const coopKind = isCoopKind(kind);
   const vf = String(raw.visitFrequency ?? "");
   const v: ContractFields = {
     kind,
@@ -176,15 +230,68 @@ export function parseContractFields(raw: Record<string, unknown>): { ok: true; v
     coopDoctorName: str(raw.coopDoctorName, 60),
     coopDoctorNote: str(raw.coopDoctorNote, 100),
     coopDuties: str(raw.coopDuties, 300) || DEFAULT_COOP_DUTIES,
+    originalTitle: str(raw.originalTitle, 100),
+    originalDate: str(raw.originalDate, 10),
+    coopClientName: str(raw.coopClientName, 150),
+    coopWithholding: raw.coopWithholding !== false,
+    coopExtraIncluded: raw.coopExtraIncluded !== false,
+    coopExtraFee: Math.floor(num(raw.coopExtraFee)),
+    coopTravel: raw.coopTravel === "included" ? "included" : "actual",
+    coopInvoiceNo: str(raw.coopInvoiceNo, 20).toUpperCase(),
   };
-  if (!v.partyName) return { ok: false, error: "契約先の会社名を入力してください" };
-  if (!v.partyAddress) return { ok: false, error: "契約先の所在地を入力してください" };
-  if (!v.partyRepName) return { ok: false, error: "契約先の代表者の氏名を入力してください" };
-  if (!v.partyRepTitle) return { ok: false, error: "契約先の代表者の役職を入力してください" };
+  const partyWord = coopKind ? (kind === "coop_individual" ? "協力医師" : "受託する法人") : "契約先";
+  if (!v.partyName) return { ok: false, error: kind === "coop_individual" ? "協力医師の氏名を入力してください" : `${partyWord}の${kind === "coop_corporate" ? "法人名" : "会社名"}を入力してください` };
+  if (!v.partyAddress) return { ok: false, error: `${partyWord}の所在地(住所)を入力してください` };
+  if (kind !== "coop_individual") {
+    if (!v.partyRepName) return { ok: false, error: `${partyWord}の代表者の氏名を入力してください` };
+    if (!v.partyRepTitle) return { ok: false, error: `${partyWord}の代表者の役職を入力してください` };
+  } else {
+    v.partyRepTitle = "";
+    v.partyRepName = "";
+    v.partyOfficeName = "";
+  }
   if (!v.signerName) return { ok: false, error: "署名する方の氏名を入力してください" };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.signerEmail)) return { ok: false, error: "署名する方のメールアドレスを正しく入力してください" };
+  if (!validDate(v.startDate)) return { ok: false, error: memo ? "覚書の効力発生日を入力してください" : "契約開始日を入力してください" };
+  if (memo) {
+    if (!v.originalTitle) return { ok: false, error: "原契約の名称を入力してください(例: 産業医選任契約書)" };
+    if (!validDate(v.originalDate)) return { ok: false, error: "原契約の締結日を入力してください" };
+    if (!v.coopDoctorName) return { ok: false, error: "協力医師の氏名を入力してください" };
+    if (!(v.fee >= 0 && v.fee <= 100_000_000)) return { ok: false, error: "原契約の報酬は0以上で入力してください(記載しない場合は0)" };
+    v.coopDoctor = true;
+    v.termMonths = 0;
+    v.hoursPerVisit = 0;
+    v.workers = null;
+    v.visitFrequency = "monthly";
+    v.includeStressCheck = false;
+    return { ok: true, value: v };
+  }
+  if (coopKind) {
+    if (!v.coopClientName) return { ok: false, error: "担当する顧問先(会社名・事業場)を入力してください" };
+    if (kind === "coop_corporate" && !v.coopDoctorName) return { ok: false, error: "担当医師(乙に所属する医師)の氏名を入力してください" };
+    if (kind === "coop_corporate" && v.coopInvoiceNo && !/^T\d{13}$/.test(v.coopInvoiceNo)) return { ok: false, error: "登録番号は T と数字13桁で入力してください(無い場合は空のまま)" };
+    if (!(v.termMonths >= 1 && v.termMonths <= 60)) return { ok: false, error: "契約期間は1〜60か月で入力してください" };
+    if (!visitOptionsFor(kind).some((o) => o.value === v.visitFrequency)) return { ok: false, error: "訪問は「月1回」または「2か月に1回」から選んでください" };
+    if (!(v.hoursPerVisit >= 0.5 && v.hoursPerVisit <= 8) || Math.round(v.hoursPerVisit * 2) !== v.hoursPerVisit * 2) {
+      return { ok: false, error: "1回の訪問時間は0.5〜8時間(0.5時間刻み)で入力してください" };
+    }
+    if (!(v.fee >= 0 && v.fee <= 100_000_000)) return { ok: false, error: `${feePeriodLabel(v.feePeriod)}の報酬を入力してください(円)` };
+    if (!v.coopExtraIncluded && !(v.coopExtraFee >= 0 && v.coopExtraFee <= 10_000_000)) return { ok: false, error: "臨時の面接指導・意見書の1件あたりの額を入力してください" };
+    if (kind === "coop_corporate") v.coopWithholding = false;
+    if (kind === "coop_individual") {
+      v.coopDoctorName = "";
+      v.coopInvoiceNo = "";
+    }
+    v.coopDoctor = true;
+    v.workers = null;
+    v.includeStressCheck = false;
+    return { ok: true, value: v };
+  }
+  // ---- 顧問先との契約(選任 / 顧問)の確認 ----
+  v.coopClientName = "";
+  v.originalTitle = "";
+  v.originalDate = "";
   if (v.workers != null && !(v.workers >= 1 && v.workers <= 100000)) return { ok: false, error: "労働者数は1〜100000の範囲で入力してください(空でもかまいません)" };
-  if (!validDate(v.startDate)) return { ok: false, error: "契約開始日を入力してください" };
   if (!(v.termMonths >= 1 && v.termMonths <= 60)) return { ok: false, error: "契約期間は1〜60か月で入力してください" };
   if (!visitOptionsFor(kind).some((o) => o.value === v.visitFrequency)) {
     return { ok: false, error: "選任契約の訪問は「月1回」または「2か月に1回」から選んでください(職場巡視は少なくとも2か月に1回必要です)" };
@@ -248,7 +355,7 @@ export const visitText = (f: Pick<ContractFields, "visitFrequency" | "hoursPerVi
 
 export type ContractItem = string | { text: string; subs: string[] };
 export type ContractArticle = { no: number; title: string; items: ContractItem[] };
-export type ContractParty = { label: "甲" | "乙"; address: string; name: string; rep: string; note?: string };
+export type ContractParty = { label: "甲" | "乙"; role?: string; address: string; name: string; rep: string; note?: string };
 export type ContractDoc = {
   title: string;
   contractNo: string;
@@ -290,6 +397,13 @@ const RULE14_DUTIES: string[] = [
 const COOP_ARTICLE_NO = 5;
 
 export function renderContract(f: ContractFields, meta: { contractNo: string; templateVersion?: number }): ContractDoc {
+  if (f.kind === "memo_coop") return renderMemo(f, meta);
+  if (isCoopKind(f.kind)) return renderCoop(f, meta);
+  return renderMain(f, meta);
+}
+
+// 顧問先との契約(選任 / 顧問)
+function renderMain(f: ContractFields, meta: { contractNo: string; templateVersion?: number }): ContractDoc {
   const end = termEndDate(f.startDate, f.termMonths);
   const site = `${partyDisplayName(f)}(${f.partyAddress})${f.workers ? ` 労働者数 約${f.workers.toLocaleString()}名` : ""}`;
   const appointed = f.kind === "appointed";
@@ -518,18 +632,221 @@ export function renderContract(f: ContractFields, meta: { contractNo: string; te
     closing: "本契約の成立を証するため、本契約の電磁的記録を作成し、甲および乙が電子署名を行う。",
     ko: {
       label: "甲",
+      role: "契約先",
       address: f.partyAddress,
       name: partyDisplayName(f),
       rep: `${f.partyRepTitle} ${f.partyRepName}`,
     },
     otsu: {
       label: "乙",
+      role: "産業医事務所",
       address: OFFICE_PARTY.address,
       name: OFFICE_PARTY.name,
       rep: `${OFFICE_PARTY.repTitle} ${OFFICE_PARTY.repName}`,
       note: `担当医師: ${OFFICE_PARTY.doctor}`,
     },
   };
+}
+
+const CLOSING = "本契約の成立を証するため、本契約の電磁的記録を作成し、甲および乙が電子署名を行う。";
+const E_SIGN_ITEMS = (word: string): ContractItem[] => [
+  `${word}は、電磁的記録により作成し、甲および乙がそれぞれ電子署名(電子署名及び認証業務に関する法律第2条第1項に定める電子署名)を行うことによって成立する。`,
+  `甲および乙は、${word}の電磁的記録を原本として保管し、書面の作成および押印は行わない。`,
+];
+const ANTISOCIAL_ITEMS: ContractItem[] = [
+  "甲および乙は、自らまたはその役員が、暴力団、暴力団員、暴力団準構成員、暴力団関係企業、総会屋その他これらに準ずる者(以下「反社会的勢力」という)に該当しないこと、および反社会的勢力と社会的に非難されるべき関係を有しないことを表明し、保証する。",
+  "甲および乙は、自らまたは第三者を利用して、相手方に対し、暴力的な要求行為、法的な責任を超えた不当な要求行為、脅迫的な言動または業務を妨害する行為をしない。",
+];
+const JURISDICTION_ITEMS = (word: string): ContractItem[] => [
+  `${word}に定めのない事項または${word}の解釈に疑義が生じた事項は、甲乙誠意をもって協議し、解決する。`,
+  `${word}に関する紛争は、京都地方裁判所を第一審の専属的合意管轄裁判所とする。`,
+];
+
+// 既存の顧問先との覚書: 協力医師に業務を分担させることの承諾・追加選任。甲 = 顧問先、乙 = 事務所
+function renderMemo(f: ContractFields, meta: { contractNo: string; templateVersion?: number }): ContractDoc {
+  const articles: ContractArticle[] = [];
+  let n = 0;
+  const art = (title: string, items: ContractItem[]) => articles.push({ no: ++n, title, items });
+  art("協力医師による業務の分担の承諾", [
+    `乙は、原契約に基づき乙が行う産業医の業務のうち次に掲げる業務(以下「分担業務」という)を、乙が雇用しまたは業務を委託する医師であって労働安全衛生法(以下「法」という)第13条第2項の要件を備える者(以下「協力医師」という)に行わせることができ、甲はこれを承諾する(民法第644条の2第1項の承諾を含む)。本覚書の締結時における協力医師および分担業務は次のとおりとし、乙は、協力医師を変更するときは、事前に書面または電磁的方法により甲に通知する。\n協力医師: ${f.coopDoctorName}${f.coopDoctorNote ? `(${f.coopDoctorNote})` : ""}\n分担業務: ${f.coopDuties}`,
+    "原契約に業務の再委託または第三者への委任を制限する定めがあるときは、分担業務については本覚書が優先する。",
+  ]);
+  art("協力医師の選任", [
+    "甲は、協力医師を甲の事業場の産業医として追加して選任し、法第18条第2項第3号に基づき衛生委員会(安全衛生委員会を設ける場合はその委員会)の委員に指名するとともに、労働安全衛生規則第13条に基づき所轄労働基準監督署長に選任報告を行う。乙は、報告に必要な書面(医師免許証の写し、産業医の資格を証する書面等)を甲に提供する。協力医師が変更されたときも同様とする。",
+  ]);
+  art("役割分担", [
+    `分担業務は協力医師が行い、分担業務以外の原契約に基づく業務(健康診断の結果に基づく措置、ストレスチェック、面接指導、意見書の作成等)は、原契約に定める担当医師(${IMPLEMENTER.name})が行う。`,
+    "担当医師と協力医師は、甲の労働者の健康管理に必要な情報を相互に共有し、乙は、両者の業務を統括して原契約に基づく業務の全体を履行する。",
+  ]);
+  art("報酬および責任", [
+    f.fee > 0
+      ? `協力医師が分担業務を行う場合においても、原契約に定める報酬(${feeText(f.fee, f.feePeriod, f.feeTax)})は変わらない。`
+      : "協力医師が分担業務を行う場合においても、原契約に定める報酬は変わらない。",
+    "原契約上の義務および責任は乙が負う。甲と協力医師との間に、別の契約または報酬は生じない。",
+  ]);
+  art("秘密保持および健康情報の取扱い", [
+    "協力医師は、原契約に定める秘密保持および個人情報の取扱いに関する乙および担当医師の義務と同一の義務を負い、乙はこれを協力医師に遵守させる。",
+    "甲は、協力医師に甲の労働者の健康情報を取り扱わせることを承諾する。",
+  ]);
+  art("指揮命令の禁止", [
+    "甲は、協力医師に対し、業務上の指揮命令を行わない。協力医師は、産業医として法令上の職務および誠実義務を自ら負うが、分担業務の進め方に関する甲との調整は乙を通じて行う。",
+  ]);
+  art("効力", [
+    `本覚書は、${formatJpDate(f.startDate)}から効力を生じ、原契約と一体をなす。原契約が終了したときは、本覚書も終了する。`,
+    "本覚書に定めのない事項は、原契約の定めによる。",
+  ]);
+  if (f.specialTerms) art("特記事項", f.specialTerms.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean));
+  art("協議および管轄", JURISDICTION_ITEMS("本覚書"));
+  art("電子契約", E_SIGN_ITEMS("本覚書"));
+  return {
+    title: kindTitle(f.kind),
+    contractNo: meta.contractNo,
+    templateVersion: meta.templateVersion ?? CONTRACT_TEMPLATE_VERSION,
+    preamble: `${f.partyName}(以下「甲」という)と、${OFFICE_PARTY.name}(以下「乙」という)は、甲乙間の${formatJpDate(f.originalDate)}付「${f.originalTitle}」(以下「原契約」という)に関し、次のとおり覚書(以下「本覚書」という)を締結する。`,
+    articles,
+    closing: "本覚書の成立を証するため、本覚書の電磁的記録を作成し、甲および乙が電子署名を行う。",
+    ko: { label: "甲", role: "顧問先", address: f.partyAddress, name: partyDisplayName(f), rep: `${f.partyRepTitle} ${f.partyRepName}` },
+    otsu: {
+      label: "乙",
+      role: "産業医事務所",
+      address: OFFICE_PARTY.address,
+      name: OFFICE_PARTY.name,
+      rep: `${OFFICE_PARTY.repTitle} ${OFFICE_PARTY.repName}`,
+      note: `担当医師: ${OFFICE_PARTY.doctor}`,
+    },
+  };
+}
+
+// 協力医師との業務委託契約: 甲 = 事務所(委託者)、乙 = 協力医師(個人)または法人(受託者)
+function renderCoop(f: ContractFields, meta: { contractNo: string; templateVersion?: number }): ContractDoc {
+  const corp = f.kind === "coop_corporate";
+  const end = termEndDate(f.startDate, f.termMonths);
+  const articles: ContractArticle[] = [];
+  let n = 0;
+  const art = (title: string, items: ContractItem[]) => articles.push({ no: ++n, title, items });
+  const no = (title: string) => articles.find((a) => a.title === title)?.no ?? 0;
+  // 実際に業務を行う医師の呼び方
+  const doc = corp ? "担当医師" : "乙";
+
+  art("目的", [
+    `甲は、甲が${f.coopClientName}(以下「顧問先」という)との間で締結する産業医に関する契約(以下「原契約」という)に基づき甲が負う業務のうち、次条に定める業務を乙に委託し、乙はこれを受託する。`,
+    corp
+      ? `乙は、乙に所属する医師であって労働安全衛生法(以下「法」という)第13条第2項の要件を備える者 ${f.coopDoctorName}(以下「担当医師」という)に本業務を行わせる。担当医師を変更するときは、乙はあらかじめ甲の承諾を得る。`
+      : "乙は、労働安全衛生法(以下「法」という)第13条第2項の要件を備える医師として、自ら本業務を行う。",
+    `${doc}は、顧問先により産業医として選任され、産業医としての法令上の職務および誠実義務を自ら負う。甲は、原契約上、顧問先が${doc}を産業医として選任し衛生委員会の委員に指名することについて、顧問先の承諾を得る。`,
+  ]);
+  art("業務の内容", [
+    `乙が${corp ? "担当医師により" : ""}行う業務(以下「本業務」という)は、顧問先の事業場における次の業務とする。\n${f.coopDuties}`,
+    `${doc}は、${visitLabel(f.visitFrequency)}、1回あたり${f.hoursPerVisit}時間を標準として顧問先の事業場を訪問し、本業務を行う。訪問の日時は、${doc}が顧問先と調整し、甲に共有する。職場巡視は労働安全衛生規則第15条に従って行う。`,
+    `本業務以外の原契約に基づく産業医の業務(健康診断の結果に基づく措置、ストレスチェック、面接指導、意見書の作成、健康管理Webによる管理等)は、甲の代表医師(${IMPLEMENTER.full})が行う。`,
+    `${doc}は、訪問の都度、職場巡視の所見および衛生委員会の議事の要点を訪問後7日以内に甲に報告し、顧問先の労働者の健康管理に必要な情報を甲と共有する。報告は電磁的方法(甲の指定する様式または健康管理Web)によることができる。`,
+    f.coopExtraIncluded
+      ? `顧問先の求めにより${doc}が訪問日に臨時の面接指導または意見書の作成を行う場合、その対価は第${"__FEE__"}条の報酬に含む。訪問日以外の対応を要するときは、甲乙協議のうえ別に定める。`
+      : `顧問先の求めにより${doc}が臨時の面接指導または意見書の作成を行ったときは、甲は、1件あたり${f.coopExtraFee.toLocaleString()}円(${feeTaxLabel(f.feeTax)})を第${"__FEE__"}条の報酬に加えて支払う。`,
+  ]);
+  art("業務の遂行方法および独立性", [
+    `${doc}は、医学に関する専門的な知識に基づき、自らの裁量と責任において本業務を行う。甲は、本業務の具体的な方法、時間および場所について${doc}に指揮命令をしない。`,
+    "乙は、本業務の遂行を妨げない範囲で、他の業務に従事することを妨げられない。乙は、本契約に定める業務以外の依頼を受諾する義務を負わない。",
+    `甲は、${doc}が産業医として行う判断、意見および勧告を尊重し、これを理由として乙に不利益な取扱いをしない。`,
+  ]);
+  art("資格および保険", [
+    `乙は、${doc}が医師免許を有し、法第13条第2項および労働安全衛生規則第14条第2項に定める産業医の要件を備えることを表明し、保証する。乙は、本契約の締結時に、これらを証する書面の写し(医師免許証、産業医学基本講座の修了証または日本医師会認定産業医の認定証等)を甲に提出し、顧問先の選任報告に用いることを承諾する。`,
+    `乙は、本契約の期間中、${doc}について医師賠償責任保険に加入し、これを維持する。`,
+  ]);
+  art("健康管理Web等の利用および情報の取扱い", [
+    `甲は、本業務に必要な範囲で、${doc}に健康管理WebおよびストレスチェックWebのアカウントを付与することができる。乙は、ID・パスワードを適切に管理し、本業務の目的以外に利用せず、本契約の終了時に利用を終了する。`,
+    `乙および${doc}は、本業務により知り得た顧問先の労働者の健康情報その他の個人情報を、個人情報の保護に関する法律、法および厚生労働省の指針に従って取り扱い、労働者本人の同意がある場合または法令に定めがある場合を除き、顧問先を含む第三者に提供しない。`,
+    "乙は、本業務に関して知り得た甲および顧問先の秘密情報を、事前の承諾なく第三者に開示または漏洩してはならず、本業務の目的以外に使用しない。本契約の終了後も同様とする。",
+  ]);
+  const feeItems: ContractItem[] = [];
+  if (corp) {
+    feeItems.push(
+      f.feeTax === "excluded"
+        ? `本業務の報酬は、${feeText(f.fee, f.feePeriod, f.feeTax)}とし、甲は、これに消費税および地方消費税の相当額を加えた額を支払う。`
+        : `本業務の報酬は、${feeText(f.fee, f.feePeriod, f.feeTax)}とする。`,
+      `乙は、業務を行った${f.feePeriod === "yearly" ? "年度の初月" : "月"}の末日までに適格請求書${f.coopInvoiceNo ? `(登録番号 ${f.coopInvoiceNo})` : "(適格請求書発行事業者である場合)"}を甲に交付し、甲は、乙が業務を行った月の末日を給付を受領した日として、その翌月末日(受領日から60日以内)までに乙の指定する銀行口座に振り込んで支払う。振込手数料は甲の負担とする。`
+    );
+  } else if (f.coopWithholding) {
+    feeItems.push(
+      `本業務の報酬は、${feePeriodLabel(f.feePeriod)} ${f.fee.toLocaleString()}円とする。`,
+      "甲および乙は、産業医の業務の対価に関する国税庁の取扱いに従い、本業務の報酬を所得税法上の給与等として取り扱う。甲は、所得税および復興特別所得税を源泉徴収(給与所得の源泉徴収税額表の乙欄による。乙が甲に給与所得者の扶養控除等申告書を提出した場合は甲欄)のうえ支払い、支払明細を乙に交付する。本業務の報酬には消費税は課されない。",
+      "税務上の取扱いが前項と異なることが判明したときは、甲乙協議のうえ必要な修正を行う。前項の取扱いは税務上のものであり、本契約が雇用契約であることを意味しない。",
+      "甲は、乙が業務を行った月の末日を給付を受領した日として、その翌月末日(受領日から60日以内)までに乙の指定する銀行口座に振り込んで支払う。振込手数料は甲の負担とする。"
+    );
+  } else {
+    feeItems.push(
+      f.feeTax === "excluded"
+        ? `本業務の報酬は、${feeText(f.fee, f.feePeriod, f.feeTax)}とし、甲は、これに消費税および地方消費税の相当額を加えた額を支払う。`
+        : `本業務の報酬は、${feeText(f.fee, f.feePeriod, f.feeTax)}とする。`,
+      "乙は、業務を行った月の末日までに請求書を甲に交付し、甲は、乙が業務を行った月の末日を給付を受領した日として、その翌月末日(受領日から60日以内)までに乙の指定する銀行口座に振り込んで支払う。振込手数料は甲の負担とする。甲は、本業務の報酬について源泉徴収を行わない。"
+    );
+  }
+  feeItems.push(
+    f.coopTravel === "actual"
+      ? "顧問先の事業場への訪問に要する交通費は、実費を報酬と併せて支払う。乙は、経路および金額を報告する。"
+      : "顧問先の事業場への訪問に要する交通費は、報酬に含む。",
+    "本契約書は、特定受託事業者に係る取引の適正化等に関する法律第3条に基づく取引条件(業務の内容、報酬の額、支払期日等)の明示を兼ねる。"
+  );
+  art("報酬および支払", feeItems);
+  art("契約期間および終了", [
+    `本契約の有効期間は、${formatJpDate(f.startDate)}から${formatJpDate(end)}までの${f.termMonths}か月間とする。`,
+    f.autoRenew
+      ? "有効期間の満了する日の1か月前までに、甲または乙から書面または電磁的方法による終了の申出がないときは、本契約は同一の条件でさらに1年間更新されるものとし、以後も同様とする。"
+      : "有効期間の満了後の本契約の継続については、有効期間の満了する日の1か月前までに甲乙協議のうえ定める。",
+    "甲と顧問先との原契約が終了したときは、本契約も終了する。甲は、原契約の終了が見込まれるときは速やかに乙に通知し、少なくとも終了日の30日前までに本契約の終了を予告する。",
+    "甲および乙は、少なくとも30日前までに書面または電磁的方法により相手方に通知することにより、本契約を解約することができる。甲は、本契約を更新しないときも同様に予告する。",
+    "甲または乙は、相手方が本契約に違反し、相当の期間を定めて催告したにもかかわらず是正されないとき、相手方について支払の停止もしくは破産手続開始その他これに類する手続の申立てがあったとき、または反社会的勢力の排除に関する条項の表明もしくは保証に反したときは、直ちに本契約を解除することができる。",
+    "本契約が終了したときは、乙は、甲および顧問先から預かった資料を返還または廃棄し、健康管理Web等の利用を終了し、必要な引継ぎに協力する。",
+  ]);
+  art("顧問先との直接契約", [
+    "乙は、本契約の期間中および終了後1年間、甲を通じて担当した顧問先との間で産業医の業務に関する契約を直接締結しようとするときは、事前に甲と協議する。",
+  ]);
+  art("ハラスメントに関する相談", [
+    `甲は、乙${corp ? "および担当医師" : ""}からのハラスメント(顧問先の関係者によるものを含む)に関する相談に応じる窓口を、${OFFICE_PARTY.email}(担当: ${OFFICE_PARTY.repTitle} ${OFFICE_PARTY.repName})に置く。甲は、相談を理由として乙に不利益な取扱いをせず、必要に応じて顧問先と協議して対応する。`,
+  ]);
+  art("損害賠償", [
+    "甲または乙は、本契約に違反して相手方に損害を与えたときは、その直接かつ通常の損害を賠償する。ただし、甲の賠償額は、甲の故意または重大な過失による場合を除き、損害の原因が生じた月の直前12か月間に甲が乙に支払った報酬の額を上限とする。",
+    `${doc}が行う医学的判断に関する責任は乙が負い、乙はこれを前条までの保険その他により担保する。`,
+  ]);
+  art("反社会的勢力の排除", ANTISOCIAL_ITEMS);
+  if (f.specialTerms) art("特記事項", f.specialTerms.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean));
+  art("協議および管轄", JURISDICTION_ITEMS("本契約"));
+  art("電子契約", E_SIGN_ITEMS("本契約"));
+
+  // 業務の内容の条から報酬の条を番号で参照する
+  const feeNo = String(no("報酬および支払"));
+  for (const a of articles) {
+    a.items = a.items.map((it) => (typeof it === "string" ? it.replace(/__FEE__/g, feeNo) : { ...it, text: it.text.replace(/__FEE__/g, feeNo) }));
+  }
+  return {
+    title: kindTitle(f.kind),
+    contractNo: meta.contractNo,
+    templateVersion: meta.templateVersion ?? CONTRACT_TEMPLATE_VERSION,
+    preamble: `${OFFICE_PARTY.name}(以下「甲」という)と、${partyDisplayName(f)}(以下「乙」という)は、甲が顧問先から受託する産業医の業務の一部の委託に関し、次のとおり業務委託契約(以下「本契約」という)を締結する。`,
+    articles,
+    closing: CLOSING,
+    ko: {
+      label: "乙",
+      role: corp ? "受託者(協力医師の所属法人)" : "受託者(協力医師)",
+      address: f.partyAddress,
+      name: partyDisplayName(f),
+      rep: corp ? `${f.partyRepTitle} ${f.partyRepName}` : f.coopDoctorNote ? `医師(${f.coopDoctorNote})` : "医師",
+      note: corp ? `担当医師: ${f.coopDoctorName}` : undefined,
+    },
+    otsu: {
+      label: "甲",
+      role: "委託者(産業医事務所)",
+      address: OFFICE_PARTY.address,
+      name: OFFICE_PARTY.name,
+      rep: `${OFFICE_PARTY.repTitle} ${OFFICE_PARTY.repName}`,
+      note: `代表医師: ${OFFICE_PARTY.doctor}`,
+    },
+  };
+}
+
+// 当事者の呼び方(甲/乙)。ko = 契約先(署名者)、otsu = 事務所
+export function partyLabels(doc: Pick<ContractDoc, "ko" | "otsu"> | null | undefined): { party: "甲" | "乙"; office: "甲" | "乙" } {
+  return { party: doc?.ko.label ?? "甲", office: doc?.otsu.label ?? "乙" };
 }
 
 // ハッシュを取るための文面(契約書の内容を1つの文字列に並べたもの)。
@@ -584,14 +901,16 @@ export type ContractEventKind = "created" | "updated" | "sent" | "resent" | "vie
 export const EVENT_LABEL: Record<ContractEventKind, string> = {
   created: "作成(下書き)",
   updated: "下書きの変更",
-  sent: "送信・乙の合意(電子署名)",
+  sent: "送信・{office}の合意(電子署名)",
   resent: "再送(新しいリンク)",
-  viewed: "甲が閲覧",
-  signed: "甲の合意(電子署名)",
+  viewed: "{party}が閲覧",
+  signed: "{party}の合意(電子署名)",
   completed: "締結完了・事業者署名の付与",
-  declined: "甲が辞退",
+  declined: "{party}が辞退",
   cancelled: "送信者が取消",
 };
+export const eventLabel = (event: string, labels: { party: string; office: string }): string =>
+  (EVENT_LABEL[event as ContractEventKind] ?? event).replace("{party}", labels.party).replace("{office}", labels.office);
 
 export type ContractEvent = {
   id: string;

@@ -13,8 +13,10 @@ import {
   type ContractRow,
   feeText,
   formatJst,
+  isCoopKind,
   kindTitle,
   partyDisplayName,
+  partyLabels,
   termEndDate,
   visitText,
 } from "@/lib/contract";
@@ -159,6 +161,25 @@ export const OFFICE_SIGN_NAME = `${SELLER.name} 代表社員 ${SELLER.representa
 const footer = [`${SELLER.name}(${IMPLEMENTER.officeName})`, `担当医師: ${IMPLEMENTER.full}`, SELLER.address, `お問い合わせ: ${SELLER.email}`];
 
 function summaryLines(f: ContractFields): string[] {
+  if (f.kind === "memo_coop") {
+    return [
+      `書面: ${kindTitle(f.kind)}`,
+      `顧問先: ${partyDisplayName(f)}`,
+      `原契約: ${formatJpDate(f.originalDate)}付 ${f.originalTitle}`,
+      `協力医師: ${f.coopDoctorName}(${f.coopDuties})`,
+      `効力発生日: ${formatJpDate(f.startDate)}`,
+    ];
+  }
+  if (isCoopKind(f.kind)) {
+    return [
+      `契約書: ${kindTitle(f.kind)}`,
+      `受託者: ${partyDisplayName(f)}${f.kind === "coop_corporate" ? `(担当医師 ${f.coopDoctorName})` : ""}`,
+      `顧問先: ${f.coopClientName}`,
+      `業務: ${f.coopDuties} / 訪問: ${visitText(f)}`,
+      `契約期間: ${formatJpDate(f.startDate)} 〜 ${formatJpDate(termEndDate(f.startDate, f.termMonths))}(${f.termMonths}か月${f.autoRenew ? "・自動更新" : ""})`,
+      `報酬: ${f.kind === "coop_individual" && f.coopWithholding ? `${f.feePeriod === "yearly" ? "年額" : "月額"} ${f.fee.toLocaleString()}円(給与扱い・源泉徴収あり)` : feeText(f.fee, f.feePeriod, f.feeTax)}`,
+    ];
+  }
   return [
     `契約書: ${kindTitle(f.kind)}`,
     `契約先: ${partyDisplayName(f)}`,
@@ -205,8 +226,8 @@ export async function mailCompleted(admin: SupabaseClient, c: ContractDbRow, url
   const common = [
     `契約番号: ${c.contract_no}`,
     `締結日時: ${formatJst(c.signed_at)}`,
-    `甲の署名者: ${c.signed_name ?? c.signer_name}${c.signed_title ? `(${c.signed_title})` : ""}`,
-    `乙の署名者: ${OFFICE_SIGN_NAME}`,
+    `${partyLabels(c.document).party}の署名者: ${c.signed_name ?? c.signer_name}${c.signed_title ? `(${c.signed_title})` : ""}`,
+    `${partyLabels(c.document).office}の署名者: ${OFFICE_SIGN_NAME}`,
     `文面のハッシュ(SHA-256): ${c.document_hash ?? ""}`,
   ];
   await sendMails(
@@ -226,8 +247,11 @@ export async function mailCompleted(admin: SupabaseClient, c: ContractDbRow, url
       ...common,
       "",
       "■ 今後の流れ",
-      "・担当医師より、初回訪問の日程についてご連絡します。",
-      ...(f.kind === "appointed" ? ["・選任後、遅滞なく所轄労働基準監督署へ産業医選任報告(様式第3号)の提出が必要です。必要な書面(医師免許証の写し等)はこちらからお送りします。"] : []),
+      ...(f.kind === "memo_coop"
+        ? ["・協力医師の追加選任報告(様式第3号)の提出をお願いします。必要な書面(医師免許証の写し等)はこちらからお送りします。", "・衛生委員会の委員への指名と、次回の開催日時のご連絡をお願いします。"]
+        : isCoopKind(f.kind)
+          ? ["・選任報告に必要な書面(医師免許証の写し、産業医の資格を証する書面)の写しをお送りください。", "・健康管理Webのアカウントと、初回訪問の日程についてご連絡します。"]
+          : ["・担当医師より、初回訪問の日程についてご連絡します。", ...(f.kind === "appointed" ? ["・選任後、遅滞なく所轄労働基準監督署へ産業医選任報告(様式第3号)の提出が必要です。必要な書面(医師免許証の写し等)はこちらからお送りします。"] : [])]),
       "",
       ...footer,
     ].join("\n")

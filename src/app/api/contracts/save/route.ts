@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { accessCodeHash } from "@/lib/contract-crypto";
-import { contractNo, parseAccessCode, parseContractFields } from "@/lib/contract";
+import { contractNo, isCoopKind, parseAccessCode, parseContractFields } from "@/lib/contract";
 import { addEvent, fail, loadContract, logOffice, officeContext } from "@/lib/contract-server";
 
 export const runtime = "nodejs";
@@ -25,7 +25,8 @@ export async function POST(req: Request) {
   const code = parseAccessCode(body.accessCode);
   if (!code.ok) return fail(400, code.error);
   const note = typeof body.note === "string" ? body.note.trim().slice(0, 1000) : "";
-  const companyId = typeof body.companyId === "string" && /^[0-9a-f-]{36}$/i.test(body.companyId) ? body.companyId : null;
+  // 協力医師との契約は顧問先の担当者(jimu)から見えてはいけないので、企業には結び付けない(顧問先名は fields に入る)
+  const companyId = !isCoopKind(f.kind) && typeof body.companyId === "string" && /^[0-9a-f-]{36}$/i.test(body.companyId) ? body.companyId : null;
   if (companyId) {
     const { data: co } = await admin.from("companies").select("id").eq("id", companyId).maybeSingle();
     if (!co) return fail(400, "選択した企業が見つかりません");
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
     signer_email: f.signerEmail,
     signer_title: f.signerTitle || null,
     kind: f.kind,
-    monthly_fee: f.fee,
+    monthly_fee: f.kind === "memo_coop" && !(f.fee > 0) ? null : f.fee,
     fee_period: f.feePeriod,
     start_date: f.startDate,
     note: note || null,

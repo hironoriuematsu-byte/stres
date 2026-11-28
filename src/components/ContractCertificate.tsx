@@ -1,6 +1,6 @@
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER, SELLER } from "@/lib/org";
-import { type ContractEvent, EVENT_LABEL, formatJst } from "@/lib/contract";
+import { type ContractEvent, eventLabel, formatJst } from "@/lib/contract";
 
 export type CertificateContract = {
   contract_no: string;
@@ -13,7 +13,7 @@ export type CertificateContract = {
 
 // 合意締結証明(監査証跡)。契約書の末尾に続けて表示・印刷する。
 // 誰が・いつ・どこから(IP)・何をしたかの記録と、文面のハッシュ・記録の連鎖・事業者署名を示す
-export function ContractCertificate({ contract, events }: { contract: CertificateContract; events: ContractEvent[] }) {
+export function ContractCertificate({ contract, events, labels = { party: "甲", office: "乙" } }: { contract: CertificateContract; events: ContractEvent[]; labels?: { party: string; office: string } }) {
   const td = { padding: "6px 8px", borderBottom: `1px solid ${brand.line}`, fontSize: 12.5, verticalAlign: "top" as const };
   const th = { ...td, background: "#EEF5F4", fontWeight: 700, textAlign: "left" as const, whiteSpace: "nowrap" as const };
   const mono = { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontSize: 11.5, wordBreak: "break-all" as const };
@@ -71,12 +71,12 @@ export function ContractCertificate({ contract, events }: { contract: Certificat
                 <td style={td}>{e.seq}</td>
                 <td style={{ ...td, whiteSpace: "nowrap" }}>{formatJst(e.at)}</td>
                 <td style={td}>
-                  {EVENT_LABEL[e.event] ?? e.event}
+                  {eventLabel(e.event, labels)}
                   {e.event === "declined" && e.detail && (e.detail as Record<string, unknown>).reason ? (
                     <div style={{ color: "#5B6B6A" }}>理由: {String((e.detail as Record<string, unknown>).reason)}</div>
                   ) : null}
                 </td>
-                <td style={td}>{e.actor === "office" ? "乙(事務所)" : e.actor === "party" ? "甲(契約先)" : "システム"}</td>
+                <td style={td}>{e.actor === "office" ? `${labels.office}(事務所)` : e.actor === "party" ? `${labels.party}(契約先)` : "システム"}</td>
                 <td style={td}>
                   {e.actor_name && <div>{e.actor_name}</div>}
                   {e.actor_email && <div style={{ color: "#5B6B6A" }}>{e.actor_email}</div>}
