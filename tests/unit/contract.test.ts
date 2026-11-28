@@ -268,8 +268,12 @@ describe("契約書の文面", () => {
     expect(text).toContain("終了後1年間、甲を通じて担当した顧問先");
     expect(text).toContain("ハラスメント");
     expect(text).toContain("交通費は、実費を報酬と併せて支払う");
-    expect(text).toContain("その対価は第6条の報酬に含む");
-    expect(doc.articles[5].title).toBe("報酬および支払");
+    expect(text).toContain("その対価は第5条の報酬に含む");
+    expect(doc.articles[4].title).toBe("報酬および支払");
+    expect(text).not.toContain("業務の遂行方法および独立性");
+    expect(text).not.toContain("指揮命令をしない");
+    expect(text).toContain("自らの裁量と責任において本業務を行う。");
+    expect(doc.articles[1].title).toBe("業務の内容");
     expect(text).not.toContain("__FEE__");
     expect(text).not.toContain("うち消費税");
   });
@@ -305,7 +309,7 @@ describe("契約書の文面", () => {
     expect(text).toContain("佐藤 一郎(以下「担当医師」という)に本業務を行わせる");
     expect(text).toContain("適格請求書(登録番号 T1234567890123)");
     expect(text).toContain("月額 33,000円(税込。うち消費税 3,000円)");
-    expect(text).toContain("1件あたり22,000円(税込)を第6条の報酬に加えて支払う");
+    expect(text).toContain("1件あたり22,000円(税込)を第5条の報酬に加えて支払う");
     expect(text).toContain("交通費は、報酬に含む");
     expect(parseContractFields({ ...VALID, kind: "coop_corporate", coopDoctorName: "", coopClientName: "X" })).toMatchObject({ ok: false, error: expect.stringContaining("担当医師") });
     expect(parseContractFields({ ...VALID, kind: "coop_corporate", coopDoctorName: "A", coopClientName: "X", coopInvoiceNo: "123" })).toMatchObject({ ok: false, error: expect.stringContaining("登録番号") });
