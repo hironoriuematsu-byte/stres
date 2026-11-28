@@ -7,7 +7,7 @@ import { ContractSheet } from "@/components/ContractSheet";
 import { ContractCertificate } from "@/components/ContractCertificate";
 import { brand } from "@/lib/brand";
 import { SELLER } from "@/lib/org";
-import { type ContractDoc, type ContractEvent, displayStatus, formatJst, STATUS_LABEL } from "@/lib/contract";
+import { type ContractDoc, type ContractEvent, displayStatus, formatJst, partyLabels, STATUS_LABEL } from "@/lib/contract";
 
 export type PublicContract = {
   id: string;
@@ -34,6 +34,7 @@ const OFFICE_SIGN = `${SELLER.name} 代表社員 ${SELLER.representative}`;
 export function SignView({ token, contract: c, doc, events }: { token: string; contract: PublicContract; doc: ContractDoc; events: ContractEvent[] }) {
   const router = useRouter();
   const st = displayStatus(c.status, c.token_expires_at);
+  const labels = partyLabels(doc);
   const [name, setName] = useState(c.signer_name);
   const [title, setTitle] = useState(c.signer_title ?? "");
   const [code, setCode] = useState("");
@@ -90,7 +91,7 @@ export function SignView({ token, contract: c, doc, events }: { token: string; c
       <Card className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <div>
           <Badge tone={STATUS_LABEL[st].tone}>{STATUS_LABEL[st].label}</Badge>
-          <h2 style={{ fontSize: 18, color: brand.ink, margin: "8px 0 2px" }}>産業医業務委託契約書(契約番号 {c.contract_no})</h2>
+          <h2 style={{ fontSize: 18, color: brand.ink, margin: "8px 0 2px" }}>{doc.title}(契約番号 {c.contract_no})</h2>
           <div style={{ fontSize: 13, color: "#5B6B6A" }}>
             送信者: うえまつ産業医事務所({SELLER.name}) / 署名者: {c.signer_name} 様({c.signer_email})
           </div>
@@ -132,7 +133,7 @@ export function SignView({ token, contract: c, doc, events }: { token: string; c
       <ContractSheet doc={doc} otsuSign={otsuSign} koSign={koSign} watermark={watermark}>
         {st === "sent" && (
           <div className="no-print" style={{ marginTop: 24, border: `2px solid ${brand.orange}`, borderRadius: 12, padding: "18px 20px", background: "#FFF9F4" }}>
-            <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 10px" }}>甲(契約先)の電子署名</h3>
+            <h3 style={{ fontSize: 16, color: brand.ink, margin: "0 0 10px" }}>{labels.party}({doc.ko.role ?? "契約先"})の電子署名</h3>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 12 }}>
               <label style={{ fontSize: 13, color: "#44534F" }}>
                 署名者の氏名
@@ -153,7 +154,7 @@ export function SignView({ token, contract: c, doc, events }: { token: string; c
             <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 14, color: brand.ink, lineHeight: 1.7, marginBottom: 14 }}>
               <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} style={{ marginTop: 5, width: 18, height: 18 }} />
               <span>
-                上記の契約書の内容を確認し、甲を代表して(または甲から権限を与えられた者として)電子署名により本契約を締結することに同意します。
+                上記の契約書の内容を確認し、{labels.party}として(または{labels.party}から権限を与えられた者として)電子署名により本契約を締結することに同意します。
                 この操作が、電子署名及び認証業務に関する法律に定める電子署名として記録されることを了承します。
               </span>
             </label>
@@ -185,7 +186,7 @@ export function SignView({ token, contract: c, doc, events }: { token: string; c
             )}
           </div>
         )}
-        <ContractCertificate contract={c} events={events} />
+        <ContractCertificate contract={c} events={events} labels={labels} />
       </ContractSheet>
     </div>
   );

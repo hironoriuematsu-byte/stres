@@ -13,9 +13,12 @@ import {
   type ContractRow,
   feeText,
   formatJst,
+  isCoopKind,
+  kindTitle,
   partyDisplayName,
+  partyLabels,
   termEndDate,
-  visitLabel,
+  visitText,
 } from "@/lib/contract";
 
 // ============================================================
@@ -158,11 +161,32 @@ export const OFFICE_SIGN_NAME = `${SELLER.name} 代表社員 ${SELLER.representa
 const footer = [`${SELLER.name}(${IMPLEMENTER.officeName})`, `担当医師: ${IMPLEMENTER.full}`, SELLER.address, `お問い合わせ: ${SELLER.email}`];
 
 function summaryLines(f: ContractFields): string[] {
+  if (f.kind === "memo_coop") {
+    return [
+      `書面: ${kindTitle(f.kind)}`,
+      `顧問先: ${partyDisplayName(f)}`,
+      `原契約: ${formatJpDate(f.originalDate)}付 ${f.originalTitle}`,
+      `協力医師: ${f.coopDoctorName}(${f.coopDuties})`,
+      `効力発生日: ${formatJpDate(f.startDate)}`,
+    ];
+  }
+  if (isCoopKind(f.kind)) {
+    return [
+      `契約書: ${kindTitle(f.kind)}`,
+      `受託者: ${partyDisplayName(f)}${f.kind === "coop_corporate" ? `(担当医師 ${f.coopDoctorName})` : ""}`,
+      `顧問先: ${f.coopClientName}`,
+      `業務: ${f.coopDuties} / 訪問: ${visitText(f)}`,
+      `契約期間: ${formatJpDate(f.startDate)} 〜 ${formatJpDate(termEndDate(f.startDate, f.termMonths))}(${f.termMonths}か月${f.autoRenew ? "・自動更新" : ""})`,
+      `報酬: ${f.kind === "coop_individual" && f.coopWithholding ? `${f.feePeriod === "yearly" ? "年額" : "月額"} ${f.fee.toLocaleString()}円(給与扱い・源泉徴収あり)` : feeText(f.fee, f.feePeriod, f.feeTax)}`,
+    ];
+  }
   return [
+    `契約書: ${kindTitle(f.kind)}`,
     `契約先: ${partyDisplayName(f)}`,
     `契約期間: ${formatJpDate(f.startDate)} 〜 ${formatJpDate(termEndDate(f.startDate, f.termMonths))}(${f.termMonths}か月${f.autoRenew ? "・自動更新" : ""})`,
-    `訪問: ${visitLabel(f.visitFrequency)}・1回 ${f.hoursPerVisit}時間`,
-    `報酬: ${feeText(f.monthlyFee)}`,
+    `訪問: ${visitText(f)}`,
+    `報酬: ${feeText(f.fee, f.feePeriod, f.feeTax)}`,
+    ...(f.coopDoctor && f.coopDoctorName ? [`協力医師: ${f.coopDoctorName}(${f.coopDuties})`] : []),
   ];
 }
 
@@ -170,15 +194,15 @@ export async function mailSignRequest(c: ContractDbRow, url: string, resend: boo
   const f = c.fields;
   await sendMails(
     [c.signer_email],
-    `【うえまつ産業医事務所】産業医業務委託契約書の電子署名のお願い${resend ? "(再送)" : ""}(契約番号 ${c.contract_no})`,
+    `【うえまつ産業医事務所】${kindTitle(f.kind)}の電子署名のお願い${resend ? "(再送)" : ""}(契約番号 ${c.contract_no})`,
     [
       f.partyName,
       `${c.signer_name} 様`,
       "",
       `${IMPLEMENTER.officeName}(${SELLER.name})です。`,
       resend
-        ? "産業医業務委託契約書の署名用リンクを新しくお送りします(以前のリンクは使えなくなりました)。"
-        : "産業医業務委託契約書をお送りします。下のリンクを開いて内容をご確認のうえ、電子署名(同意)をお願いします。",
+        ? `${kindTitle(f.kind)}の署名用リンクを新しくお送りします(以前のリンクは使えなくなりました)。`
+        : `${kindTitle(f.kind)}をお送りします。下のリンクを開いて内容をご確認のうえ、電子署名(同意)をお願いします。`,
       "",
       url,
       "",
@@ -202,18 +226,18 @@ export async function mailCompleted(admin: SupabaseClient, c: ContractDbRow, url
   const common = [
     `契約番号: ${c.contract_no}`,
     `締結日時: ${formatJst(c.signed_at)}`,
-    `甲の署名者: ${c.signed_name ?? c.signer_name}${c.signed_title ? `(${c.signed_title})` : ""}`,
-    `乙の署名者: ${OFFICE_SIGN_NAME}`,
+    `${partyLabels(c.document).party}の署名者: ${c.signed_name ?? c.signer_name}${c.signed_title ? `(${c.signed_title})` : ""}`,
+    `${partyLabels(c.document).office}の署名者: ${OFFICE_SIGN_NAME}`,
     `文面のハッシュ(SHA-256): ${c.document_hash ?? ""}`,
   ];
   await sendMails(
     [c.signer_email],
-    `【うえまつ産業医事務所】産業医業務委託契約が締結されました(契約番号 ${c.contract_no})`,
+    `【うえまつ産業医事務所】${kindTitle(f.kind)}が締結されました(契約番号 ${c.contract_no})`,
     [
       f.partyName,
       `${c.signed_name ?? c.signer_name} 様`,
       "",
-      "産業医業務委託契約の電子署名をいただき、ありがとうございます。契約が締結されました。",
+      `${kindTitle(f.kind)}の電子署名をいただき、ありがとうございます。契約が締結されました。`,
       "契約書と合意締結証明(署名の記録)は、下のリンクからいつでも閲覧・印刷(PDF保存)できます。このメールは契約書の控えとして保管してください。",
       "",
       url,
@@ -223,17 +247,20 @@ export async function mailCompleted(admin: SupabaseClient, c: ContractDbRow, url
       ...common,
       "",
       "■ 今後の流れ",
-      "・担当医師より、初回訪問の日程についてご連絡します。",
-      "・常時50人以上の労働者を使用する事業場では、選任後14日以内に所轄労働基準監督署へ産業医選任報告が必要です。必要な書面(医師免許証の写し等)はこちらからお送りします。",
+      ...(f.kind === "memo_coop"
+        ? ["・協力医師の追加選任報告(様式第3号)の提出をお願いします。必要な書面(医師免許証の写し等)はこちらからお送りします。", "・衛生委員会の委員への指名と、次回の開催日時のご連絡をお願いします。"]
+        : isCoopKind(f.kind)
+          ? ["・選任報告に必要な書面(医師免許証の写し、産業医の資格を証する書面)の写しをお送りください。", "・健康管理Webのアカウントと、初回訪問の日程についてご連絡します。"]
+          : ["・担当医師より、初回訪問の日程についてご連絡します。", ...(f.kind === "appointed" ? ["・選任後、遅滞なく所轄労働基準監督署へ産業医選任報告(様式第3号)の提出が必要です。必要な書面(医師免許証の写し等)はこちらからお送りします。"] : [])]),
       "",
       ...footer,
     ].join("\n")
   );
   await sendMails(
     await officeEmails(admin),
-    `【電子契約】産業医業務委託契約が締結されました: ${partyDisplayName(f)}(${c.contract_no})`,
+    `【電子契約】${kindTitle(f.kind)}が締結されました: ${partyDisplayName(f)}(${c.contract_no})`,
     [
-      "契約先が電子署名を行い、産業医業務委託契約が締結されました。",
+      `契約先が電子署名を行い、${kindTitle(f.kind)}が締結されました。`,
       "",
       ...summaryLines(f),
       ...common,
@@ -248,7 +275,7 @@ export async function mailDeclined(admin: SupabaseClient, c: ContractDbRow, reas
     await officeEmails(admin),
     `【電子契約】契約先が署名を辞退しました: ${partyDisplayName(c.fields)}(${c.contract_no})`,
     [
-      "契約先の署名者が、産業医業務委託契約書の電子署名を辞退しました。",
+      `契約先の署名者が、${kindTitle(c.fields.kind)}の電子署名を辞退しました。`,
       "",
       `契約先: ${partyDisplayName(c.fields)}`,
       `署名者: ${c.signer_name}(${c.signer_email})`,
@@ -263,12 +290,12 @@ export async function mailDeclined(admin: SupabaseClient, c: ContractDbRow, reas
 export async function mailCancelled(c: ContractDbRow): Promise<void> {
   await sendMails(
     [c.signer_email],
-    `【うえまつ産業医事務所】産業医業務委託契約書の送信を取り消しました(契約番号 ${c.contract_no})`,
+    `【うえまつ産業医事務所】${kindTitle(c.fields.kind)}の送信を取り消しました(契約番号 ${c.contract_no})`,
     [
       c.fields.partyName,
       `${c.signer_name} 様`,
       "",
-      `先にお送りした産業医業務委託契約書(契約番号 ${c.contract_no})の送信を取り消しました。お送りしたリンクは使えなくなっています。`,
+      `先にお送りした${kindTitle(c.fields.kind)}(契約番号 ${c.contract_no})の送信を取り消しました。お送りしたリンクは使えなくなっています。`,
       "内容を見直したうえで、改めてお送りすることがあります。ご不明な点は下記までご連絡ください。",
       "",
       ...footer,
@@ -281,7 +308,7 @@ export async function mailSentNotice(admin: SupabaseClient, c: ContractDbRow, or
     await officeEmails(admin),
     `【電子契約】契約書を送信しました: ${partyDisplayName(c.fields)}(${c.contract_no})`,
     [
-      `${byName ?? "実施者"} が産業医業務委託契約書を送信しました。契約先の署名を待っています。`,
+      `${byName ?? "実施者"} が${kindTitle(c.fields.kind)}を送信しました。契約先の署名を待っています。`,
       "",
       ...summaryLines(c.fields),
       `署名者: ${c.signer_name}(${c.signer_email})`,

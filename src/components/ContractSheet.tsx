@@ -82,8 +82,18 @@ export function ContractSheet({
       <p style={{ fontSize: 14.5, lineHeight: 1.95, margin: "22px 0 18px" }}>{doc.closing}</p>
 
       <div className="contract-parties" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
-        <PartyBlock p={doc.ko} sign={koSign} role="契約先" />
-        <PartyBlock p={doc.otsu} sign={otsuSign} role="産業医事務所" />
+        {/* 甲を左に置く(協力医師との契約では事務所が甲) */}
+        {doc.ko.label === "甲" ? (
+          <>
+            <PartyBlock p={doc.ko} sign={koSign} role={doc.ko.role ?? "契約先"} />
+            <PartyBlock p={doc.otsu} sign={otsuSign} role={doc.otsu.role ?? "産業医事務所"} />
+          </>
+        ) : (
+          <>
+            <PartyBlock p={doc.otsu} sign={otsuSign} role={doc.otsu.role ?? "産業医事務所"} />
+            <PartyBlock p={doc.ko} sign={koSign} role={doc.ko.role ?? "契約先"} />
+          </>
+        )}
       </div>
 
       {children}

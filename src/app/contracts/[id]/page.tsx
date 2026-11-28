@@ -8,7 +8,7 @@ import { ContractCertificate } from "@/components/ContractCertificate";
 import { PrintButton } from "@/components/PrintButton";
 import { brand } from "@/lib/brand";
 import { SELLER } from "@/lib/org";
-import { type ContractEvent, type ContractRow, CONTRACT_COLS, displayStatus, formatJst, renderContract, STATUS_LABEL } from "@/lib/contract";
+import { type ContractEvent, type ContractRow, CONTRACT_COLS, displayStatus, formatJst, partyLabels, renderContract, STATUS_LABEL } from "@/lib/contract";
 
 export const metadata = { title: "契約書" };
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ export default async function ContractPage({ params }: { params: { id: string } 
         <div>
           <Badge tone={STATUS_LABEL[st].tone}>{STATUS_LABEL[st].label}</Badge>
           <h2 style={{ fontSize: 18, color: brand.ink, margin: "8px 0 2px" }}>
-            {c.party_name} 産業医業務委託契約書(契約番号 {c.contract_no})
+            {c.party_name} {doc.title}(契約番号 {c.contract_no})
           </h2>
           <div style={{ fontSize: 13, color: "#5B6B6A" }}>
             署名者: {c.signer_name}({c.signer_email})
@@ -64,7 +64,7 @@ export default async function ContractPage({ params }: { params: { id: string } 
         </div>
       </Card>
       <ContractSheet doc={doc} otsuSign={otsuSign} koSign={koSign} watermark={watermark}>
-        <ContractCertificate contract={c} events={events} />
+        <ContractCertificate contract={c} events={events} labels={partyLabels(doc)} />
       </ContractSheet>
     </div>
   );
