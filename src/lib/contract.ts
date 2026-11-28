@@ -19,7 +19,7 @@ import { IMPLEMENTER, SELLER } from "@/lib/org";
 import { formatJpDate, taxIncluded } from "@/lib/plan";
 
 // 契約書の文面の版。文面(条文)を変えたときは +1 する。送信済みの契約書は送信時の文面を保存しているので影響しない
-export const CONTRACT_TEMPLATE_VERSION = 6;
+export const CONTRACT_TEMPLATE_VERSION = 7;
 
 // 署名用リンクの有効期間(日)。期限が切れたら実施者が再送する
 export const SIGN_LINK_DAYS = 14;
@@ -96,7 +96,9 @@ export const FEE_PERIOD_OPTIONS: { value: FeePeriod; label: string }[] = [
 ];
 export const visitLabel = (v: string | null | undefined): string => VISIT_OPTIONS.find((o) => o.value === v)?.label ?? "月1回";
 export const paymentLabel = (v: string | null | undefined): string => PAYMENT_OPTIONS.find((o) => o.value === v)?.label ?? "翌月末日";
-export const feePeriodLabel = (v: string | null | undefined): string => (v === "yearly" ? "年額" : "月額");
+// "per_visit" は協力医師との契約で「訪問1回あたり」の額を定めたとき(coopPerVisit)の表記用。データベースの fee_period には入れない
+export type FeeUnit = FeePeriod | "per_visit";
+export const feePeriodLabel = (v: string | null | undefined): string => (v === "yearly" ? "年額" : v === "per_visit" ? "訪問1回あたり" : "月額");
 export const FEE_TAX_OPTIONS: { value: FeeTax; label: string }[] = [
   { value: "included", label: "税込" },
   { value: "excluded", label: "税別" },
@@ -140,6 +142,7 @@ export type ContractFields = {
   coopExtraIncluded: boolean; // 臨時の面接指導・意見書の作成を報酬に含める
   coopExtraFee: number; // 含めない場合の1件あたりの額(円)
   coopTravel: "included" | "actual"; // 交通費: 報酬に含む / 実費
+  coopPerVisit: boolean; // 報酬を訪問1回あたりの額で定め、訪問のあった月の分として支払う(false なら月額・年額の定額)
   coopInvoiceNo: string; // 法人: 適格請求書発行事業者の登録番号(任意)
 };
 
@@ -178,6 +181,7 @@ export const DEFAULT_FIELDS: ContractFields = {
   coopExtraIncluded: true,
   coopExtraFee: 20000,
   coopTravel: "actual",
+  coopPerVisit: true,
   coopInvoiceNo: "",
 };
 export const COOP_TRAVEL_OPTIONS: { value: ContractFields["coopTravel"]; label: string }[] = [
@@ -237,6 +241,7 @@ export function parseContractFields(raw: Record<string, unknown>): { ok: true; v
     coopExtraIncluded: raw.coopExtraIncluded !== false,
     coopExtraFee: Math.floor(num(raw.coopExtraFee)),
     coopTravel: raw.coopTravel === "included" ? "included" : "actual",
+    coopPerVisit: coopKind && raw.coopPerVisit === true,
     coopInvoiceNo: str(raw.coopInvoiceNo, 20).toUpperCase(),
   };
   const partyWord = coopKind ? (kind === "coop_individual" ? "協力医師" : "受託する法人") : "契約先";
@@ -272,10 +277,10 @@ export function parseContractFields(raw: Record<string, unknown>): { ok: true; v
     if (kind === "coop_corporate" && v.coopInvoiceNo && !/^T\d{13}$/.test(v.coopInvoiceNo)) return { ok: false, error: "登録番号は T と数字13桁で入力してください(無い場合は空のまま)" };
     if (!(v.termMonths >= 1 && v.termMonths <= 60)) return { ok: false, error: "契約期間は1〜60か月で入力してください" };
     if (!visitOptionsFor(kind).some((o) => o.value === v.visitFrequency)) return { ok: false, error: "訪問は「月1回」または「2か月に1回」から選んでください" };
-    if (!(v.hoursPerVisit >= 0.5 && v.hoursPerVisit <= 8) || Math.round(v.hoursPerVisit * 2) !== v.hoursPerVisit * 2) {
-      return { ok: false, error: "1回の訪問時間は0.5〜8時間(0.5時間刻み)で入力してください" };
-    }
-    if (!(v.fee >= 0 && v.fee <= 100_000_000)) return { ok: false, error: `${feePeriodLabel(v.feePeriod)}の報酬を入力してください(円)` };
+    // 協力医師との契約では1回の訪問時間を定めない(条文にも入れない)
+    v.hoursPerVisit = 0;
+    if (v.coopPerVisit) v.feePeriod = "monthly"; // 訪問1回あたりの額。fee_period 列は既定の monthly のまま
+    if (!(v.fee >= 0 && v.fee <= 100_000_000)) return { ok: false, error: `${feePeriodLabel(feeUnit(v))}の報酬を入力してください(円)` };
     if (!v.coopExtraIncluded && !(v.coopExtraFee >= 0 && v.coopExtraFee <= 10_000_000)) return { ok: false, error: "臨時の面接指導・意見書の1件あたりの額を入力してください" };
     if (kind === "coop_corporate") v.coopWithholding = false;
     if (kind === "coop_individual") {
@@ -338,7 +343,10 @@ export function termEndDate(start: string, months: number): string {
 // 契約番号: 作成した年と id の先頭8文字(領収書番号と同じ方式)
 export const contractNo = (id: string, createdAt: string): string => `E${createdAt.slice(0, 4)}-${id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 
-export const feeText = (fee: number, period: FeePeriod = "monthly", tax: FeeTax = "included"): string =>
+// 報酬の単位の表記用(協力医師との契約で訪問1回あたりなら "per_visit")
+export const feeUnit = (f: Pick<ContractFields, "kind" | "feePeriod" | "coopPerVisit">): FeeUnit => (isCoopKind(f.kind) && f.coopPerVisit ? "per_visit" : f.feePeriod);
+
+export const feeText = (fee: number, period: FeeUnit = "monthly", tax: FeeTax = "included"): string =>
   tax === "excluded"
     ? `${feePeriodLabel(period)} ${fee.toLocaleString()}円(消費税別)`
     : `${feePeriodLabel(period)} ${fee.toLocaleString()}円(税込。うち消費税 ${taxIncluded(fee).toLocaleString()}円)`;
@@ -349,7 +357,7 @@ export const feeShort = (fee: number | null | undefined, period: string | null |
 
 // 訪問の短い表記(「月1回・1回 2時間」)
 export const visitText = (f: Pick<ContractFields, "visitFrequency" | "hoursPerVisit">): string =>
-  f.visitFrequency === "on_request" ? visitLabel(f.visitFrequency) : `${visitLabel(f.visitFrequency)}・1回 ${f.hoursPerVisit}時間`;
+  f.visitFrequency === "on_request" || !(f.hoursPerVisit > 0) ? visitLabel(f.visitFrequency) : `${visitLabel(f.visitFrequency)}・1回 ${f.hoursPerVisit}時間`;
 
 // ---- 契約書の文面 ----
 
@@ -739,7 +747,7 @@ function renderCoop(f: ContractFields, meta: { contractNo: string; templateVersi
   ]);
   art("業務の内容", [
     `乙が${corp ? "担当医師により" : ""}行う業務(以下「本業務」という)は、顧問先の事業場における次の業務とする。\n${f.coopDuties}`,
-    `${doc}は、${visitLabel(f.visitFrequency)}、1回あたり${f.hoursPerVisit}時間を標準として顧問先の事業場を訪問し、本業務を行う。訪問の日時は、${doc}が顧問先と調整し、甲に共有する。職場巡視は労働安全衛生規則第15条に従って行う。`,
+    `${doc}は、${visitLabel(f.visitFrequency)}、顧問先の事業場を訪問し、本業務を行う。訪問の日時は、${doc}が顧問先と調整し、甲に共有する。職場巡視は労働安全衛生規則第15条に従って行う。`,
     `本業務以外の原契約に基づく産業医の業務(健康診断の結果に基づく措置、ストレスチェック、面接指導、意見書の作成、健康管理Webによる管理等)は、甲の代表医師(${IMPLEMENTER.full})が行う。`,
     `${doc}は、訪問の都度、職場巡視の所見および衛生委員会の議事の要点を訪問後7日以内に甲に報告し、顧問先の労働者の健康管理に必要な情報を甲と共有する。報告は電磁的方法(甲の指定する様式または健康管理Web)によることができる。`,
     f.coopExtraIncluded
@@ -761,16 +769,21 @@ function renderCoop(f: ContractFields, meta: { contractNo: string; templateVersi
     "乙は、本業務に関して知り得た甲および顧問先の秘密情報を、事前の承諾なく第三者に開示または漏洩してはならず、本業務の目的以外に使用しない。本契約の終了後も同様とする。",
   ]);
   const feeItems: ContractItem[] = [];
+  const unit = feeUnit(f);
+  // 訪問1回あたりの額のとき: 訪問のあった月の分として支払い、訪問のない月は報酬が生じない
+  const perVisitNote = f.coopPerVisit ? [`前項の報酬は、${doc}が顧問先の事業場を訪問して本業務を行った月の分として支払う。訪問を行わなかった月の報酬は生じない。`] : [];
   if (corp) {
     feeItems.push(
       f.feeTax === "excluded"
-        ? `本業務の報酬は、${feeText(f.fee, f.feePeriod, f.feeTax)}とし、甲は、これに消費税および地方消費税の相当額を加えた額を支払う。`
-        : `本業務の報酬は、${feeText(f.fee, f.feePeriod, f.feeTax)}とする。`,
+        ? `本業務の報酬は、${feeText(f.fee, unit, f.feeTax)}とし、甲は、これに消費税および地方消費税の相当額を加えた額を支払う。`
+        : `本業務の報酬は、${feeText(f.fee, unit, f.feeTax)}とする。`,
+      ...perVisitNote,
       `乙は、業務を行った${f.feePeriod === "yearly" ? "年度の初月" : "月"}の末日までに適格請求書${f.coopInvoiceNo ? `(登録番号 ${f.coopInvoiceNo})` : "(適格請求書発行事業者である場合)"}を甲に交付し、甲は、乙が業務を行った月の末日を給付を受領した日として、その翌月末日(受領日から60日以内)までに乙の指定する銀行口座に振り込んで支払う。振込手数料は甲の負担とする。`
     );
   } else if (f.coopWithholding) {
     feeItems.push(
-      `本業務の報酬は、${feePeriodLabel(f.feePeriod)} ${f.fee.toLocaleString()}円とする。`,
+      `本業務の報酬は、${feePeriodLabel(unit)} ${f.fee.toLocaleString()}円とする。`,
+      ...perVisitNote,
       "甲および乙は、産業医の業務の対価に関する国税庁の取扱いに従い、本業務の報酬を所得税法上の給与等として取り扱う。甲は、所得税および復興特別所得税を源泉徴収(給与所得の源泉徴収税額表の乙欄による。乙が甲に給与所得者の扶養控除等申告書を提出した場合は甲欄)のうえ支払い、支払明細を乙に交付する。本業務の報酬には消費税は課されない。",
       "税務上の取扱いが前項と異なることが判明したときは、甲乙協議のうえ必要な修正を行う。前項の取扱いは税務上のものであり、本契約が雇用契約であることを意味しない。",
       "甲は、乙が業務を行った月の末日を給付を受領した日として、その翌月末日(受領日から60日以内)までに乙の指定する銀行口座に振り込んで支払う。振込手数料は甲の負担とする。"
@@ -778,8 +791,9 @@ function renderCoop(f: ContractFields, meta: { contractNo: string; templateVersi
   } else {
     feeItems.push(
       f.feeTax === "excluded"
-        ? `本業務の報酬は、${feeText(f.fee, f.feePeriod, f.feeTax)}とし、甲は、これに消費税および地方消費税の相当額を加えた額を支払う。`
-        : `本業務の報酬は、${feeText(f.fee, f.feePeriod, f.feeTax)}とする。`,
+        ? `本業務の報酬は、${feeText(f.fee, unit, f.feeTax)}とし、甲は、これに消費税および地方消費税の相当額を加えた額を支払う。`
+        : `本業務の報酬は、${feeText(f.fee, unit, f.feeTax)}とする。`,
+      ...perVisitNote,
       "乙は、業務を行った月の末日までに請求書を甲に交付し、甲は、乙が業務を行った月の末日を給付を受領した日として、その翌月末日(受領日から60日以内)までに乙の指定する銀行口座に振り込んで支払う。振込手数料は甲の負担とする。甲は、本業務の報酬について源泉徴収を行わない。"
     );
   }

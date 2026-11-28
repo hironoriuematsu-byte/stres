@@ -102,7 +102,8 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
     setMsg(null);
   };
   const startEdit = (r: Row) => {
-    setEditing({ id: r.id, form: toForm({ ...DEFAULT_FIELDS, ...r.fields }), companyId: r.company_id ?? "", accessCode: "", clearCode: false, note: r.note ?? "" });
+    // coopPerVisit の無い以前の下書きは、定額(月額・年額)のまま開く
+    setEditing({ id: r.id, form: toForm({ ...DEFAULT_FIELDS, ...r.fields, coopPerVisit: r.fields.coopPerVisit === true }), companyId: r.company_id ?? "", accessCode: "", clearCode: false, note: r.note ?? "" });
     setPreview(false);
     setMsg(null);
   };
@@ -236,7 +237,8 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
   const isMemo = kind === "memo_coop";
   const isCoop = isCoopKind(kind);
   const corp = kind === "coop_corporate";
-  const yearly = editing?.form.feePeriod === "yearly";
+  const perVisit = isCoop && !!editing?.form.coopPerVisit;
+  const yearly = !perVisit && editing?.form.feePeriod === "yearly";
   const taxWord = editing?.form.feeTax === "excluded" ? "税別" : "税込";
   // 個人の協力医師で給与扱いのときは消費税の区分がない
   const hideTax = kind === "coop_individual" && editing?.form.coopWithholding;
@@ -390,7 +392,6 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                   <input value={editing.form.coopDuties} onChange={(e) => setForm({ coopDuties: e.target.value })} style={input} />
                 </label>
                 {select("visitFrequency", "訪問の頻度", visitOptionsFor(kind))}
-                {field("hoursPerVisit", "1回の訪問時間(時間・0.5刻み)", { inputMode: "decimal" })}
               </div>
               {check("coopExtraIncluded", <>顧問先の求めによる訪問日の臨時の面接指導・意見書の作成を報酬に含める(外すと1件あたりの額を定めます)</>, { marginTop: 10 })}
               {!editing.form.coopExtraIncluded && <div style={{ ...grid, marginTop: 8 }}>{field("coopExtraFee", `臨時の面接指導・意見書 1件あたり(${taxWord}・円)`, { inputMode: "numeric" })}</div>}
@@ -435,13 +436,18 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                 </label>
                 {isMain && select("visitFrequency", "訪問の頻度", visitOptionsFor(kind))}
                 {isMain && editing.form.visitFrequency !== "on_request" && field("hoursPerVisit", "1回の訪問時間(時間・0.5刻み)", { inputMode: "decimal" })}
-                {select("feePeriod", "報酬の単位", FEE_PERIOD_OPTIONS)}
+                {!perVisit && select("feePeriod", "報酬の単位", FEE_PERIOD_OPTIONS)}
                 {!hideTax && select("feeTax", "税込 / 税別", FEE_TAX_OPTIONS)}
-                {field("fee", `${yearly ? "年額" : "月額"}の報酬(${hideTax ? "源泉徴収前" : taxWord}・円)`, { inputMode: "numeric" })}
+                {field("fee", `${perVisit ? "訪問1回あたり" : yearly ? "年額" : "月額"}の報酬(${hideTax ? "源泉徴収前" : taxWord}・円)`, { inputMode: "numeric" })}
                 {isMain && select("paymentTiming", `支払期日(${yearly ? "年1回の請求書を受け取った月を基準" : "毎月末に送る請求書の月を基準"})`, PAYMENT_OPTIONS)}
                 {isCoop && select("coopTravel", "交通費", COOP_TRAVEL_OPTIONS)}
                 {isMain && check("includeStressCheck", "ストレスチェックの実施者業務を含める(Web申込の利用料は別)", { marginTop: 22 })}
               </div>
+              {isCoop && (
+                <div style={{ marginTop: 10 }}>
+                  {check("coopPerVisit", <>報酬を<b>訪問1回あたりの額</b>で定め、訪問のあった月の分として支払う(外すと、訪問のない月も支払う月額・年額の定額になります)</>)}
+                </div>
+              )}
               {kind === "coop_individual" && (
                 <div style={{ marginTop: 10 }}>
                   {check(
@@ -575,7 +581,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                         {r.signer_title ? `(${r.signer_title})` : ""} {r.signer_email}
                         <br />
                         {r.kind === "memo_coop" ? `効力 ${formatJpDate(r.start_date)}` : `開始 ${formatJpDate(r.start_date)}`}
-                        {r.kind === "memo_coop" && !(r.monthly_fee && r.monthly_fee > 0) ? "" : ` / ${feeShort(r.monthly_fee, r.fee_period, f?.feeTax)}`}
+                        {r.kind === "memo_coop" && !(r.monthly_fee && r.monthly_fee > 0) ? "" : ` / ${feeShort(r.monthly_fee, coopRow && f?.coopPerVisit ? "per_visit" : r.fee_period, f?.feeTax)}`}
                         {coopRow && f?.coopClientName ? ` / 顧問先 ${f.coopClientName}` : ""}
                         {!coopRow && f?.coopDoctor && f.coopDoctorName ? ` / 協力医師 ${f.coopDoctorName}` : ""}
                         {r.kind === "coop_corporate" && f?.coopDoctorName ? ` / 担当医師 ${f.coopDoctorName}` : ""}
@@ -646,7 +652,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                         </>
                       )}
                       {st !== "draft" && (
-                        <button onClick={() => startNew({ ...DEFAULT_FIELDS, ...r.fields }, r.company_id ?? "")} disabled={busy} style={{ ...small, background: "#fff", color: brand.tealDark, border: `1px solid ${brand.teal}` }}>
+                        <button onClick={() => startNew({ ...DEFAULT_FIELDS, ...r.fields, coopPerVisit: r.fields.coopPerVisit === true }, r.company_id ?? "")} disabled={busy} style={{ ...small, background: "#fff", color: brand.tealDark, border: `1px solid ${brand.teal}` }}>
                           複製
                         </button>
                       )}

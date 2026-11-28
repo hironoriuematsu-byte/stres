@@ -6,6 +6,7 @@ import {
   DEFAULT_FIELDS,
   displayStatus,
   eventLabel,
+  feeShort,
   feeText,
   formatJst,
   isExpired,
@@ -250,6 +251,28 @@ describe("契約書の文面", () => {
     expect(text).not.toContain("__FEE__");
     expect(text).not.toContain("うち消費税");
   });
+  it("協力医師(個人): 訪問1回あたりの報酬は訪問のあった月の分として支払い、1回の訪問時間は条文に入れない", () => {
+    const base = { ...VALID, kind: "coop_individual", partyName: "佐藤 一郎", partyAddress: "大阪市北区1-1", partyRepName: "", partyRepTitle: "", coopClientName: "株式会社テスト 本社", visitFrequency: "bimonthly", fee: "25000", coopWithholding: true, signerName: "佐藤 一郎", signerEmail: "sato@example.com" };
+    const p = parseContractFields({ ...base, coopPerVisit: true, feePeriod: "yearly" });
+    if (!p.ok) throw new Error(p.error);
+    expect(p.value.feePeriod).toBe("monthly");
+    expect(p.value.hoursPerVisit).toBe(0);
+    const text = contractText(renderContract(p.value, { contractNo: "E2026-TEST0010" }));
+    expect(text).toContain("訪問1回あたり 25,000円とする");
+    expect(text).toContain("本業務を行った月の分として支払う。訪問を行わなかった月の報酬は生じない");
+    expect(text).toContain("乙は、2か月に1回、顧問先の事業場を訪問し、本業務を行う");
+    expect(text).not.toContain("時間を標準として");
+    expect(feeShort(25000, "per_visit", "included")).toContain("訪問1回あたり 25,000円");
+    // チェックなし(以前の下書き)は定額のまま。訪問時間は入れない
+    const q = parseContractFields(base);
+    if (!q.ok) throw new Error(q.error);
+    expect(q.value.coopPerVisit).toBe(false);
+    const t2 = contractText(renderContract(q.value, { contractNo: "E2026-TEST0011" }));
+    expect(t2).toContain("月額 25,000円とする");
+    expect(t2).not.toContain("訪問を行わなかった月");
+    expect(t2).not.toContain("時間を標準として");
+  });
+
   it("協力医師(法人): 担当医師の特定・適格請求書・臨時対応は1件あたり", () => {
     const p = parseContractFields({ ...VALID, kind: "coop_corporate", partyName: "医療法人テスト会", partyOfficeName: "テストクリニック", partyRepTitle: "理事長", partyRepName: "高橋 次郎", coopDoctorName: "佐藤 一郎", coopClientName: "株式会社テスト 本社", coopInvoiceNo: "t1234567890123", fee: "33000", feeTax: "included", coopExtraIncluded: false, coopExtraFee: "22000", coopTravel: "included" });
     if (!p.ok) throw new Error(p.error);
