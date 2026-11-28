@@ -74,7 +74,7 @@ export function SignupForm({ enabled }: { enabled: boolean }) {
         )}
         <ol style={{ fontSize: 14, color: "#44534F", lineHeight: 1.9, paddingLeft: 20, margin: "0 0 10px" }}>
           <li>
-            {f.contactEmail} に届く「<strong>担当者アカウントの確認(会社登録)</strong>」のメールのリンクを開き、「アカウントを有効にして担当者の画面へ」を押してください(リンクの有効期限は1時間です)
+            {f.contactEmail} に届く「<strong>担当者アカウントの確認(会社登録)</strong>」のメールのリンクを開き、「アカウントを有効にして担当者の画面へ」を押してください(リンクの有効期限は24時間です)
           </li>
           <li>ストレスチェックの担当者としての誓約(人事権を持たないこと・守秘義務)を行ってください</li>
           <li>表示される「ストレスチェックのお申込み」で、受検予定人数と受検期間を入れてお支払いください</li>

@@ -26,11 +26,19 @@ export async function POST(req: Request) {
     if (request.scheduled_at && new Date(request.scheduled_at).getTime() - Date.now() < 24 * 3600_000) {
       return fail(400, "面談の24時間前を過ぎているため、画面からは取り消せません。会社の担当者または当事務所にご連絡ください");
     }
-    // 選んだ候補を開き直し、申出受付の状態に戻す(ほかの候補が残っていれば選び直せる)
-    await admin.from("interview_slots").update({ status: "open", chosen_at: null }).eq("request_id", request.id).eq("status", "chosen");
+    // 選んだ候補を開き直し、申出受付の状態に戻す(ほかの候補が残っていれば選び直せる)。
+    // 本人の希望を医師が承認した日時だった場合は閉じる(候補がなければ、あらためて希望の日時を送れる)
+    // (SQL 0033 の実行前は希望日時の列がないので、これまでどおり開き直すだけにする)
+    const has0033 = "proposed_at" in request;
+    if (has0033) {
+      await admin.from("interview_slots").update({ status: "open", chosen_at: null }).eq("request_id", request.id).eq("status", "chosen").eq("proposed_by_user", false);
+      await admin.from("interview_slots").update({ status: "withdrawn" }).eq("request_id", request.id).eq("status", "chosen").eq("proposed_by_user", true);
+    } else {
+      await admin.from("interview_slots").update({ status: "open", chosen_at: null }).eq("request_id", request.id).eq("status", "chosen");
+    }
     const { error } = await admin
       .from("interview_requests")
-      .update({ status: "pending", scheduled_at: null, meet_url: null, scheduled_by: null })
+      .update({ status: "pending", scheduled_at: null, meet_url: null, scheduled_by: null, ...(has0033 ? { proposed_at: null, proposal_note: null } : {}) })
       .eq("id", request.id)
       .eq("status", "scheduled");
     if (error) return fail(500, `保存できませんでした: ${error.message}`);
@@ -39,6 +47,7 @@ export async function POST(req: Request) {
   }
 
   if (request.status !== "pending" || request.schedule_mode !== "online") return fail(400, "いまは候補日時を選べる状態ではありません");
+  if (request.proposed_at) return fail(400, "希望の日時を送ったため、医師の承認をお待ちください");
   if (typeof body.slotId !== "string") return fail(400, "日時を選んでください");
   const { data: slot } = await admin.from("interview_slots").select("*").eq("id", body.slotId).eq("request_id", request.id).maybeSingle();
   if (!slot || slot.status !== "open") return fail(409, "その日時は選べなくなりました。別の日時を選んでください");

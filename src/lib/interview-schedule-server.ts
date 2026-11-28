@@ -15,6 +15,8 @@ export type RequestRow = {
   duration_min: number | null;
   meet_url: string | null;
   visit_note: string | null;
+  proposed_at?: string | null;
+  proposal_note?: string | null;
 };
 
 export async function loadRequest(admin: SupabaseClient, id: unknown): Promise<RequestRow | null> {
@@ -23,9 +25,20 @@ export async function loadRequest(admin: SupabaseClient, id: unknown): Promise<R
   return (data as RequestRow | null) ?? null;
 }
 
+// 企業名と面談ルームのURL。ストレスチェックWebで未登録なら、健康管理Webの産業医面談ルーム(hm_meet_rooms)を使う
 export async function companyInfo(admin: SupabaseClient, companyId: string): Promise<{ name: string; meet_room_url: string | null }> {
   const { data } = await admin.from("companies").select("name, meet_room_url").eq("id", companyId).maybeSingle();
-  return { name: (data?.name as string | undefined) ?? "(不明)", meet_room_url: (data?.meet_room_url as string | null | undefined) ?? null };
+  const name = (data?.name as string | undefined) ?? "(不明)";
+  const own = ((data?.meet_room_url as string | null | undefined) ?? "").trim();
+  if (own) return { name, meet_room_url: own };
+  return { name, meet_room_url: await kenkoMeetRoom(admin, companyId) };
+}
+
+// 健康管理Webの産業医面談ルーム(健康管理Webを使っていない環境では表がないので null)
+export async function kenkoMeetRoom(admin: SupabaseClient, companyId: string): Promise<string | null> {
+  const { data, error } = await admin.from("hm_meet_rooms").select("meeting_uri, enabled").eq("company_id", companyId).maybeSingle();
+  if (error || !data?.enabled) return null;
+  return ((data.meeting_uri as string | null) ?? "").trim() || null;
 }
 
 export async function userEmail(admin: SupabaseClient, userId: string): Promise<string | null> {
@@ -62,6 +75,24 @@ export async function withdrawOpenSlots(admin: SupabaseClient, requestId: string
   await admin.from("interview_slots").update({ status: "withdrawn" }).eq("request_id", requestId).eq("status", "open");
 }
 
+// 本人の希望日時(医師の承認待ち)を見送りにする
+export async function declineProposals(admin: SupabaseClient, requestId: string): Promise<void> {
+  await admin.from("interview_slots").update({ status: "declined" }).eq("request_id", requestId).eq("status", "proposed");
+}
+
+// 医師が出した候補の最終日(日本時間)。本人の希望日時はこの日より後から選べる
+export async function lastOfferedDate(admin: SupabaseClient, requestId: string): Promise<string | null> {
+  const { data } = await admin
+    .from("interview_slots")
+    .select("starts_at")
+    .eq("request_id", requestId)
+    .eq("proposed_by_user", false)
+    .order("starts_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.starts_at ? jstDateOf(data.starts_at as string) : null;
+}
+
 // ---- メール(本文に本人の氏名・相談内容は書かない) ----
 
 export async function mailSlotsOffered(admin: SupabaseClient, req: RequestRow, dates: string[], origin: string): Promise<void> {
@@ -71,6 +102,7 @@ export async function mailSlotsOffered(admin: SupabaseClient, req: RequestRow, d
     [email],
     "【ストレスチェックWeb】面接指導の候補日時が届きました",
     [
+      ...(req.proposed_at ? ["ご希望の日時では都合がつかなかったため、医師から改めて候補の日時をお送りします。"] : []),
       "産業医面接指導の日程について、医師から候補の日時が届きました。",
       "下のリンクからログインし、マイページで都合のよい日時を1つ選んでください。選んだ時点で日程が確定し、オンライン面談のURLをお知らせします。",
       "",
@@ -79,11 +111,35 @@ export async function mailSlotsOffered(admin: SupabaseClient, req: RequestRow, d
       `${origin}/login?next=/my`,
       "",
       "※候補はほかの方の面談が確定すると変わることがあります。お早めにお選びください。",
+      "※都合の合う日時がない場合は、マイページから希望の日時を送れます。",
     ].join("\n")
   );
 }
 
-export async function mailScheduledOnline(admin: SupabaseClient, req: RequestRow, companyName: string, origin: string): Promise<void> {
+// 本人が希望日時を送った(実施者へ。日時の一覧は画面で見てもらう)
+export async function mailProposalsReceived(admin: SupabaseClient, companyName: string, count: number, origin: string): Promise<void> {
+  await sendMails(
+    await officeEmails(admin),
+    "【ストレスチェックWeb】面接指導の希望日時が届きました(承認待ち)",
+    [
+      "面接指導の申出者から、候補に都合の合う日時がないため、希望の日時が届きました。",
+      "ログインして面接指導申出の一覧で「日程」を開き、希望の日時から1つを承認してください(承認すると確定し、本人にお知らせします)。",
+      "どれも都合が合わない場合は、候補を出し直してください。",
+      "",
+      `企業名: ${companyName}`,
+      `希望の日時: ${count}件`,
+      `ログイン: ${origin}/office`,
+    ].join("\n")
+  );
+}
+
+export async function mailScheduledOnline(
+  admin: SupabaseClient,
+  req: RequestRow,
+  companyName: string,
+  origin: string,
+  notifyOffice = true
+): Promise<void> {
   if (!req.scheduled_at) return;
   const when = formatSlot(req.scheduled_at, req.duration_min);
   const email = await userEmail(admin, req.user_id);
@@ -106,6 +162,8 @@ export async function mailScheduledOnline(admin: SupabaseClient, req: RequestRow
       ].join("\n")
     );
   }
+  // 医師が希望日時を承認したときは、医師へは送らない
+  if (!notifyOffice) return;
   await sendMails(
     await officeEmails(admin),
     "【ストレスチェックWeb】面接指導の日時が確定しました",

@@ -1,12 +1,18 @@
 // メール送信(Resend)。
 // Resend APIは1秒あたり2リクエストまでのため、429(レート制限)の場合は待って再試行する
 
+import { isIdEmail } from "@/lib/no-email";
+
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function sendViaResend(
   resendKey: string,
   payload: { from: string; to: string[]; subject: string; text: string }
-): Promise<{ ok: boolean; detail?: string }> {
+): Promise<{ ok: boolean; detail?: string; id?: string }> {
+  // メールアドレスのない方(ID受検・紙)の内部用アドレスには送らない(実在しない宛先のため)
+  const to = payload.to.filter((x) => !isIdEmail(x));
+  if (to.length === 0) return { ok: true, detail: "skipped: no-email account" };
+  payload = { ...payload, to };
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
       const res = await fetch("https://api.resend.com/emails", {
@@ -17,7 +23,11 @@ export async function sendViaResend(
         },
         body: JSON.stringify(payload),
       });
-      if (res.ok) return { ok: true };
+      if (res.ok) {
+        // 送信の受付番号(配信状況をあとで確かめるときに使う)
+        const j = (await res.json().catch(() => null)) as { id?: unknown } | null;
+        return { ok: true, id: typeof j?.id === "string" ? j.id : undefined };
+      }
       const detail = `${res.status} ${await res.text()}`;
       if (res.status === 429) {
         await sleep(1200 * (attempt + 1));

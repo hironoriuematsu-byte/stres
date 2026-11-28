@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { searchKey } from "@/lib/search";
+import { stepBlocked, STEP_BLOCKED_MESSAGE } from "@/lib/second-step-state";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -15,6 +17,10 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
   }
+  // 二段階認証の対象の方は、確認コードの入力が済んでから
+  if (await stepBlocked(supabase)) {
+    return NextResponse.json({ error: STEP_BLOCKED_MESSAGE }, { status: 401 });
+  }
 
   const { data: me } = await supabase.from("profiles").select("role").eq("user_id", user.id).single();
   if (me?.role !== "office") {
@@ -26,7 +32,8 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     companyId = body.companyId;
-    query = typeof body.query === "string" ? body.query.trim().toLowerCase() : undefined;
+    // 空白(半角・全角)や全角/半角の違いは無視して探す
+    query = typeof body.query === "string" ? searchKey(body.query) : undefined;
   } catch {
     /* fallthrough */
   }
@@ -63,7 +70,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "2文字以上で検索してください" }, { status: 400 });
     }
     const idsByEmail = Array.from(userById.entries())
-      .filter(([, u]) => u.email.toLowerCase().includes(query))
+      .filter(([, u]) => searchKey(u.email).includes(query))
       .map(([id]) => id);
     const { data: byEmail } = idsByEmail.length
       ? await admin
@@ -71,11 +78,21 @@ export async function POST(req: Request) {
           .select("user_id, name, emp_id, dept, role, company_id, hm_company_access, hm_view_only, companies(name)")
           .in("user_id", idsByEmail.slice(0, 200))
       : { data: [] };
-    const { data: byName } = await admin
-      .from("profiles")
-      .select("user_id, name, emp_id, dept, role, company_id, hm_company_access, hm_view_only, companies(name)")
-      .ilike("name", `%${query.replace(/[%_]/g, "")}%`)
-      .limit(100);
+    // 氏名は、姓と名の間の空白の有無・種類が人によって違うため、データベースの部分一致ではなく、
+    // 全員の氏名を読んでから、空白を除いた形で比べる
+    const nameIds: string[] = [];
+    for (let from = 0; from < 50000 && nameIds.length < 100; from += 1000) {
+      const { data: page } = await admin.from("profiles").select("user_id, name").order("user_id").range(from, from + 999);
+      if (!page || page.length === 0) break;
+      for (const p of page) if (searchKey(p.name as string | null).includes(query) && nameIds.length < 100) nameIds.push(p.user_id as string);
+      if (page.length < 1000) break;
+    }
+    const { data: byName } = nameIds.length
+      ? await admin
+          .from("profiles")
+          .select("user_id, name, emp_id, dept, role, company_id, hm_company_access, hm_view_only, companies(name)")
+          .in("user_id", nameIds)
+      : { data: [] };
     const seen = new Set<string>();
     const rows = [...(byEmail ?? []), ...(byName ?? [])].filter((p) => {
       if (seen.has(p.user_id)) return false;
@@ -126,6 +143,9 @@ export async function POST(req: Request) {
     members: (profiles ?? []).map((p) => ({
       ...p,
       email: userById.get(p.user_id)?.email ?? "",
+      // まだログインしていない方に、招待メールを送り直せるようにする
+      last_sign_in_at: userById.get(p.user_id)?.lastSignIn ?? null,
+      confirmed: userById.get(p.user_id)?.confirmed ?? false,
     })),
   });
 }

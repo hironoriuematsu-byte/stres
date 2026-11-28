@@ -354,7 +354,8 @@ Supabase の Authentication → Rate Limits(制限値は「IPアドレスごと�
 
 Authentication → Providers → Email:
 - **Confirm email** が ON(自己登録は確認メールで本人確認する前提)
-- **Email OTP Expiration** は 3600秒(1時間)。短くしすぎるとメールを後で開く人が期限切れになる
+- **Email OTP Expiration** は 86400秒(24時間。設定できる上限)。招待メールを翌日に開く方でも期限切れにならないようにするため
+  (2026年11月に 3600秒から変更。画面とメールの文言「24時間有効」と合わせてある。変えるときは文言も直す)
 - **Minimum password length** は 8 以上(アプリ側も8文字以上で統一)。文字種の要件(Password Requirements)を付けると、
   エラー文が英語のまま表示されるため付けない
 
@@ -380,3 +381,57 @@ Resend のログで **Delivery Delayed** が繰り返されるのは、宛先の
 - 列を足すだけなので実行は一瞬で終わり、受検中の従業員には影響しない
 - あわせて事業者担当者(company)が自社の従業員プロフィール(氏名・社員番号・部署・生年月日)を読めるポリシーを追加
   (健康管理Webのカルテで本人のアカウントを選ぶため。受検結果は含まない)
+
+## 二段階認証(メールの確認コード + この端末を30日間覚える)
+
+ストレスチェックWeb・健康管理Webの両方に効く(同じデータベースのため)。対象は 事務所 / 実施事務従事者・会社の担当者
+(健康管理Webの担当を兼ねる方を含む)。従業員・メールのない方(ID受検)は対象外。
+
+- SQL: `supabase/migrations/0035_second_step.sql`(実行しただけでは何も変わらない。スイッチは最初はオフ)
+- 環境変数(両方の Vercel プロジェクト): `SUPABASE_SERVICE_ROLE_KEY` / `RESEND_API_KEY` / `SENDER_EMAIL`。
+  ストレスチェックWebには `NEXT_PUBLIC_KENKO_URL`(健康管理Webの準備状況を設定画面から確かめるため)
+- 有効にする: 事務所ダッシュボード「🔒 二段階認証」→ 準備の状況を確認 → 自分のメールで試す → 有効にする
+  (自分で確認コードを受け取れたログインでしかオンにできない)。まず事務所、次に担当者の順
+- 緊急停止: SQL Editor で `select public.second_step_enable('office', false); select public.second_step_enable('staff', false);`
+- しくみ: 確認が済んでいないログインでは、すべての表の制限ポリシー(`second_step`)と権限の関数
+  (`my_role` / `my_company` / `my_attested` / `hm_my_role` / `hm_my_company` / `hm_is_office`)が権限を返さない。
+  画面の誘導は `src/middleware.ts` → `/api/second-step/gate` → `/verify`。service_role を使うAPIは
+  `requestUser` / `stepBlocked` で未確認のログインを弾く
+- 新しい表を追加したら、SQL の最後に `select public.second_step_apply_policies();` を実行する(制限を付け直す)
+- メールのリンクでログインした直後は、確認コードを送らない(`verifyByMailLink`、`src/app/auth/callback/route.ts`)。
+  会社登録の確認(signup)・招待(invite)・パスワードの再設定(recovery)のリンクは、届いたメールを開けることの確認になるため、
+  そのログインを確認済みとして記録する(記録: `login_security_events` の `verified_mail_link`)。端末は覚えないので、
+  次にパスワードでログインするときは確認コードが要る。メールアドレスの変更(email_change)は対象外。
+  記録に失敗したときは、今までどおり確認コードの画面に進む
+- 新しいAPIで service_role を使うときは、入口で `requestUser`(または `stepBlocked`)を通す
+
+## 銀行振込(Web申込のお支払い方法に加える)
+
+既定はオフ(カードのみ)。次の順に進めると、決済画面で「クレジットカード / 銀行振込」を選べるようになる。
+
+1. SQL: `supabase/migrations/0036_bank_transfer.sql` を実行(実行しただけでは何も変わらない)
+2. Stripe の管理画面
+   - 設定 → 決済 → 支払い方法 で「銀行振込」を有効にする
+   - APIキー(制限付きキー `rk_…`)の権限に `Customers: 書き込み` と `PaymentIntents: 書き込み` を足す
+     (これまでの `Checkout Sessions: 書き込み` / `Invoices: 読み取り` に加えて。シークレットキー `sk_…` なら不要)
+   - Webhook の送信イベントに `checkout.session.async_payment_succeeded` と `checkout.session.async_payment_failed` が
+     入っていることを確かめる(入金が確認されたときに、ここから開設される)
+3. Vercel(ストレスチェックWeb)の環境変数に `NEXT_PUBLIC_BANK_TRANSFER` = `1` を追加して、再デプロイ
+   (値は秘密ではない。外すとカードのみに戻る)
+
+しくみ:
+- 銀行振込は、Stripe が会社(顧客)ごとに振込先の口座を発行し、入金を自動で照合する。そのため、決済画面を作る前に
+  会社の Stripe 顧客を用意して渡す(`companies.stripe_customer_id`、`ensureCustomer`)
+- 決済画面で銀行振込が選ばれると、申込は「お振込み待ち」になる(`plan_orders.pay_method = 'bank_transfer'`、期限は申込から14日)。
+  担当者には、振込先・金額・期限をメールと画面(「お振込み待ちのお申込み」)で案内し、請求書(`/plan/invoice/<id>`)を印刷できる
+- 入金が確認されると(`checkout.session.async_payment_succeeded`)、カードのときと同じ処理で開設される
+- 毎日の見回り(`/api/plan/reminders` → `sweepBankTransfers`): 期限の3日前に1回お知らせ / 期限の翌日に、Stripe の決済ごと取り消し /
+  金額の不足(振込手数料が引かれた など)は、残額を担当者と事務所に1回お知らせ(入金済みの分があるので、自動では取り消さない)
+- お振込み待ちの間は、同じ年度の新しい申込を受け付けない(行き違いの二重払いを防ぐ)。担当者・事務所は、入金のない申込を取り消せる
+- 銀行振込つきの決済画面を作れなかったとき(Stripe 側で未設定・権限不足・SQL 未実行)は、カードのみで作り直し、事務所にメールで知らせる
+
+運用の注意:
+- 取り消したあと・多すぎる金額で振り込まれたお金は、決済に充てられず、Stripe の「顧客の残高」に残る。Stripe の管理画面から返金する
+- 請求書は適格請求書としていない(入金後の領収書が適格請求書を兼ねる。同じ取引に2通出さないため)
+- Stripe の実際の画面・入金の流れは、テスト環境でまだ確かめていない(テストモードのキーで、銀行振込の入金をシミュレートして確認する)
+

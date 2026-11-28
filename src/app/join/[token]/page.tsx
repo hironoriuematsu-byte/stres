@@ -33,6 +33,10 @@ export default async function JoinPage({ params }: { params: { token: string } }
         <p style={{ fontSize: 14, color: "#5B6B6A", lineHeight: 1.9, margin: 0 }}>
           厚生労働省「職業性ストレス簡易調査票」によるストレスチェックです。受検にはアカウント登録(本人確認のためのメール認証)が必要です。結果はあなた本人と実施者(産業医事務所)・実施事務従事者のみが確認でき、あなたの同意なく会社側へ個人結果が提供されることはありません。
         </p>
+        {/* 受検の基本はメールアドレスでの登録。難しい方のための方法は、小さく案内するだけにする */}
+        <p style={{ fontSize: 12.5, color: "#7A8886", lineHeight: 1.7, margin: "10px 0 0" }}>
+          メールアドレスをお持ちでない方、画面での回答が難しい方は、会社のストレスチェック担当者にお申し出ください(ログインIDの紙、または紙の回答用紙で受検できます)。
+        </p>
       </Card>
       <JoinForm token={params.token} />
     </div>

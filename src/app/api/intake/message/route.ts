@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  CRISIS_MESSAGE,
+  CRISIS_FOLLOWUP,
   decideTurn,
   INTAKE_MAX_CHARS,
   detectCrisis,
@@ -14,7 +14,7 @@ import {
   type RiskLevel,
 } from "@/lib/intake";
 import { intakeTurn } from "@/lib/intake-server";
-import { fail, intakeContext, loadIntake, notifyUrgent, siteOrigin } from "@/lib/intake-api";
+import { fail, intakeContext, loadIntake, loadScores, notifyUrgent, siteOrigin } from "@/lib/intake-api";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -50,10 +50,11 @@ export async function POST(req: Request) {
   } else if (body.quick !== undefined) {
     if (answered) return fail(400, "選んで答える質問は回答済みです");
     if (!validQuickAnswers(body.quick)) return fail(400, "すべての質問に答えてください");
-    const note = typeof body.note === "string" ? body.note.trim().slice(0, 300) : "";
-    history.push({ role: "user", content: formatQuickAnswers(body.quick, note), at: now() });
-    risk = higherRisk(risk, quickRisk(body.quick));
-    crisis = risk === "high" || detectCrisis(note);
+    const quick = body.quick;
+    history.push({ role: "user", content: formatQuickAnswers(quick), at: now() });
+    risk = higherRisk(risk, quickRisk(quick));
+    // 自由記入の欄にサインの言葉があるときも確かめる
+    crisis = risk === "high" || detectCrisis([...(quick.note ?? []), ...(quick.medical_detail ?? []), ...(quick.job ?? [])].join("\n"));
   } else {
     if (!answered) return fail(400, "先に、選んで答える質問に回答してください");
     const text = typeof body.text === "string" ? body.text.trim() : "";
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
   if (body.retry !== true) {
     const { error } = await admin
       .from("interview_intakes")
-      .update({ messages: history, risk_level: risk, progress: intakeProgress(userTurns, false), updated_at: now() })
+      .update({ messages: history, risk_level: risk, progress: Math.max(intake.progress ?? 0, intakeProgress(Math.min(userTurns, 1), false)), updated_at: now() })
       .eq("id", intake.id)
       .eq("status", "in_progress");
     if (error) return fail(500, `保存できませんでした: ${error.message}`);
@@ -78,25 +79,31 @@ export async function POST(req: Request) {
 
   let reply: string;
   let done: boolean;
+  let covered: number | undefined;
   const left = followupsLeft(userTurns);
-  if (crisis) {
-    reply = CRISIS_MESSAGE;
-    done = true;
-  } else {
-    try {
-      const t = await decideTurn(userTurns, () => intakeTurn(history, left));
-      reply = t.reply;
-      done = t.done;
-      risk = higherRisk(risk, t.risk_level);
-    } catch (e) {
-      console.error("intake turn failed", e);
+  // 死にたい気持ちのサインがあっても聞き取りは続け、AIが落ち着いて詳しく確かめる(医師には上で至急知らせている)。
+  // いまにも実行しそうな様子のときだけ、AIが相談窓口につないで終える
+  try {
+    const scores = await loadScores(admin, intake.request_id);
+    const t = await decideTurn(userTurns, () => intakeTurn(history, left, crisis, scores));
+    reply = t.reply;
+    done = t.done;
+    covered = t.covered?.length;
+    risk = higherRisk(risk, t.risk_level);
+  } catch (e) {
+    console.error("intake turn failed", e);
+    if (!crisis) {
       return NextResponse.json(
         { error: "回答は保存しました。AIの応答に失敗したため、「続きの質問を受け取る」を押してください。", saved: true },
         { status: 502 }
       );
     }
+    // AIが応答できなくても、サインがあったときは相談先を必ず示す
+    reply = CRISIS_FOLLOWUP;
+    done = false;
   }
-  const progress = intakeProgress(userTurns, done);
+  // 進み具合は聞き終えた項目の割合で決め、戻らないようにする
+  const progress = done ? 100 : Math.max(intake.progress ?? 0, intakeProgress(userTurns, false, covered));
 
   history.push({ role: "assistant", content: reply, at: now() });
   const { error } = await admin

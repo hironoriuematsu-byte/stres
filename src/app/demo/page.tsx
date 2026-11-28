@@ -4,8 +4,9 @@ import { brand } from "@/lib/brand";
 import { buildDemoPeople, DEMO_COMPANY, DEMO_FISCAL_YEAR } from "@/lib/demo-data";
 
 export const metadata = {
-  title: "サンプル(デモ)",
-  description: "架空企業のデータで、個人結果票と集団分析報告書のサンプルをご覧いただけます。",
+  title: "体験デモ｜個人結果票・集団分析報告書のサンプル",
+  description:
+    "産業医が実施者を務めるストレスチェックWebの体験デモです。架空企業のデータで、受検者に渡す個人結果票と、事業者に渡す集団分析報告書のサンプルを、ログイン不要でご覧いただけます。57項目版と80項目版に対応しています。",
   alternates: { canonical: "/demo" },
 };
 

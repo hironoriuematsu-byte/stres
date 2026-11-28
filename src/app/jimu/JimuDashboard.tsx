@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Badge, Btn, Card } from "@/components/ui";
@@ -11,6 +11,7 @@ import { DashboardMenu, MenuItem } from "@/components/DashboardMenu";
 import { KenkoLink } from "@/components/KenkoLink";
 import { PlanStatusPanel } from "@/components/PlanStatusPanel";
 import { PlanOrderPanel } from "@/components/PlanOrderPanel";
+import { BankTransferPanel } from "@/components/BankTransferPanel";
 
 // 各パネルはタブを開いたときに初めて読み込む(初期表示の高速化)
 // タブの部品を読み込む間も、上端の進行バーを出す(LoadingCard が表示中に出す)
@@ -24,10 +25,12 @@ const GroupReportView = dynamic(
 );
 const UserAdminPanel = dynamic(() => import("@/components/UserAdminPanel").then((m) => m.UserAdminPanel), { loading: panelLoading, ssr: false });
 const CampaignPanel = dynamic(() => import("@/components/CampaignPanel").then((m) => m.CampaignPanel), { loading: panelLoading, ssr: false });
+const ExamReminderPanel = dynamic(() => import("@/components/ExamReminderPanel").then((m) => m.ExamReminderPanel), { loading: panelLoading, ssr: false });
+const NoEmailPanel = dynamic(() => import("@/components/NoEmailPanel").then((m) => m.NoEmailPanel), { loading: panelLoading, ssr: false });
 const DeptAdminPanel = dynamic(() => import("@/components/DeptAdminPanel").then((m) => m.DeptAdminPanel), { loading: panelLoading, ssr: false });
 const CompanyContractsPanel = dynamic(() => import("@/components/CompanyContractsPanel").then((m) => m.CompanyContractsPanel), { loading: panelLoading, ssr: false });
 
-const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "従業員招待", "部署管理", "契約書"] as const;
+const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "従業員招待", "部署管理", "契約書", "メールのない方"] as const;
 type Tab = (typeof TABS)[number];
 
 type MenuKey = Tab | "使い方ガイド";
@@ -36,10 +39,12 @@ const MENU_ITEMS: MenuItem<MenuKey>[] = [
   { key: "結果一覧", icon: "📋", title: "結果一覧", desc: "自社の受検結果の一覧・詳細・CSV出力・再受検対応" },
   { key: "面接指導申出", icon: "🩺", title: "面接指導申出", desc: "産業医面接指導の申出の確認と対応状況の管理" },
   { key: "集団分析", icon: "📊", title: "集団分析", desc: "部署別集計・健康リスク・集団分析報告書" },
-  { key: "配布URL・QR", icon: "🔗", title: "配布URL・QR", desc: "従業員に配布する受検用URL・QRコードの確認" },
+  { key: "配布URL・QR", icon: "🔗", title: "配布URL・QR", desc: "従業員に配布する受検用URL・QRコードの確認と、未受検の方へのリマインド" },
   { key: "従業員招待", icon: "✉️", title: "従業員招待", desc: "従業員への招待メールの送信(個別・CSV一括)" },
   { key: "部署管理", icon: "🗂️", title: "部署管理", desc: "受検時に選択できる部署名の登録・編集" },
   { key: "契約書", icon: "✍️", title: "契約書", desc: "うえまつ産業医事務所との産業医業務委託契約書(電子契約)の閲覧・印刷" },
+  // 受検の基本はメール(配布URL・QR、招待)。メール・スマホのない方への対応は例外なので、最後に置く
+  { key: "メールのない方", icon: "🪪", title: "メール・スマホのない方(例外の対応)", desc: "受検の基本はメールです。どうしても難しい方だけ、ログインIDの紙や紙の回答用紙で対応します" },
   // タブではなく別ページ(マニュアル)へ移動する
   { key: "使い方ガイド", icon: "📘", title: "使い方ガイド", desc: "はじめての運用の手引き・操作マニュアル", href: "/guide/jimu" },
 ];
@@ -61,6 +66,10 @@ export function JimuDashboard({
   const [year, setYear] = useState(getFiscalYear());
   // 覗き見対策: ログイン直後は結果を表示せず、メニュー画面から選択する
   const [tab, setTab] = useState<Tab | null>(null);
+  // 紙の回答の登録画面から戻ったとき(/jimu?tab=noemail)は、元のタブを開く
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tab") === "noemail") setTab("メールのない方");
+  }, []);
 
   return (
     <div style={{ maxWidth: 960, margin: "0 auto", display: "grid", gap: 16 }}>
@@ -145,6 +154,8 @@ export function JimuDashboard({
       {/* Web申込の企業のみ: 受検期間・受検者数(人数のみで個人の情報は含まない) */}
       {(tab === null || tab === "配布URL・QR") && <PlanStatusPanel companyId={companyId} fiscalYear={year} canEdit />}
       {/* Web申込の企業のみ: 年度の申込(初年度・今年度の申込がない・受検期間が終わったとき) */}
+      {/* Web申込の企業のみ: 銀行振込を選んだお申込みのうち、入金の確認待ちのもの(振込先・期限・請求書) */}
+      {tab === null && webSignup && <BankTransferPanel companyId={companyId} canEdit />}
       {tab === null && webSignup && <PlanOrderPanel companyId={companyId} currentYear={getFiscalYear()} />}
       {tab === null && <DashboardMenu
           items={webSignup ? MENU_ITEMS.map((m) => (m.key === "従業員招待" ? { ...m, desc: "従業員への招待メールの送信と、ほかの担当者(実施事務従事者)の追加" } : m)) : MENU_ITEMS}
@@ -160,6 +171,8 @@ export function JimuDashboard({
       {tab === "配布URL・QR" && (
         <CampaignPanel companyId={companyId} companyName={companyName} fiscalYear={year} manage={false} />
       )}
+      {tab === "配布URL・QR" && <ExamReminderPanel companyId={companyId} companyName={companyName} />}
+      {tab === "メールのない方" && <NoEmailPanel companyId={companyId} companyName={companyName} guideHref="/manuals/jimu-noemail.html" />}
       {tab === "従業員招待" && <UserAdminPanel fixedCompany={{ code: companyCode, name: companyName, webSignup }} />}
       {tab === "部署管理" && <DeptAdminPanel companyId={companyId} companyName={companyName} />}
       {tab === "契約書" && <CompanyContractsPanel companyName={companyName} />}

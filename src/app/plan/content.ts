@@ -1,5 +1,6 @@
 import { IMPLEMENTER } from "@/lib/org";
-import { INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, PRICE_EXAMPLES, priceNew, seatsGranted, WEB_MAX_SEATS, type Pricing } from "@/lib/plan";
+import { bankTransferOn, exTax, INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, PRICE_EXAMPLES, priceNew, seatsGranted, WEB_MAX_SEATS, type Pricing } from "@/lib/plan";
+import { BANK_TRANSFER_DAYS } from "@/lib/bank-transfer";
 
 // 宣伝ページ(/plan)と社内検討用資料(/plan/brochure)で共通の文面。
 // どちらにも同じことを書くので、内容を変えるときはここだけを直す
@@ -10,7 +11,7 @@ export const HEADLINE = "産業医がいなくても、今日から始められ�
 export const KEY_POINTS = [
   { title: "産業医が実施者", text: "法令で必要な実施者(医師)を、当事務所の産業医が務めます。" },
   { title: "個人情報を法令に沿って守る", text: "個人の結果は、実施者と守秘義務のある担当者が法令に沿って管理します。会社には、職場改善に役立つ集団分析と、本人が同意した結果をお渡しします。" },
-  { title: "QRコードを配るだけ", text: "名簿登録やインストールは不要。従業員はスマートフォンで受検します。" },
+  { title: "QRコードを配るだけ", text: "名簿登録やインストールは不要。従業員はスマートフォンで受検します。メールアドレスやスマートフォンのない方は、紙でも受けられます。" },
 ];
 
 // 50人未満の義務化(改正労働安全衛生法。令和10年(2028年)4月1日施行)
@@ -32,22 +33,22 @@ export const compareRows = (pr: Pricing): string[][] => [
   ["個人の結果", "社内の担当者が管理", "サービスにより異なる", "実施者のもとで法令に沿って管理(会社へは集団分析と本人同意分)"],
   ["始め方", "パソコンにインストール", "見積り・契約・名簿登録の場合も", "申込当日から。QRコードを配るだけ"],
   ["調査票", "57項目・23項目", "57項目が中心", "57項目・80項目(同じ料金)"],
-  ["費用", "無料", "サービス・人数により異なる", `1名${pr.unitPrice}円・集団分析込み`],
+  ["費用", "無料", "サービス・人数により異なる", `1名${exTax(pr.unitPrice)}円(税別)・集団分析込み`],
 ];
 export const COMPARE_NOTE =
   "ほかの提供会社の内容は各社・プランにより異なり、上の表は一般的な傾向です。社内に産業医・保健師がいて実施者や個人情報の管理を担える場合は、無料の方法も有力な選択肢です。";
 
-// 料金の例(税込)
+// 料金の例(税別。totalは税込)
 export const priceExamples = (pr: Pricing) =>
   PRICE_EXAMPLES.map((n) => ({
     seats: n,
     total: priceNew(n, pr).total,
-    note: n < minSeats(pr) ? `最低料金(${seatsGranted(n, pr)}名まで)` : `${pr.unitPrice}円 × ${n}名`,
+    note: n < minSeats(pr) ? `最低料金(${seatsGranted(n, pr)}名まで)` : `${exTax(pr.unitPrice)}円 × ${n}名`,
   }));
 export const priceNotes = (pr: Pricing) => [
-  `受検者1名 ${pr.unitPrice}円・最低料金 ${pr.minTotal.toLocaleString()}円(${minSeats(pr)}名まで)。集団分析・結果の5年保存込み(税込)`,
+  `受検者1名 ${exTax(pr.unitPrice)}円・最低料金 ${exTax(pr.minTotal).toLocaleString()}円(${minSeats(pr)}名まで)。集団分析・結果の5年保存込み。金額は税別です(税込は1名${pr.unitPrice}円・最低${pr.minTotal.toLocaleString()}円)`,
   `人数を追加したい場合は1名から追加できます(QRコードはそのまま使えます)。${WEB_MAX_SEATS}名を超える場合はお見積り(割引あり)`,
-  `面接指導を当事務所の医師が行う場合は、申出があった方のみ1回 ${INTERVIEW_FEE.toLocaleString()}円(税込)`,
+  `面接指導を当事務所の医師が行う場合は、申出があった方のみ1回 ${exTax(INTERVIEW_FEE).toLocaleString()}円(税別。税込${INTERVIEW_FEE.toLocaleString()}円)`,
   "お申込み後のお客さまのご都合によるキャンセル・返金はお受けできません",
 ];
 
@@ -66,8 +67,12 @@ export const FAQ: [string, string][] = [
     "QRコードからメールアドレスを登録して、スマートフォンかパソコンで回答します(57項目版で約10分)。結果はその場で本人に表示されます。",
   ],
   [
-    "スマートフォンを持っていない従業員は？",
-    "パソコンからも受検できます。共用のパソコンを使う場合は、受検後にログアウトしてください。受検にはメールアドレスが必要です。",
+    "スマートフォンやメールアドレスを持っていない従業員は？",
+    "受検の基本は、ご本人のメールアドレスでの登録です(スマートフォンのほか、パソコンからも受検できます)。メールアドレスのない方には、担当者が「ログインIDと合言葉」の紙を発行し、職場の共用のパソコン・タブレットで受けていただけます。共用の端末を使う場合は、受検後にログアウトしてください。",
+  ],
+  [
+    "紙でも受検できますか？",
+    "はい。画面での回答が難しい方は、専用の回答用紙(A4)に記入していただき、担当者(実施事務従事者)が回答を登録します。結果はWebで受けた方と同じ計算で出て、結果票を印刷して封筒でお渡しします。集団分析にも同じように入り、料金も同じです。回答の登録と結果票の受け渡しに手間がかかるため、Webでの受検が難しい方のための方法としてご利用ください。",
   ],
   [
     "受検期間はどう決めますか？",
@@ -79,7 +84,7 @@ export const FAQ: [string, string][] = [
   ],
   [
     "高ストレスの人が出たら？",
-    `本人が面接指導を申し出ると、担当者に通知が届きます。医師面接指導は、自社で医師を探して依頼する(自社の産業医など)か、当事務所に依頼する(1回 ${INTERVIEW_FEE.toLocaleString()}円・税込)かを選べ、あとで変更もできます。`,
+    `本人が面接指導を申し出ると、担当者に通知が届きます。医師面接指導は、自社で医師を探して依頼する(自社の産業医など)か、当事務所に依頼する(1回 ${exTax(INTERVIEW_FEE).toLocaleString()}円・税別)かを選べ、あとで変更もできます。`,
   ],
   [
     "衛生委員会や労働基準監督署への報告は？",
@@ -89,5 +94,10 @@ export const FAQ: [string, string][] = [
     "翌年度も使えますか？",
     "はい。ログイン後の画面から同じ操作で申し込めます。更新の時期にはご案内メールをお送りし、従業員のアカウントと過去の結果は引き継がれます。",
   ],
-  ["請求書払いはできますか？", `Web申込のお支払いは${PAYMENT_METHODS_TEXT}です。請求書払いをご希望の場合はお問い合わせください。`],
+  bankTransferOn()
+    ? [
+        "請求書・銀行振込で支払えますか？",
+        `はい。お支払いは${PAYMENT_METHODS_TEXT}から選べます。銀行振込を選ぶと、貴社専用の振込先口座と、経理の方へお渡しいただける請求書(振込先入り)を表示します。お申込みから${BANK_TRANSFER_DAYS}日以内にお振込みください(振込手数料はお客さまのご負担です)。ご入金の確認後に受検の準備が整い、適格請求書(インボイス)を兼ねた領収書を発行します。`,
+      ]
+    : ["請求書払いはできますか？", `Web申込のお支払いは${PAYMENT_METHODS_TEXT}です。請求書払いをご希望の場合はお問い合わせください。`],
 ];

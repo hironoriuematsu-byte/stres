@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { stepBlocked, STEP_BLOCKED_MESSAGE } from "@/lib/second-step-state";
 import { createClient } from "@/lib/supabase/server";
 import { IMPLEMENTER } from "@/lib/org";
 import { sendViaResend, sleep } from "@/lib/mail";
@@ -22,6 +23,10 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+  }
+  // 二段階認証の対象の方は、確認コードの入力が済んでから
+  if (await stepBlocked(supabase)) {
+    return NextResponse.json({ error: STEP_BLOCKED_MESSAGE }, { status: 401 });
   }
 
   let requestId: string | undefined;
@@ -156,7 +161,7 @@ export async function POST(req: Request) {
       ? [
           "",
           `■ 面談前の事前問診への回答をお願いします(${INTAKE_MINUTES})`,
-          "医師との面談の前に、全員に回答をお願いしています。選んで答える質問が中心で、必要なときだけAIから短い追加の質問があります。医師が事前に確認するので、面談では解決策の相談に時間を使えます。回答は自動で保存され、途中でやめても続きから再開できます。",
+          "医師との面談の前に、全員に回答をお願いしています。選んで答える質問のあと、AIが状況を詳しく伺います(音声入力も使えます)。医師が事前に確認するので、面談では解決策の相談に時間を使えます。回答は自動で保存され、途中でやめても続きから再開できます。",
           `${origin}/intake/${request.id}`,
         ]
       : [];

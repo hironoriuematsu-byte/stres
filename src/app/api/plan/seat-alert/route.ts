@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { stepBlocked, STEP_BLOCKED_MESSAGE } from "@/lib/second-step-state";
 import { getFiscalYear } from "@/lib/fiscal";
 import { formatJpDate, seatAlertLevel } from "@/lib/plan";
 import { loadPricing } from "@/lib/plan-prices";
@@ -19,6 +20,10 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "認証が必要です" }, { status: 401 });
+  // 二段階認証の対象の方は、確認コードの入力が済んでから
+  if (await stepBlocked(supabase)) {
+    return NextResponse.json({ error: STEP_BLOCKED_MESSAGE }, { status: 401 });
+  }
 
   const admin = adminClient();
   if (!admin) return NextResponse.json({ skipped: "no service key" });

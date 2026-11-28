@@ -3,6 +3,7 @@ import { requestUser } from "@/lib/supabase/server";
 import { fiscalYearOf, parseOrderInput, priceNew, seatsGranted } from "@/lib/plan";
 import { loadPricing } from "@/lib/plan-prices";
 import { adminClient, invoiceFields } from "@/lib/plan-server";
+import { customerForCompany, reportBankFallback } from "@/lib/plan-bank";
 import { createCheckoutSession, stripeConfigured } from "@/lib/stripe";
 
 export const runtime = "nodejs";
@@ -53,6 +54,23 @@ export async function POST(req: Request) {
     );
   }
 
+  // 同じ年度に、お振込み待ちの申込がある間は、新しく申し込めない(入金と行き違って二重のお支払いになるのを防ぐ)
+  const { data: awaiting } = await admin
+    .from("plan_orders")
+    .select("id")
+    .eq("company_id", me.company_id)
+    .eq("fiscal_year", fiscalYear)
+    .in("kind", ["new", "renew"])
+    .eq("status", "pending")
+    .eq("pay_method", "bank_transfer")
+    .limit(1);
+  if (awaiting && awaiting.length > 0) {
+    return NextResponse.json(
+      { error: `${fiscalYear}年度は、お振込み待ちのお申込みがあります。内容を変える・カードで支払う場合は、「お振込み待ちのお申込み」の欄で取り消してから、もう一度お申込みください` },
+      { status: 409 }
+    );
+  }
+
   const email = user.email ?? "";
   // 料金は受検開始日の年度のもの(申込時点の単価・受検人数枠を記録し、後の改定の影響を受けない)
   const pricing = await loadPricing(admin, fiscalYear);
@@ -90,8 +108,11 @@ export async function POST(req: Request) {
 
   const origin = req.headers.get("origin") ?? new URL(req.url).origin;
   const inv = invoiceFields(company.name, price.total);
+  // 銀行振込も選べるようにする(有効なときだけ)。用意できなければ、カードのみの決済画面になる
+  const customer = await customerForCompany(admin, { companyId: me.company_id, name: `${company.name}${company.office_name ? ` ${company.office_name}` : ""}`, email });
   try {
     const session = await createCheckoutSession({
+      customerId: customer.id,
       orderId: order.id,
       email,
       lines: price.lines,
@@ -102,6 +123,7 @@ export async function POST(req: Request) {
       invoiceCustomFields: inv.customFields,
     });
     await admin.from("plan_orders").update({ stripe_session_id: session.id }).eq("id", order.id);
+    await reportBankFallback(admin, company.name, [customer.error, session.bankError]);
     return NextResponse.json({ url: session.url });
   } catch (e) {
     await admin.from("plan_orders").update({ status: "failed", error: String(e) }).eq("id", order.id);

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { fail, intakeContext, siteOrigin } from "@/lib/intake-api";
-import { excludeBooked, expandSlots, jstToday, MAX_SLOTS, validateRanges, type TimeRange } from "@/lib/interview-schedule";
+import { excludeBooked, expandSlots, jstToday, MAX_SLOTS, overlaps, validateRanges, type TimeRange } from "@/lib/interview-schedule";
 import {
   bookedInterviews,
   companyInfo,
+  declineProposals,
   loadRequest,
   mailScheduleCancelled,
+  mailScheduledOnline,
   mailSlotsOffered,
   mailVisitScheduled,
   withdrawOpenSlots,
@@ -17,6 +19,8 @@ export const runtime = "nodejs";
 //   mode=online: 空いている時間帯から候補日時を作り、本人に選んでもらう
 //   mode=visit:  次回の訪問日に対面で行うことにし、本人と会社の担当者に案内する
 //   action=reset: 候補・確定した日程を取り消して、申出受付の状態に戻す
+//   action=approve: 本人の希望日時から1つを承認して確定する
+// 候補を出し直す・訪問にする・取り消すと、本人の希望日時(承認待ち)は見送りになる
 export async function POST(req: Request) {
   const ctx = await intakeContext(req);
   if (!ctx.ok) return ctx.res;
@@ -28,6 +32,7 @@ export async function POST(req: Request) {
     action?: unknown;
     mode?: unknown;
     durationMin?: unknown;
+    slotId?: unknown;
     ranges?: unknown;
     visitDate?: unknown;
     visitNote?: unknown;
@@ -43,13 +48,59 @@ export async function POST(req: Request) {
   const origin = siteOrigin(req);
   const now = new Date().toISOString();
 
+  if (body.action === "approve") {
+    if (request.status !== "pending" || !request.proposed_at) return fail(400, "承認できる希望の日時がありません");
+    if (typeof body.slotId !== "string") return fail(400, "承認する日時を選んでください");
+    const { data: slot } = await admin.from("interview_slots").select("*").eq("id", body.slotId).eq("request_id", request.id).maybeSingle();
+    if (!slot || slot.status !== "proposed") return fail(409, "その希望の日時は承認できなくなりました");
+    const startsAt = slot.starts_at as string;
+    const durationMin = slot.duration_min as number;
+    if (new Date(startsAt).getTime() < Date.now()) return fail(409, "その日時は過ぎています。別の希望を選ぶか、候補を出し直してください");
+    const booked = await bookedInterviews(admin, request.id);
+    if (booked.some((b) => overlaps(startsAt, durationMin, b.starts_at, b.duration_min))) {
+      return fail(409, "その日時はほかの面談と重なっています。別の希望を選ぶか、候補を出し直してください");
+    }
+    const co = await companyInfo(admin, request.company_id);
+    if (!co.meet_room_url) return fail(400, "先に、この企業の産業医面談ルーム(Google Meet)のURLを登録してください");
+    const { data: claimed } = await admin
+      .from("interview_slots")
+      .update({ status: "chosen", chosen_at: now })
+      .eq("id", slot.id)
+      .eq("status", "proposed")
+      .select("id");
+    if (!claimed || claimed.length === 0) return fail(409, "その希望の日時は承認できなくなりました");
+    const { error } = await admin
+      .from("interview_requests")
+      .update({ status: "scheduled", scheduled_at: startsAt, duration_min: durationMin, meet_url: co.meet_room_url, scheduled_by: userId })
+      .eq("id", request.id);
+    if (error) return fail(500, `保存できませんでした: ${error.message}`);
+    // 残りの希望は見送り。ほかの申出の候補のうち、この面談と重なるものは閉じる
+    await declineProposals(admin, request.id);
+    const { data: others } = await admin.from("interview_slots").select("id, starts_at, duration_min").eq("status", "open").neq("request_id", request.id);
+    const clash = (others ?? []).filter((o) => overlaps(startsAt, durationMin, o.starts_at as string, o.duration_min as number)).map((o) => o.id as string);
+    if (clash.length > 0) await admin.from("interview_slots").update({ status: "withdrawn" }).in("id", clash);
+    await mailScheduledOnline(
+      admin,
+      { ...request, status: "scheduled", scheduled_at: startsAt, duration_min: durationMin, meet_url: co.meet_room_url },
+      co.name,
+      origin,
+      false
+    );
+    return NextResponse.json({ ok: true });
+  }
+
+  // ここから先(取り消し・訪問・候補の出し直し)では、本人の希望日時は見送りにする
+  if (request.proposed_at) await declineProposals(admin, request.id);
+  // SQL 0033 の実行前は列がないので触らない(select("*") で列があるかがわかる)
+  const clearProposal = "proposed_at" in request ? { proposed_at: null, proposal_note: null } : {};
+
   if (body.action === "reset") {
     const hadOnlineDate = request.status === "scheduled" && request.schedule_mode === "online" && Boolean(request.scheduled_at);
     await withdrawOpenSlots(admin, request.id);
     await admin.from("interview_slots").update({ status: "withdrawn" }).eq("request_id", request.id).eq("status", "chosen");
     const { error } = await admin
       .from("interview_requests")
-      .update({ status: "pending", schedule_mode: null, slots_offered_at: null, scheduled_at: null, duration_min: null, meet_url: null, visit_note: null, scheduled_by: null })
+      .update({ status: "pending", schedule_mode: null, slots_offered_at: null, scheduled_at: null, duration_min: null, meet_url: null, visit_note: null, scheduled_by: null, ...clearProposal })
       .eq("id", request.id);
     if (error) return fail(500, `保存できませんでした: ${error.message}`);
     if (hadOnlineDate) await mailScheduleCancelled(admin, request, origin, "doctor");
@@ -65,7 +116,7 @@ export async function POST(req: Request) {
     const scheduledAt = new Date(`${date}T00:00:00+09:00`).toISOString();
     const { error } = await admin
       .from("interview_requests")
-      .update({ status: "scheduled", schedule_mode: "visit", scheduled_at: scheduledAt, duration_min: null, meet_url: null, visit_note: note || null, scheduled_by: userId, slots_offered_at: null })
+      .update({ status: "scheduled", schedule_mode: "visit", scheduled_at: scheduledAt, duration_min: null, meet_url: null, visit_note: note || null, scheduled_by: userId, slots_offered_at: null, ...clearProposal })
       .eq("id", request.id);
     if (error) return fail(500, `保存できませんでした: ${error.message}`);
     const co = await companyInfo(admin, request.company_id);
@@ -99,11 +150,12 @@ export async function POST(req: Request) {
   if (insErr) return fail(500, `候補を保存できませんでした: ${insErr.message}`);
   const { error } = await admin
     .from("interview_requests")
-    .update({ schedule_mode: "online", slots_offered_at: now, duration_min: durationMin, scheduled_at: null, meet_url: null, visit_note: null, status: "pending" })
+    .update({ schedule_mode: "online", slots_offered_at: now, duration_min: durationMin, scheduled_at: null, meet_url: null, visit_note: null, status: "pending", ...clearProposal })
     .eq("id", request.id);
   if (error) return fail(500, `保存できませんでした: ${error.message}`);
 
   const dates = [...new Set(ranges.map((r) => r.date))].sort();
+  // 希望を見送って出し直したときは、メールにその旨を添える(request.proposed_at は更新前の値)
   await mailSlotsOffered(admin, request, dates, origin);
   return NextResponse.json({ ok: true, count: starts.length });
 }

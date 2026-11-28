@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER, SELLER } from "@/lib/org";
-import { INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, pricingFor } from "@/lib/plan";
+import { bankTransferOn, exTax, INTERVIEW_FEE, minSeats, PAYMENT_METHODS_TEXT, pricingFor } from "@/lib/plan";
+import { BANK_TRANSFER_DAYS } from "@/lib/bank-transfer";
 import { getFiscalYear } from "@/lib/fiscal";
 import { loadPlanPrices } from "@/lib/plan-prices";
 import { createClient } from "@/lib/supabase/server";
@@ -68,9 +69,14 @@ export default async function TermsPage() {
       <h2 style={h}>第4条(料金と支払い)</h2>
       <ol style={ol}>
         <li>
-          料金は、当社のサービスのご案内ページに掲載する、受検開始日の属する年度の料金とします(本規約の掲載時点では、受検者1名あたり {pricing.unitPrice}円(税込)、最低料金 {pricing.minTotal.toLocaleString()}円(税込。{minSeats(pricing)}名まで))。集団分析の料金を含みます。
+          料金は、当社のサービスのご案内ページに掲載する、受検開始日の属する年度の料金とします(本規約の掲載時点では、受検者1名あたり {exTax(pricing.unitPrice)}円(税別。税込{pricing.unitPrice}円)、最低料金 {exTax(pricing.minTotal).toLocaleString()}円(税別。税込{pricing.minTotal.toLocaleString()}円。{minSeats(pricing)}名まで))。集団分析の料金を含みます。
         </li>
         <li>事業者は、年度ごとの申込時に受検予定人数分の料金を、{PAYMENT_METHODS_TEXT}により前払いします。</li>
+        {bankTransferOn() && (
+          <li>
+            銀行振込の場合、事業者は、申込の日から{BANK_TRANSFER_DAYS}日以内に、当社が申込後に表示する口座へ料金の全額を振り込むものとし、振込手数料は事業者の負担とします。当社は、入金を確認した後に受検の準備を整えます。期限までに全額の入金を確認できない場合、当社は、その申込を取り消すことができます。
+          </li>
+        )}
         <li>受検者が申込人数に達した後は受検できません。事業者は、受検期間中に1名単位で人数を追加購入できます。</li>
         <li>当社は、料金を改定する場合があります。改定後の料金は、サービスのご案内ページとお申込み画面に表示し、改定後のお申込みから適用します。申込済みの料金(その年度の人数の追加を含みます)は、改定の影響を受けません。</li>
       </ol>
@@ -86,7 +92,7 @@ export default async function TermsPage() {
       <h2 style={h}>第6条(面接指導)</h2>
       <ol style={ol}>
         <li>医師面接指導の担当は、事業者が申込時に、事業者が医師を探して依頼するか、当社に依頼するかを選びます。事業者は、申込後も担当者の画面から変更できます。</li>
-        <li>当社の医師が面接指導を行う場合の料金は、1回 {INTERVIEW_FEE.toLocaleString()}円(税込。意見書の作成を含みます)とし、実施後に事業者に請求書を送付して請求します。</li>
+        <li>当社の医師が面接指導を行う場合の料金は、1回 {exTax(INTERVIEW_FEE).toLocaleString()}円(税別。税込{INTERVIEW_FEE.toLocaleString()}円。意見書の作成を含みます)とし、実施後に事業者に請求書を送付して請求します。</li>
       </ol>
 
       <h2 style={h}>第7条(キャンセル・返金)</h2>

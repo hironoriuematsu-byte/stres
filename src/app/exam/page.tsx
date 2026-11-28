@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionProfile, roleHome } from "@/lib/auth-server";
+import { requireIdConfirmed } from "@/lib/id-gate";
 import { createClient } from "@/lib/supabase/server";
 import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
@@ -27,6 +28,8 @@ export default async function ExamPage() {
   }
   // 従業員に加えて実施事務従事者も自分のアカウントで受検できる
   if (profile.role !== "employee" && profile.role !== "jimu") redirect(roleHome(profile.role));
+  // IDでログインした方は、最初に生年月日で本人確認を済ませる
+  await requireIdConfirmed(user.id, "/exam");
 
   const supabase = createClient();
   const fiscalYear = getFiscalYear();

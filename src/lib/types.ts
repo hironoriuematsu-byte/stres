@@ -55,6 +55,9 @@ export type InterviewRequest = {
   duration_min?: number | null;
   meet_url?: string | null;
   visit_note?: string | null;
+  // 本人からの希望日時(SQL 0033)
+  proposed_at?: string | null;
+  proposal_note?: string | null;
 };
 
 export type GroupAnalysisRow = {

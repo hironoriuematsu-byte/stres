@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { stepBlocked, STEP_BLOCKED_MESSAGE } from "@/lib/second-step-state";
 import { adminClient } from "@/lib/plan-server";
 import { receiptPageUrl, stripeConfigured } from "@/lib/stripe";
 
@@ -14,6 +15,10 @@ export async function GET(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.redirect(new URL(`/login?next=/jimu`, req.url));
+  // 二段階認証の対象の方は、確認コードの入力が済んでから
+  if (await stepBlocked(supabase)) {
+    return NextResponse.json({ error: STEP_BLOCKED_MESSAGE }, { status: 401 });
+  }
 
   const admin = adminClient();
   if (!admin || !stripeConfigured()) return new NextResponse("現在、領収書を表示できません。", { status: 503 });

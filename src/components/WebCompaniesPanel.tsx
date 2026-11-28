@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { searchKey } from "@/lib/search";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
@@ -94,14 +95,15 @@ export function WebCompaniesPanel({ fiscalYear, onOpenCompany }: { fiscalYear: n
   }, [rows]);
 
   const shown = useMemo(() => {
-    const key = q.trim().toLowerCase();
+    // 空白(半角・全角)や全角/半角の違いは無視して探す
+    const key = searchKey(q);
     return (rows ?? []).filter((r) => {
       const st = statusOf(r, fiscalYear, today).key;
       const okFilter =
         filter === "all" ? true : filter === "contract" ? st === "contract" : filter === "none" ? st === "none" || st === "lapsed" : st !== "contract";
       const okQ =
         !key ||
-        [r.name, r.code, r.office_name ?? "", r.biz_id ?? "", r.jimu_names ?? ""].some((v) => v.toLowerCase().includes(key));
+        [r.name, r.code, r.office_name ?? "", r.biz_id ?? "", r.jimu_names ?? ""].some((v) => searchKey(v).includes(key));
       return okFilter && okQ;
     });
   }, [rows, filter, q, fiscalYear, today]);

@@ -3,6 +3,7 @@ import { constructWebhookEvent } from "@/lib/stripe";
 import { maxEndOf, seatsGranted } from "@/lib/plan";
 import { adminClient, officeEmails, orderSummary, OrderRow, sendMails } from "@/lib/plan-server";
 import { IMPLEMENTER, SELLER } from "@/lib/org";
+import { noteAwaitingTransfer } from "@/lib/plan-bank";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -62,8 +63,15 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ ok: true });
   }
-  // 完了イベントでも、コンビニ・銀行振込は入金前(unpaid)。入金されると async_payment_succeeded が届く
-  if (session.payment_status !== "paid") return NextResponse.json({ waiting: true });
+  // 完了イベントでも、銀行振込は入金前(unpaid)。入金されると async_payment_succeeded が届く
+  if (session.payment_status !== "paid") {
+    // 銀行振込が選ばれた: お振込み待ちとして控え、振込先と期限を担当者に案内する(最初の1回だけ)
+    if (event.type === "checkout.session.completed" && (session.payment_method_types ?? []).includes("customer_balance")) {
+      const pi = typeof session.payment_intent === "string" ? session.payment_intent : (session.payment_intent?.id ?? null);
+      await noteAwaitingTransfer(admin, orderId, pi, process.env.NEXT_PUBLIC_SITE_URL || new URL(req.url).origin);
+    }
+    return NextResponse.json({ waiting: true });
+  }
 
   const { data: order } = await admin.from("plan_orders").select("*").eq("id", orderId).single<OrderRow>();
   if (!order) return NextResponse.json({ error: "order not found" }, { status: 404 });
@@ -123,7 +131,7 @@ export async function POST(req: Request) {
           : "3. 昨年度に受検した従業員の方は、これまでのアカウントでログインして受検できます(登録し直す必要はありません)。",
         "",
         "■ 領収書",
-        "決済代行会社(Stripe)から領収書のメールが届きます。ログイン後の画面の「お支払いの記録」からも、いつでもダウンロードできます。",
+        "ログイン後の画面の「お支払いの記録」から、いつでも領収書(インボイス対応)を表示・保存できます。決済代行会社(Stripe)からも、領収書のメールが届きます。",
         "",
         `${origin}/jimu`,
         `実施者: ${IMPLEMENTER.full}(${IMPLEMENTER.officeName})`,

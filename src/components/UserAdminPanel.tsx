@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isIdEmail } from "@/lib/no-email";
 import { createClient } from "@/lib/supabase/client";
 import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
@@ -27,7 +28,12 @@ type Member = {
   email: string;
   hm_company_access?: boolean; // 健康管理Webでは事業者担当者として扱う(兼務)
   hm_view_only?: boolean; // 健康管理Webでは閲覧のみ(登録・編集・取込は不可)
+  last_sign_in_at?: string | null; // 最後にログインした日時(まだなら null)
+  confirmed?: boolean; // メールアドレスの確認(招待メールのリンクを押した)が済んでいるか
 };
+
+// 招待メールの送り直しの状況(相手のメールサーバーに届いたかまで表示する)
+type ResendState = { state: "sending" | "sent" | "delivered" | "failed" | "error"; text: string; mailId?: string | null; startedAt?: number };
 
 const input = {
   width: "100%",
@@ -61,6 +67,7 @@ export function UserAdminPanel({
   });
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState<string[]>([]);
+  const [resends, setResends] = useState<Record<string, ResendState>>({});
   // メンバー一覧・ロール変更(officeのみ)
   // 画面上部で企業を選んでいればそれを引き継ぐ。未選択なら企業を選ばない
   // (誤って別の企業のメンバーを開かないようにする)
@@ -178,6 +185,51 @@ export function UserAdminPanel({
     }
     await loadMembers(memberCompanyId);
     setMemberBusy(false);
+  };
+
+  // 招待メールを送り直す(登録はあるが、まだログインしていない方へ)。送ったあと、相手のメールサーバーに届いたかを確かめる
+  const resendInvite = async (m: { user_id: string; email: string }) => {
+    if (!window.confirm(`${m.email} あてに、パスワードを設定するためのメールを送り直します。\n(以前に送ったメールのリンクは使えなくなります)\n\nよろしいですか？`)) return;
+    const put = (v: ResendState) => setResends((r) => ({ ...r, [m.user_id]: v }));
+    put({ state: "sending", text: "送っています…" });
+    try {
+      const startedAt = Date.now();
+      const res = await fetch("/api/invite/resend", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: m.user_id }) });
+      const j = (await res.json().catch(() => ({}))) as { error?: string; mailId?: string | null };
+      if (!res.ok) return put({ state: "error", text: j.error ?? "送れませんでした" });
+      const at = new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+      put({ state: "sent", text: `✓ ${at} に送りました(相手のメールサーバーへの到着を確認中…)`, mailId: j.mailId, startedAt });
+      if (!j.mailId) return put({ state: "sent", text: `✓ ${at} に送りました` });
+      // 最長40秒、相手のメールサーバーに届いたかを確かめる
+      for (let i = 0; i < 13; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const sr = await fetch("/api/invite/resend", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ statusId: j.mailId }) });
+        const sj = (await sr.json().catch(() => ({}))) as { event?: string | null };
+        const ev = sr.ok ? (sj.event ?? null) : null;
+        if (ev === "delivered" || ev === "opened" || ev === "clicked") return put({ state: "delivered", text: `✓ ${at} に送り、相手のメールサーバーに届きました(迷惑メールに入ることもあります)` });
+        if (ev === "bounced" || ev === "complained" || ev === "failed") return put({ state: "failed", text: "✗ 届きませんでした(メールアドレスが違う、または受け取りを拒否されています)" });
+        if (ev === null && i >= 2) break; // 状況を取得できない設定のときは、送ったことだけを表示する
+      }
+      put({ state: "sent", text: `✓ ${at} に送りました(到着は確認できませんでした。Resend の「Emails」で確かめられます)` });
+    } catch (e) {
+      put({ state: "error", text: `通信エラー: ${String(e)}` });
+    }
+  };
+  // まだログインしていない方に出す、送り直しのボタンと結果
+  const resendCell = (m: { user_id: string; email: string; last_sign_in_at?: string | null; confirmed?: boolean }) => {
+    // ログイン済みの方・メールアドレスのない方(IDでログインする方)には出さない
+    if (m.last_sign_in_at || !m.email || isIdEmail(m.email)) return null;
+    const r = resends[m.user_id];
+    return (
+      <div style={{ marginTop: 6 }}>
+        <Btn tone="ghost" onClick={() => resendInvite(m)} disabled={r?.state === "sending"} style={{ padding: "5px 12px", fontSize: 12 }}>
+          {r?.state === "sending" ? "送っています…" : "招待メールを送り直す"}
+        </Btn>
+        <div style={{ fontSize: 11.5, color: r ? (r.state === "error" || r.state === "failed" ? "#B02A2A" : brand.tealDark) : "#8A6B2E", marginTop: 3, whiteSpace: "normal", maxWidth: 300, lineHeight: 1.6 }}>
+          {r ? r.text : m.confirmed ? "まだログインしていません" : "招待メールのリンクが、まだ押されていません"}
+        </div>
+      </div>
+    );
   };
 
   const send = async (invites: InvitePayload[]) => {
@@ -401,6 +453,7 @@ export function UserAdminPanel({
                         </td>
                         <td style={{ padding: "8px 10px", whiteSpace: "nowrap", color: "#5B6B6A" }}>
                           {f.last_sign_in_at ? new Date(f.last_sign_in_at).toLocaleString("ja-JP") : f.confirmed ? "未ログイン" : "メール未確認"}
+                          {resendCell(f)}
                         </td>
                         <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                           {f.company_id && (
@@ -537,6 +590,7 @@ export function UserAdminPanel({
                             従業員に戻す
                           </Btn>
                         )}
+                        {resendCell(m)}
                       </td>
                     </tr>
                   ))}

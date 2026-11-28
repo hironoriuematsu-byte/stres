@@ -183,9 +183,13 @@ function gradeCellColor(key: string, v: number | null): string {
   return "#fff";
 }
 
-// 1つの表に並べる部署数の上限。これを超えると表を分割して積み重ねる
-// (A4印刷でも列が切れないようにするため)
-const MAX_COLS = 5; // 6列だとA4の印刷幅(余白12mmで約690px)で右端の列が切れるため5列まで
+// 1つの表に並べる部署数(「全体」を含む)の上限。これを超えると表を分割して積み重ねる
+// (A4印刷でも列が切れないようにするため)。列の余白を詰め、部署名は折り返すことで、
+// A4の印刷幅(余白12mmで約690px)でも8列まで1つの表に収まる
+const MAX_COLS = 8;
+// 部署の列の見出し・値のセル(余白を詰める。長い部署名は折り返す)
+const DEPT_TH: React.CSSProperties = { textAlign: "left", padding: "5px 6px", lineHeight: 1.35, verticalAlign: "bottom", wordBreak: "break-all" };
+const DEPT_TD_PAD = "5px 6px";
 
 // 判定図プロット用の番号表記(①〜⑳、それ以降は (21) 形式)
 export function plotNum(i: number): string {
@@ -637,9 +641,12 @@ export function GroupReportView({
   const groups: DeptAggregate[] = [...sortedDepts, ...(total ? [total] : [])];
   // 80項目版の回答が含まれていれば「新職業性ストレス簡易調査票 短縮版」として表記する
   const is80 = groups.some((g) => g.ext80Count > 0);
-  // 部署数が多いと表が横に伸びて印刷時に切れるため、6部署ずつに分けて表を積み重ねる
+  // 部署数が多いと表が横に伸びて印刷時に切れるため、MAX_COLS 列までの表に分けて積み重ねる。
+  // 分けるときは、最後の表に1〜2列だけが残らないよう、ほぼ同じ列数に割り振る
   const groupBlocks: DeptAggregate[][] = [];
-  for (let i = 0; i < groups.length; i += MAX_COLS) groupBlocks.push(groups.slice(i, i + MAX_COLS));
+  const blockCount = Math.max(1, Math.ceil(groups.length / MAX_COLS));
+  const blockSize = Math.ceil(groups.length / blockCount);
+  for (let i = 0; i < groups.length; i += blockSize) groupBlocks.push(groups.slice(i, i + blockSize));
 
   // 判定図: 部署名の代わりに番号で点を打ち、対応表を図の下に示す(ラベルの重なり対策)
   const plotted = groups.filter(
@@ -1038,7 +1045,7 @@ export function GroupReportView({
             <h2 className="print-break-before" style={{ fontSize: 15, color: brand.tealDark, margin: "16px 0 6px" }}>
               尺度別 平均評価点(素点換算・5段階)
             </h2>
-            {/* 部署が多いときは6部署ずつの表に分けて縦に並べる(印刷で列が切れないように) */}
+            {/* 部署が多いときは表を分けて縦に並べる(印刷で列が切れないように) */}
             {groupBlocks.map((block, bi) => (
               <div key={bi} style={{ overflowX: "auto", marginTop: bi === 0 ? 0 : 10, pageBreakInside: "avoid" }}>
                 {groupBlocks.length > 1 && (
@@ -1050,11 +1057,11 @@ export function GroupReportView({
                   <thead>
                     <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
                       <th style={{ textAlign: "left", padding: "5px 8px", minWidth: 110 }}>尺度</th>
-                      <th style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap", color: "#5B6B6A" }}>
+                      <th style={{ textAlign: "left", padding: "5px 6px", whiteSpace: "nowrap", color: "#5B6B6A", verticalAlign: "bottom" }}>
                         全国平均
                       </th>
                       {block.map((g) => (
-                        <th key={g.dept} style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap" }}>
+                        <th key={g.dept} style={DEPT_TH}>
                           {g.dept}
                         </th>
                       ))}
@@ -1072,11 +1079,11 @@ export function GroupReportView({
                           <tr key={s.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
                             <td style={{ padding: "5px 8px", color: brand.ink, whiteSpace: "nowrap" }}>{s.label}</td>
                             {/* 4段階の単一項目尺度の 2.5 は全国平均ではなく参考基準。※印を付け、下の注記で説明する */}
-                            <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
+                            <td style={{ padding: "5px 6px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
                               {s.male.length === 4 ? "2.5*" : "3.0"}
                             </td>
                             {block.map((g) => (
-                              <td key={g.dept} style={{ padding: "5px 8px", background: gradeCellColor(s.key, g.meanGrades[s.key]) }}>
+                              <td key={g.dept} style={{ padding: DEPT_TD_PAD, background: gradeCellColor(s.key, g.meanGrades[s.key]) }}>
                                 {g.meanGrades[s.key] ?? "—"}
                               </td>
                             ))}
@@ -1131,9 +1138,9 @@ export function GroupReportView({
                     <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
                       {/* 尺度名の列は最低幅を確保し、長い尺度名でも1〜2行に収める(狭い画面では表が横にスクロールする) */}
                       <th style={{ textAlign: "left", padding: "5px 8px", minWidth: 130 }}>尺度</th>
-                      <th style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap", color: "#5B6B6A" }}>全国平均</th>
+                      <th style={{ textAlign: "left", padding: "5px 6px", whiteSpace: "nowrap", color: "#5B6B6A", verticalAlign: "bottom" }}>全国平均</th>
                       {block.map((g) => (
-                        <th key={g.dept} style={{ textAlign: "left", padding: "5px 8px", whiteSpace: "nowrap" }}>
+                        <th key={g.dept} style={DEPT_TH}>
                           {g.dept}
                         </th>
                       ))}
@@ -1150,7 +1157,7 @@ export function GroupReportView({
                         {EXT80_SCALES.filter((sc) => sc.group === grp).map((sc) => (
                           <tr key={sc.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
                             <td style={{ padding: "5px 8px", color: brand.ink, minWidth: 130 }}>{sc.label}</td>
-                            <td style={{ padding: "5px 8px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
+                            <td style={{ padding: "5px 6px", color: "#5B6B6A", background: "#F1F3F3", whiteSpace: "nowrap" }}>
                               {sc.norm.all.toFixed(2)}
                             </td>
                             {block.map((g) => {
@@ -1160,7 +1167,7 @@ export function GroupReportView({
                                 <td
                                   key={g.dept}
                                   style={{
-                                    padding: "5px 8px",
+                                    padding: DEPT_TD_PAD,
                                     background: diff == null ? "#fff" : diff <= -0.5 ? "#FDE3E3" : diff <= -0.25 ? "#FCEADC" : "#fff",
                                   }}
                                 >

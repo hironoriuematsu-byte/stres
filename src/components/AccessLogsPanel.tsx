@@ -6,16 +6,33 @@ import { Badge, Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { Profile, ROLE_LABEL, Role } from "@/lib/types";
 import { LoadingCard } from "@/components/LoadingCard";
+import { hmActionLabel, hmIsView } from "@/lib/hm-log-labels";
 
+// ストレスチェックWebのログ(access_logs)と健康管理Webのログ(hm_access_logs)を同じ形にして並べる
+type Site = "stres" | "hm";
 type LogRow = {
-  id: number;
+  key: string;
+  site: Site;
   user_id: string;
   role: string | null;
   action: string;
   target: string | null;
   company_id: string | null;
   created_at: string;
+  // 健康管理Webのログだけ: 対象の表・記録と補足
+  hm?: { table: string | null; target_id: string | null; detail: Record<string, unknown> | null };
 };
+type HmLogRow = {
+  id: string;
+  user_id: string | null;
+  action: string;
+  target_table: string | null;
+  target_id: string | null;
+  detail: Record<string, unknown> | null;
+  company_id?: string | null; // 健康管理Webの SQL 0152 の実行後
+  created_at: string;
+};
+const LIMIT = 300;
 
 const ACTION_LABEL: Record<string, string> = {
   view_results: "結果一覧の表示",
@@ -23,6 +40,8 @@ const ACTION_LABEL: Record<string, string> = {
   export_csv: "CSV出力",
   view_interview: "申出一覧の表示",
   invite_user: "ユーザー招待",
+  invite_resend: "招待メールの送り直し",
+  plan_order_cancel: "お振込み待ちの申込の取り消し",
   interview_request_created: "面接指導の申出",
   delete_result_for_retake: "結果削除(再受検対応)",
   view_group_report: "集団分析報告書の表示",
@@ -39,6 +58,13 @@ const ACTION_LABEL: Record<string, string> = {
   dept_master_renamed: "部署名の変更(マスタ)",
   dept_master_removed: "部署の削除(マスタ)",
   company_hm_changed: "健康管理Webの併用設定の変更",
+  no_email_person_created: "メールのない方の登録",
+  no_email_passcode_issued: "ログインID・合言葉の発行",
+  no_email_person_removed: "メールのない方の登録の取り消し",
+  paper_result_registered: "紙の回答の登録",
+  paper_ai_read: "紙の回答のAI読み取り",
+  paper_consent_recorded: "紙の同意書の記録(同意)",
+  paper_consent_withdrawn: "紙の同意の取り消し",
   hm_view_high_stress: "高ストレス者一覧の閲覧(健康管理Web)",
   hm_view_stress_history: "受検歴の閲覧(健康管理Web)",
 };
@@ -53,8 +79,8 @@ function resultIdOf(target: string | null): string | null {
 
 // 閲覧(view_*)か操作(データの作成・変更・出力)かの分類
 type LogKind = "all" | "view" | "operation";
-const kindOf = (action: string): Exclude<LogKind, "all"> =>
-  action.startsWith("view_") ? "view" : "operation";
+const kindOf = (r: LogRow): Exclude<LogKind, "all"> =>
+  (r.site === "hm" ? hmIsView(r.action) : r.action.startsWith("view_")) ? "view" : "operation";
 
 export function AccessLogsPanel() {
   const [rows, setRows] = useState<LogRow[] | null>(null);
@@ -65,16 +91,24 @@ export function AccessLogsPanel() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [kind, setKind] = useState<LogKind>("all");
+  const [site, setSite] = useState<"all" | Site>("all");
+  // 健康管理Webのログの対象(カルテ・面談・健診)が誰の記録かを表示用に引く
+  const [hmNames, setHmNames] = useState<Record<string, string>>({});
 
   const supabase = createClient();
 
   const load = async () => {
-    let q = supabase.from("access_logs").select("*").order("created_at", { ascending: false }).limit(300);
+    let q = supabase.from("access_logs").select("*").order("created_at", { ascending: false }).limit(LIMIT);
     if (from) q = q.gte("created_at", `${from}T00:00:00+09:00`);
     if (to) q = q.lte("created_at", `${to}T23:59:59+09:00`);
-    const [{ data: logs }, { data: ps }, { data: cs }] = await Promise.all([
+    // 健康管理Webを使っていない環境では表がないので、読めなければ空にする
+    let hq = supabase.from("hm_access_logs").select("*").order("created_at", { ascending: false }).limit(LIMIT);
+    if (from) hq = hq.gte("created_at", `${from}T00:00:00+09:00`);
+    if (to) hq = hq.lte("created_at", `${to}T23:59:59+09:00`);
+    const [{ data: logs }, { data: hmLogs, error: hmErr }, { data: ps }, { data: cs }] = await Promise.all([
       q,
-      supabase.from("profiles").select("user_id, name, company_id"),
+      hq,
+      supabase.from("profiles").select("user_id, name, company_id, role"),
       supabase.from("companies").select("id, name"),
     ]);
     const map: Record<string, Profile> = {};
@@ -83,7 +117,42 @@ export function AccessLogsPanel() {
     const cmap: Record<string, string> = {};
     ((cs as { id: string; name: string }[]) ?? []).forEach((c) => (cmap[c.id] = c.name));
     setCompanies(cmap);
-    const logRows = (logs as LogRow[]) ?? [];
+    const stresRows: LogRow[] = ((logs as (Omit<LogRow, "key" | "site"> & { id: number })[]) ?? []).map((r) => ({
+      ...r,
+      key: `s${r.id}`,
+      site: "stres",
+    }));
+    const hmRows: LogRow[] = (hmErr ? [] : ((hmLogs as HmLogRow[]) ?? []))
+      .filter((r) => r.user_id)
+      .map((r) => ({
+        key: `h${r.id}`,
+        site: "hm",
+        user_id: r.user_id as string,
+        role: map[r.user_id as string]?.role ?? null,
+        action: r.action,
+        target: null,
+        company_id: r.company_id ?? null,
+        created_at: r.created_at,
+        hm: { table: r.target_table, target_id: r.target_id, detail: r.detail },
+      }));
+    const logRows = [...stresRows, ...hmRows].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    // 健康管理Webのログの対象: カルテ・面談・健診が誰の記録か
+    const idsOf = (table: string) =>
+      Array.from(new Set(hmRows.filter((r) => r.hm?.table === table && r.hm.target_id).map((r) => r.hm!.target_id as string)));
+    const names: Record<string, string> = {};
+    const [persons, interviews, checkups] = await Promise.all([
+      idsOf("hm_persons").length ? supabase.from("hm_persons").select("id, full_name").in("id", idsOf("hm_persons").slice(0, 200)) : null,
+      idsOf("hm_interviews").length ? supabase.from("hm_interviews").select("id, target_name").in("id", idsOf("hm_interviews").slice(0, 200)) : null,
+      idsOf("hm_checkups").length
+        ? supabase.from("hm_checkups").select("id, target_name, fiscal_year").in("id", idsOf("hm_checkups").slice(0, 200))
+        : null,
+    ]);
+    ((persons?.data as { id: string; full_name: string }[] | null) ?? []).forEach((x) => (names[x.id] = `${x.full_name}さん`));
+    ((interviews?.data as { id: string; target_name: string }[] | null) ?? []).forEach((x) => (names[x.id] = `${x.target_name}さん`));
+    ((checkups?.data as { id: string; target_name: string; fiscal_year: number }[] | null) ?? []).forEach(
+      (x) => (names[x.id] = `${x.target_name}さん ${x.fiscal_year}年度`)
+    );
+    setHmNames(names);
     // 補足欄に結果ID(そのまま、または report:ID)が入っている行の結果をまとめて引く
     const ids = Array.from(
       new Set(logRows.map((r) => resultIdOf(r.target)).filter((x): x is string => x !== null))
@@ -109,7 +178,7 @@ export function AccessLogsPanel() {
 
   if (rows === null) return <LoadingCard />;
 
-  const shown = kind === "all" ? rows : rows.filter((r) => kindOf(r.action) === kind);
+  const shown = rows.filter((r) => (kind === "all" || kindOf(r) === kind) && (site === "all" || r.site === site));
 
   // どの企業に関する操作かを示す。ログに企業が記録されていなければ、操作した方の所属企業を出す
   const companyOf = (r: LogRow): string => {
@@ -119,6 +188,17 @@ export function AccessLogsPanel() {
   // 「対象」は企業列と重なる部分(企業名)を省き、年度などの補足だけを短く出す。
   // 「report:<id>」のような内部の識別子は読みやすい表記にする
   const targetLabel = (r: LogRow): string => {
+    if (r.site === "hm") {
+      const h = r.hm!;
+      const parts: string[] = [];
+      // 申出者のストレスチェック結果の表示は、対象に本人のアカウントが入っている
+      if (h.target_id) parts.push(hmNames[h.target_id] ?? (h.table === "results" && people[h.target_id] ? `${people[h.target_id].name}さん` : ""));
+      const d = h.detail ?? {};
+      if (typeof d.file_name === "string") parts.push(d.file_name);
+      if (typeof d.reason === "string") parts.push(`理由: ${d.reason}`);
+      if (typeof d.recipients === "number") parts.push(`${d.recipients}名に送信`);
+      return parts.filter(Boolean).join(" / ");
+    }
     const t = r.target ?? "";
     if (!t) return "";
     // 個人結果の閲覧: 結果IDを「誰の何年度の結果か」に置き換える
@@ -144,7 +224,7 @@ export function AccessLogsPanel() {
   return (
     <Card>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-        <h3 style={{ fontSize: 17, color: brand.ink, margin: 0 }}>アクセスログ(最新300件)</h3>
+        <h3 style={{ fontSize: 17, color: brand.ink, margin: 0 }}>アクセスログ(各サイトの最新{LIMIT}件)</h3>
         <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, flexWrap: "wrap" }}>
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ padding: "6px 8px", border: `1px solid ${brand.line}`, borderRadius: 8 }} />
           〜
@@ -154,7 +234,19 @@ export function AccessLogsPanel() {
           </Btn>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+      <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
+        {(
+          [
+            ["all", "両方のサイト"],
+            ["stres", "ストレスチェックWeb"],
+            ["hm", "健康管理Web"],
+          ] as const
+        ).map(([k, label]) => (
+          <FilterChip key={k} on={site === k} onClick={() => setSite(k)}>
+            {label}
+          </FilterChip>
+        ))}
+        <span style={{ width: 10 }} />
         {(
           [
             ["all", "すべて"],
@@ -162,29 +254,16 @@ export function AccessLogsPanel() {
             ["operation", "操作ログ"],
           ] as const
         ).map(([k, label]) => (
-          <button
-            key={k}
-            onClick={() => setKind(k)}
-            style={{
-              background: kind === k ? brand.teal : "#fff",
-              color: kind === k ? "#fff" : brand.tealDark,
-              border: `1px solid ${brand.teal}`,
-              borderRadius: 999,
-              padding: "6px 14px",
-              fontSize: 12.5,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
+          <FilterChip key={k} on={kind === k} onClick={() => setKind(k)}>
             {label}
-          </button>
+          </FilterChip>
         ))}
       </div>
       <div style={{ overflowX: "auto", marginTop: 12 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#EDF6F5", color: brand.tealDark }}>
-              {["日時", "ユーザー", "ロール", "企業", "種別", "内容", "補足"].map((h) => (
+              {["日時", "サイト", "ユーザー", "ロール", "企業", "種別", "内容", "補足"].map((h) => (
                 <th key={h} style={{ textAlign: "left", padding: "9px 10px", whiteSpace: "nowrap" }}>
                   {h}
                 </th>
@@ -193,9 +272,12 @@ export function AccessLogsPanel() {
           </thead>
           <tbody>
             {shown.map((r) => (
-              <tr key={r.id} style={{ borderBottom: `1px solid ${brand.line}` }}>
+              <tr key={r.key} style={{ borderBottom: `1px solid ${brand.line}` }}>
                 <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
                   {new Date(r.created_at).toLocaleString("ja-JP")}
+                </td>
+                <td style={{ padding: "8px 10px", whiteSpace: "nowrap", fontSize: 12, color: r.site === "hm" ? "#8A5A12" : brand.tealDark }}>
+                  {r.site === "hm" ? "健康管理Web" : "ストレスチェック"}
                 </td>
                 {/* 氏名は折り返さず1行で出す(表全体は横スクロール可) */}
                 <td style={{ padding: "8px 10px", fontWeight: 700, color: brand.ink, whiteSpace: "nowrap" }}>
@@ -208,13 +290,15 @@ export function AccessLogsPanel() {
                   {companyOf(r)}
                 </td>
                 <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
-                  {kindOf(r.action) === "view" ? (
+                  {kindOf(r) === "view" ? (
                     <Badge tone="gray">閲覧</Badge>
                   ) : (
                     <Badge tone="orange">操作</Badge>
                   )}
                 </td>
-                <td style={{ padding: "8px 10px" }}>{ACTION_LABEL[r.action] ?? r.action}</td>
+                <td style={{ padding: "8px 10px" }}>
+                  {r.site === "hm" ? hmActionLabel(r.action, r.hm?.table ?? null) : ACTION_LABEL[r.action] ?? r.action}
+                </td>
                 <td style={{ padding: "8px 10px", whiteSpace: "nowrap", color: "#5B6B6A" }}>
                   {targetLabel(r)}
                 </td>
@@ -222,7 +306,7 @@ export function AccessLogsPanel() {
             ))}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ padding: 24, textAlign: "center", color: "#8A9694" }}>
+                <td colSpan={8} style={{ padding: 24, textAlign: "center", color: "#8A9694" }}>
                   ログはありません。
                 </td>
               </tr>
@@ -231,8 +315,29 @@ export function AccessLogsPanel() {
         </table>
       </div>
       <p style={{ fontSize: 12, color: "#8A9694", marginTop: 10, lineHeight: 1.7 }}>
-        「閲覧」は結果一覧・詳細・報告書などの表示、「操作」はCSV出力・招待・配布URL発行・企業追加・部署名修正・結果削除・ロール変更などのデータに影響する行為です。ログは削除できません(監査証跡として保全されます)。
+        「閲覧」は結果一覧・詳細・報告書・カルテ・面談記録などの表示やファイルのダウンロード、「操作」はCSV出力・招待・配布URL発行・企業追加・結果削除・ロール変更・議事録や健診・面談記録の作成/更新/削除などのデータに影響する行為です。
+        健康管理Webのログも同じ表に並びます(企業欄は、健康管理Webの SQL 0152 の実行後に出ます)。ログは削除できません(監査証跡として保全されます)。
       </p>
     </Card>
+  );
+}
+
+function FilterChip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: on ? brand.teal : "#fff",
+        color: on ? "#fff" : brand.tealDark,
+        border: `1px solid ${brand.teal}`,
+        borderRadius: 999,
+        padding: "6px 14px",
+        fontSize: 12.5,
+        fontWeight: 700,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
   );
 }

@@ -3,6 +3,7 @@ import { requestUser } from "@/lib/supabase/server";
 import { MAX_SEATS, priceAdd } from "@/lib/plan";
 import { loadPricing } from "@/lib/plan-prices";
 import { adminClient, invoiceFields } from "@/lib/plan-server";
+import { customerForCompany, reportBankFallback } from "@/lib/plan-bank";
 import { createCheckoutSession, stripeConfigured } from "@/lib/stripe";
 import { getFiscalYear } from "@/lib/fiscal";
 
@@ -94,8 +95,11 @@ export async function POST(req: Request) {
   }
 
   const origin = req.headers.get("origin") ?? new URL(req.url).origin;
+  // 銀行振込も選べるようにする(有効なときだけ)
+  const customer = await customerForCompany(admin, { companyId: me.company_id, name: `${company?.name ?? ""}${firstOrder?.office_name ? ` ${firstOrder.office_name}` : ""}`, email });
   try {
     const session = await createCheckoutSession({
+      customerId: customer.id,
       orderId: order.id,
       email,
       lines: price.lines,
@@ -106,6 +110,7 @@ export async function POST(req: Request) {
       invoiceCustomFields: invoiceFields(company?.name ?? "", price.total).customFields,
     });
     await admin.from("plan_orders").update({ stripe_session_id: session.id }).eq("id", order.id);
+    await reportBankFallback(admin, company?.name ?? "", [customer.error, session.bankError]);
     return NextResponse.json({ url: session.url });
   } catch (e) {
     await admin.from("plan_orders").update({ status: "failed", error: String(e) }).eq("id", order.id);

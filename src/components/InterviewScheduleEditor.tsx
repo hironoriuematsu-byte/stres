@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Btn } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { postJson } from "@/lib/api-client";
@@ -18,6 +19,7 @@ import {
   jstToday,
   timeOptions,
   toMinutes,
+  type Slot,
   type TimeRange,
 } from "@/lib/interview-schedule";
 
@@ -27,6 +29,7 @@ const TIMES = timeOptions();
 // 実施者(医師)向け: 面接指導の日程を決める
 //   オンライン: 翌営業日から1週間分の営業日ごとに空いている時間帯を入れる → 15分刻みの候補を本人に送る
 //   次回訪問:   訪問日を入れる → 本人と会社の担当者に案内する
+//   本人の希望: 候補に合う日時がなく本人が希望日時を送ってきたら、1つを承認して確定する
 export function InterviewScheduleEditor({
   request,
   meetRoomUrl,
@@ -44,6 +47,22 @@ export function InterviewScheduleEditor({
   const [visitNote, setVisitNote] = useState(request.visit_note ?? "");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const hasProposals = request.status === "pending" && Boolean(request.proposed_at);
+  const [proposals, setProposals] = useState<Slot[] | null>(null);
+  const [approvePick, setApprovePick] = useState("");
+
+  useEffect(() => {
+    if (!hasProposals) return setProposals(null);
+    (async () => {
+      const { data } = await createClient()
+        .from("interview_slots")
+        .select("id, request_id, starts_at, duration_min, status")
+        .eq("request_id", request.id)
+        .eq("status", "proposed")
+        .order("starts_at");
+      setProposals((data as Slot[] | null) ?? []);
+    })();
+  }, [request.id, hasProposals, request.proposed_at]);
 
   const days = useMemo(() => businessDaysFrom(from, OFFER_WINDOW_DAYS), [from]);
   const flat: TimeRange[] = useMemo(
@@ -79,6 +98,12 @@ export function InterviewScheduleEditor({
     if (!visitDate) return setMsg({ ok: false, text: "訪問日を入れてください" });
     call({ mode: "visit", visitDate, visitNote }, "次回訪問日の面談として、本人と会社の担当者に案内しました。");
   };
+  const approve = () => {
+    const s = proposals?.find((x) => x.id === approvePick);
+    if (!s) return;
+    if (!window.confirm(`${formatSlot(s.starts_at, s.duration_min)} で確定し、本人に面談のURLをお知らせします。よろしいですか？`)) return;
+    call({ action: "approve", slotId: s.id }, "承認して日程を確定しました。本人にメールでお知らせしました。");
+  };
   const reset = () => {
     if (!window.confirm("候補・確定した日程を取り消して、申出受付の状態に戻します。よろしいですか？(確定していた場合は本人にお知らせします)")) return;
     call({ action: "reset" }, "日程を取り消しました。");
@@ -100,11 +125,44 @@ export function InterviewScheduleEditor({
               ? request.schedule_mode === "visit"
                 ? `次回訪問日 ${formatDateJa(jstDateOf(request.scheduled_at!))} に対面で実施${request.visit_note ? `(${request.visit_note})` : ""}`
                 : `確定: ${formatSlot(request.scheduled_at!, request.duration_min)} オンライン${request.meet_url ? ` / ${request.meet_url}` : ""}`
-              : `候補を送信済み(${new Date(request.slots_offered_at!).toLocaleDateString("ja-JP")})・本人の選択待ち`}
+              : hasProposals
+                ? `本人から希望の日時が届いています(${new Date(request.proposed_at!).toLocaleDateString("ja-JP")})・承認待ち`
+                : `候補を送信済み(${new Date(request.slots_offered_at!).toLocaleDateString("ja-JP")})・本人の選択待ち`}
           </span>
           <button onClick={reset} disabled={busy} style={{ background: "none", border: 0, padding: 0, color: "#B02A2A", fontSize: 12, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}>
             {scheduled ? "取り消して出し直す" : "候補を出し直す"}
           </button>
+        </div>
+      )}
+
+      {hasProposals && (
+        <div style={{ background: "#FFF8EE", border: "1px solid #F0D9A8", borderRadius: 8, padding: "10px 12px", display: "grid", gap: 8 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: brand.ink }}>本人の希望の日時(都合のよいものを1つ承認してください)</div>
+          {proposals === null ? (
+            <div style={{ fontSize: 13, color: "#8A9694" }}>読み込んでいます…</div>
+          ) : proposals.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#8A6B2E" }}>承認できる希望がありません。下で候補を出し直してください。</div>
+          ) : (
+            <div style={{ display: "grid", gap: 4 }}>
+              {proposals.map((s) => {
+                const past = new Date(s.starts_at).getTime() < Date.now();
+                return (
+                  <label key={s.id} style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13.5, cursor: past ? "default" : "pointer", color: past ? "#8A9694" : brand.ink }}>
+                    <input type="radio" name={`approve-${request.id}`} disabled={past || busy} checked={approvePick === s.id} onChange={() => setApprovePick(s.id)} />
+                    {formatSlot(s.starts_at, s.duration_min)}
+                    {past && "(過ぎています)"}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+          {request.proposal_note && <div style={{ fontSize: 12.5, color: "#5B6B6A" }}>本人の補足: {request.proposal_note}</div>}
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <Btn onClick={approve} disabled={busy || !approvePick || !meetRoomUrl}>
+              {busy ? "確定しています…" : "この日時で承認して確定する"}
+            </Btn>
+            <span style={{ fontSize: 12, color: "#5B6B6A" }}>どれも都合が合わない場合は、下で候補を出し直してください(希望は見送りになり、本人にお知らせします)。</span>
+          </div>
         </div>
       )}
 
@@ -213,6 +271,7 @@ export function scheduleSummary(r: InterviewRequest): string | null {
   if (r.status === "scheduled" && r.scheduled_at) {
     return r.schedule_mode === "visit" ? `次回訪問日 ${formatDateJa(jstDateOf(r.scheduled_at))} に対面` : `${formatSlot(r.scheduled_at, r.duration_min)} オンライン`;
   }
+  if (r.status === "pending" && r.proposed_at) return "本人から希望の日時あり・承認待ち";
   if (r.status === "pending" && r.schedule_mode === "online" && r.slots_offered_at) return "候補を送信済み・本人の選択待ち";
   return null;
 }

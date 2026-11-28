@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { brand } from "@/lib/brand";
 import { IMPLEMENTER, IMPLEMENTER_PROFILE, SELLER } from "@/lib/org";
-import { formatJpDate, pricingFor, upcomingPriceChange } from "@/lib/plan";
+import { exTax, formatJpDate, pricingFor, upcomingPriceChange } from "@/lib/plan";
 import { getFiscalYear } from "@/lib/fiscal";
 import { loadPlanPrices } from "@/lib/plan-prices";
 import { createClient } from "@/lib/supabase/server";
@@ -64,14 +64,15 @@ export default async function BrochurePage() {
         <h2 style={h}>なぜ今か</h2>
         <p style={t}>{OBLIGATION}</p>
 
-        <h2 style={h}>料金(税込)</h2>
+        <h2 style={h}>料金(税別)</h2>
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
           <table style={{ borderCollapse: "collapse" }}>
             <tbody>
               {priceExamples(pricing).map((r) => (
                 <tr key={r.seats}>
                   <td style={cell}>{r.seats}名</td>
-                  <td style={{ ...cell, fontWeight: 700, textAlign: "right" }}>{r.total.toLocaleString()}円</td>
+                  <td style={{ ...cell, fontWeight: 700, textAlign: "right" }}>{exTax(r.total).toLocaleString()}円</td>
+                  <td style={{ ...cell, fontSize: 11, color: "#5B6B6A" }}>税込{r.total.toLocaleString()}円</td>
                 </tr>
               ))}
             </tbody>
@@ -82,8 +83,8 @@ export default async function BrochurePage() {
             ))}
             {change && (
               <li>
-                {change.fiscal_year}年度({formatJpDate(`${change.fiscal_year}-04-01`)}以降に受検開始)から1名{change.pricing.unitPrice}円・最低料金
-                {change.pricing.minTotal.toLocaleString()}円に改定予定
+                {change.fiscal_year}年度({formatJpDate(`${change.fiscal_year}-04-01`)}以降に受検開始)から1名{exTax(change.pricing.unitPrice)}円・最低料金
+                {exTax(change.pricing.minTotal).toLocaleString()}円(税別)に改定予定
               </li>
             )}
           </ul>

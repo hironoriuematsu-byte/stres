@@ -8,7 +8,10 @@ import {
   formatSlot,
   jstDateOf,
   overlaps,
+  proposalFirstDate,
+  proposalTimeOptions,
   timeOptions,
+  validateProposals,
   validateRanges,
 } from "@/lib/interview-schedule";
 
@@ -85,5 +88,64 @@ describe("面接指導の日程調整", () => {
     expect(jstDateOf("2026-10-27T15:00:00Z")).toBe("2026-10-28"); // 日本時間では翌日
     expect(timeOptions()[0]).toBe("08:00");
     expect(timeOptions().at(-1)).toBe("20:00");
+  });
+});
+
+describe("本人の希望日時", () => {
+  const now = new Date("2026-11-04T01:00:00Z"); // 2026-11-04(水) 10:00 JST
+
+  it("選べる最初の日は、医師の候補の最終日の翌営業日(候補がなければ明日以降の営業日)", () => {
+    expect(proposalFirstDate("2026-11-06", now)).toBe("2026-11-09"); // 金 → 次の月曜
+    expect(proposalFirstDate("2026-11-20", now)).toBe("2026-11-24"); // 金 → 11/23 は祝日 → 火
+    expect(proposalFirstDate(null, now)).toBe("2026-11-05");
+    expect(proposalFirstDate("2026-10-30", now)).toBe("2026-11-05"); // 候補が過去なら今日の翌営業日
+  });
+
+  it("5つまで・候補の後の営業日・15分刻み・時間内・重ならないものを受け付ける", () => {
+    const first = "2026-11-09";
+    const ok = [
+      { date: "2026-11-09", start: "10:00" },
+      { date: "2026-11-09", start: "14:00" },
+      { date: "2026-11-10", start: "09:30" },
+      { date: "2026-11-11", start: "17:00" },
+      { date: "2026-11-12", start: "19:30" },
+    ];
+    expect(validateProposals(ok, 30, first, now)).toBeNull();
+    expect(validateProposals([], 30, first, now)).toMatch(/1つ以上/);
+    expect(validateProposals([...ok, { date: "2026-11-13", start: "10:00" }], 30, first, now)).toMatch(/5つまで/);
+    expect(validateProposals([{ date: "2026-11-06", start: "10:00" }], 30, first, now)).toMatch(/以降の日/);
+    expect(validateProposals([{ date: "2026-11-14", start: "10:00" }], 30, first, now)).toMatch(/土日・祝日/);
+    expect(validateProposals([{ date: "2026-11-23", start: "10:00" }], 30, first, now)).toMatch(/土日・祝日/);
+    expect(validateProposals([{ date: "2026-11-09", start: "10:10" }], 30, first, now)).toMatch(/15分単位/);
+    expect(validateProposals([{ date: "2026-11-09", start: "19:45" }], 30, first, now)).toMatch(/20:00/);
+    expect(validateProposals([{ date: "2027-02-01", start: "10:00" }], 30, first, now)).toMatch(/60日先/);
+    expect(
+      validateProposals(
+        [
+          { date: "2026-11-09", start: "10:00" },
+          { date: "2026-11-09", start: "10:00" },
+        ],
+        30,
+        first,
+        now
+      )
+    ).toMatch(/2回/);
+    expect(
+      validateProposals(
+        [
+          { date: "2026-11-09", start: "10:00" },
+          { date: "2026-11-09", start: "10:15" },
+        ],
+        30,
+        first,
+        now
+      )
+    ).toMatch(/重なって/);
+  });
+
+  it("開始時刻の選択肢は面談時間が20:00までに収まるもの", () => {
+    expect(proposalTimeOptions(30).at(-1)).toBe("19:30");
+    expect(proposalTimeOptions(60).at(-1)).toBe("19:00");
+    expect(proposalTimeOptions(30)[0]).toBe("08:00");
   });
 });

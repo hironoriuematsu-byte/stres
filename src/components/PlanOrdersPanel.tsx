@@ -6,6 +6,8 @@ import { Btn, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { formatJpDate, interviewOptionLabel, jstToday, SALES_HEADERS, salesRows, SalesOrder } from "@/lib/plan";
 import { buildCsv, downloadCsv } from "@/lib/csv";
+import { postJson } from "@/lib/api-client";
+import { shortBy, type PayInfo } from "@/lib/bank-transfer";
 import { CompanySelect } from "@/components/CompanySelect";
 import { Company } from "@/lib/types";
 
@@ -31,7 +33,13 @@ type Order = {
   paid_at: string | null;
   stripe_payment_intent: string | null;
   stripe_invoice_id: string | null;
+  // 銀行振込(SQL 0036 以降)
+  pay_method?: string | null;
+  pay_due?: string | null;
+  pay_info?: PayInfo | null;
 };
+// 銀行振込を選んで、入金の確認を待っている申込
+const awaitingTransfer = (o: Order) => o.status === "pending" && o.pay_method === "bank_transfer";
 
 type Plan = { company_id: string; fiscal_year: number; seats: number; exam_start: string; exam_end: string; max_end: string };
 
@@ -43,7 +51,7 @@ const STATUS: Record<string, { label: string; color: string }> = {
   expired: { label: "決済されず終了", color: "#8A9694" },
 };
 
-// 実施者: Web申込(クレジットカード決済)の一覧と、受検期間・人数枠の手動変更
+// 実施者: Web申込(クレジットカード・銀行振込)の一覧と、受検期間・人数枠の手動変更
 export function PlanOrdersPanel() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -139,20 +147,29 @@ export function PlanOrdersPanel() {
     setMsg(`${rows.length}件・合計${total.toLocaleString()}円(税込)の売上明細をダウンロードしました。`);
   };
 
-  const shown = showAll ? orders : orders.filter((o) => o.status !== "pending" && o.status !== "expired");
+  // お振込み待ちの申込を取り消す(まだ入金のないものだけ)
+  const cancelTransfer = async (o: Order) => {
+    if (!window.confirm(`${o.company_name} のお振込み待ちの申込(${o.amount.toLocaleString()}円)を取り消します。よろしいですか？\n(取り消したあとに振り込まれたお金は、決済に充てられず、Stripe の顧客の残高に残ります)`)) return;
+    const { ok, json } = await postJson<{ ok?: boolean }>("/api/plan/order/cancel", { orderId: o.id });
+    setMsg(ok ? "お振込み待ちの申込を取り消しました。" : (json.error ?? "取り消せませんでした"));
+    if (ok) load();
+  };
+
+  const shown = showAll ? orders : orders.filter((o) => (o.status !== "pending" && o.status !== "expired") || awaitingTransfer(o));
   const cell = { padding: "7px 8px", fontSize: 12.5, verticalAlign: "top" } as const;
   const input = { padding: "5px 8px", fontSize: 13, border: `1px solid ${brand.line}`, borderRadius: 6 } as const;
 
   return (
     <Card>
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-        <h3 style={{ fontSize: 16, color: brand.ink, margin: 0 }}>Web申込(クレジットカード決済)</h3>
+        <h3 style={{ fontSize: 16, color: brand.ink, margin: 0 }}>Web申込(クレジットカード・銀行振込)</h3>
         <label style={{ fontSize: 12, color: "#5B6B6A" }}>
           <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> 決済されなかった申込も表示
         </label>
       </div>
       <p style={{ fontSize: 12, color: "#8A9694", margin: "4px 0 10px", lineHeight: 1.7 }}>
         お支払いが確認されると、企業・受検期間・配布URLが自動で作られ、担当者に招待メールが送られます。「要確認」は開設処理で問題があった申込です。
+        銀行振込の申込は、入金が確認されるまで「お振込み待ち」と表示され、期限までに入金がなければ自動で取り消されます。
       </p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", fontSize: 13, margin: "0 0 10px", padding: "10px 12px", background: "#F4FAF9", border: `1px solid ${brand.line}`, borderRadius: 10 }}>
         <strong style={{ color: brand.ink }}>売上明細(CSV)</strong>
@@ -182,12 +199,28 @@ export function PlanOrdersPanel() {
             )}
             {shown.map((o) => {
               const plan = plans.find((p) => p.company_id === o.company_id && p.fiscal_year === o.fiscal_year);
-              const st = STATUS[o.status] ?? { label: o.status, color: "#5B6B6A" };
+              const short = awaitingTransfer(o) ? shortBy(o.amount, o.pay_info?.remaining) : 0;
+              const st = awaitingTransfer(o)
+                ? short > 0
+                  ? { label: `一部入金(不足 ${short.toLocaleString()}円)`, color: "#B02A2A" }
+                  : { label: "お振込み待ち", color: "#B45415" }
+                : (STATUS[o.status] ?? { label: o.status, color: "#5B6B6A" });
               return (
                 <tr key={o.id} style={{ borderBottom: `1px solid ${brand.line}` }}>
                   <td style={{ ...cell, whiteSpace: "nowrap" }}>{new Date(o.created_at).toLocaleDateString("ja-JP")}</td>
                   <td style={{ ...cell, whiteSpace: "nowrap", color: st.color, fontWeight: 700 }}>
                     {st.label}
+                    {awaitingTransfer(o) && (
+                      <div style={{ fontWeight: 400, color: "#5B6B6A" }}>
+                        期限 {formatJpDate(o.pay_due)}
+                        {short === 0 && (
+                          <button onClick={() => cancelTransfer(o)} style={{ display: "block", background: "none", border: "none", padding: 0, color: "#8A9694", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
+                            取り消す
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {o.pay_method === "bank_transfer" && !awaitingTransfer(o) && o.status !== "expired" && <div style={{ fontWeight: 400, color: "#5B6B6A" }}>銀行振込</div>}
                     {o.error && <div style={{ fontWeight: 400, color: "#B02A2A", maxWidth: 220, whiteSpace: "normal" }}>{o.error}</div>}
                   </td>
                   <td style={cell}>

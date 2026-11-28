@@ -6,7 +6,7 @@ import { postJson } from "@/lib/api-client";
 import { logAccess } from "@/lib/log";
 import { Badge, Btn } from "@/components/ui";
 import { brand } from "@/lib/brand";
-import { RISK_LABEL, SHARE_OPTIONS, type IntakeMessage, type IntakeStatus, type IntakeSummary, type RiskLevel, type ShareConsent } from "@/lib/intake";
+import { RISK_LABEL, SHARE_OPTIONS, type IntakeMessage, type IntakeOpinion, type IntakeStatus, type IntakeSummary, type RiskLevel, type ShareConsent } from "@/lib/intake";
 
 export type IntakeRecord = {
   id: string;
@@ -26,6 +26,13 @@ export type IntakeRecord = {
   company_shared_by?: string | null;
   summary_error?: string | null;
 };
+
+// 指導区分(複数選択可。古い下書きは文字列)と要再面接の時期
+const guidanceText = (o: IntakeOpinion): string => {
+  const g = Array.isArray(o.guidance) ? o.guidance.join("・") : o.guidance;
+  return o.reinterview ? `${g}(再面接: ${o.reinterview})` : g;
+};
+const list = (items: string[] | undefined, empty: string): string => ((items ?? []).length > 0 ? items!.map((m) => `・${m}`).join("\n") : empty);
 
 export const riskTone = (r: RiskLevel): "red" | "orange" | "teal" | "gray" =>
   r === "high" ? "red" : r === "moderate" ? "orange" : r === "low" ? "teal" : "gray";
@@ -123,6 +130,57 @@ export function IntakeReview({ intake, personName, onChanged, demo }: { intake: 
           <Btn tone="ghost" onClick={resummarize} disabled={busy}>
             {busy ? "作っています(1分ほど)…" : s ? "最新の回答で要約を作り直す" : "途中までの内容で要約を作る"}
           </Btn>
+        </div>
+      )}
+      {s?.opinion && (
+        <div style={{ borderTop: `1px solid ${brand.line}`, paddingTop: 10 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: brand.ink, marginBottom: 4 }}>面接指導結果報告書・意見書の下書き(AI案)</div>
+          <div style={{ fontSize: 12, color: "#8A6B2E", marginBottom: 6 }}>事前問診だけで作った案です。面談で確かめてから、医師の判断で確定してください。</div>
+          {row("勤務の状況", s.opinion.work_condition)}
+          {row("疲労の蓄積", s.opinion.fatigue)}
+          {row("心理的な負担", s.opinion.psych_burden)}
+          {row("その他の心身", s.opinion.other_health)}
+          {row("指導区分(案)", guidanceText(s.opinion))}
+          {row("就業区分(案)", s.opinion.work_category)}
+          {s.opinion.hours_measures || s.opinion.other_measures ? (
+            <>
+              {row("労働時間の短縮(案)", list(s.opinion.hours_measures, "特に指示なし"))}
+              {row("労働時間以外(案)", list(s.opinion.other_measures, "なし"))}
+            </>
+          ) : (
+            row("就業上の措置(案)", list(s.opinion.measures, "なし"))
+          )}
+          {row("措置期間(案)", s.opinion.measure_period)}
+          {row("職場環境の改善", s.opinion.environment)}
+          {row("受診の配慮等", s.opinion.medical_care)}
+          {s.opinion.consent_notes && row("意見書への本人の希望", s.opinion.consent_notes)}
+          {row("根拠・面談で確認", s.opinion.basis)}
+          <button
+            onClick={() => {
+              const o = s.opinion!;
+              const text = [
+                "【面接指導結果報告書・意見書(下書き)】",
+                `勤務の状況(労働時間、労働時間以外の要因): ${o.work_condition}`,
+                `心理的な負担の状況(ストレスチェック結果・医学的所見に関する特記事項): ${o.psych_burden}`,
+                `その他の心身の状況: ${o.other_health}`,
+                `本人への指導区分: ${guidanceText(o)}`,
+                `就業区分: ${o.work_category}`,
+                ...(o.hours_measures || o.other_measures
+                  ? [`就業上の措置(労働時間の短縮): ${(o.hours_measures ?? []).join("、") || "特に指示なし"}`, `就業上の措置(労働時間以外の項目): ${(o.other_measures ?? []).join("、") || "なし"}`]
+                  : [`就業上の措置: ${(o.measures ?? []).join("、") || "なし"}`]),
+                `措置期間: ${o.measure_period}`,
+                `職場環境の改善に関する意見: ${o.environment}`,
+                `医療機関への受診配慮等: ${o.medical_care}`,
+              ].join("\n");
+              navigator.clipboard?.writeText(text).then(
+                () => setMsg({ ok: true, text: "意見書の下書きをコピーしました。" }),
+                () => setMsg({ ok: false, text: "コピーできませんでした。" })
+              );
+            }}
+            style={{ marginTop: 8, background: "#fff", border: `1px solid ${brand.teal}`, color: brand.tealDark, borderRadius: 8, padding: "5px 12px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+          >
+            意見書の下書きをコピー
+          </button>
         </div>
       )}
       <div style={{ fontSize: 12, color: "#8A9694", lineHeight: 1.6 }}>AIによる要約です。判断は会話の記録と面談で確認してください。</div>

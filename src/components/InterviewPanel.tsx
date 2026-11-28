@@ -47,6 +47,7 @@ export function InterviewPanel({
   const [openShare, setOpenShare] = useState<string | null>(null);
   // 日程調整(実施者): 企業の産業医面談ルームのURLと、開いている申出の日程の編集
   const [meetRoom, setMeetRoom] = useState<string | null>(null);
+  const [kenkoRoom, setKenkoRoom] = useState<string | null>(null); // 健康管理Webの面談ルーム(未登録のときに使う)
   const [roomInput, setRoomInput] = useState("");
   const [roomMsg, setRoomMsg] = useState<string | null>(null);
   const [openSchedule, setOpenSchedule] = useState<string | null>(null);
@@ -68,6 +69,12 @@ export function InterviewPanel({
     const room = ((co as { meet_room_url?: string | null } | null)?.meet_room_url ?? null) || null;
     setMeetRoom(room);
     setRoomInput(room ?? "");
+    if (isOffice) {
+      // 健康管理Webを使っていない環境では表がなく、エラーになるので無視する
+      const { data: hr, error: hrErr } = await supabase.from("hm_meet_rooms").select("meeting_uri, enabled").eq("company_id", companyId).maybeSingle();
+      const uri = !hrErr && hr?.enabled ? ((hr.meeting_uri as string | null) ?? "").trim() : "";
+      setKenkoRoom(uri || null);
+    }
     if (isOffice) {
       const { data: ins } = await supabase
         .from("interview_intakes")
@@ -110,6 +117,13 @@ export function InterviewPanel({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reload]);
+
+  // 実施済を取り消す(押し間違えたとき・面談管理に入れ直したいとき)。日程が決まっていれば日程調整済、なければ申出受付に戻す
+  const reopen = async (r: InterviewRequest) => {
+    const back: InterviewRequest["status"] = r.scheduled_at ? "scheduled" : "pending";
+    if (!window.confirm(`「実施済」を取り消して「${STATUS_LABEL[back]}」に戻します。よろしいですか？`)) return;
+    await updateStatus(r, back);
+  };
 
   const updateStatus = async (r: InterviewRequest, status: InterviewRequest["status"]) => {
     const { error } = await supabase.from("interview_requests").update({ status }).eq("id", r.id);
@@ -190,7 +204,10 @@ export function InterviewPanel({
               保存
             </button>
             {roomMsg && <span style={{ fontSize: 12, color: brand.tealDark }}>{roomMsg}</span>}
-            {!meetRoom && !roomMsg && <span style={{ fontSize: 12, color: "#8A6B2E" }}>未登録(オンラインの候補日時を出す前に登録してください)</span>}
+            {!meetRoom && !roomMsg && kenkoRoom && (
+              <span style={{ fontSize: 12, color: brand.tealDark }}>未登録のため、健康管理Webの産業医面談ルーム({kenkoRoom})を使います</span>
+            )}
+            {!meetRoom && !roomMsg && !kenkoRoom && <span style={{ fontSize: 12, color: "#8A6B2E" }}>未登録(オンラインの候補日時を出す前に登録してください)</span>}
           </div>
         </div>
       )}
@@ -335,6 +352,24 @@ export function InterviewPanel({
                       {STATUS_LABEL[s]}にする
                     </button>
                   ))}
+                  {r.status === "done" && (
+                    <button
+                      onClick={() => reopen(r)}
+                      style={{
+                        background: "#fff",
+                        border: `1px solid ${brand.line}`,
+                        color: "#5B6B6A",
+                        borderRadius: 8,
+                        padding: "4px 10px",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        marginRight: 6,
+                      }}
+                    >
+                      実施済を取り消す
+                    </button>
+                  )}
                 </td>
               </tr>
               {!isOffice && openShare === r.id && shares[r.id] && (
@@ -355,7 +390,7 @@ export function InterviewPanel({
               {isOffice && openSchedule === r.id && (
                 <tr>
                   <td colSpan={9} style={{ padding: "8px 10px 14px" }}>
-                    <InterviewScheduleEditor request={r} meetRoomUrl={meetRoom} onChanged={reload} />
+                    <InterviewScheduleEditor request={r} meetRoomUrl={meetRoom ?? kenkoRoom} onChanged={reload} />
                   </td>
                 </tr>
               )}

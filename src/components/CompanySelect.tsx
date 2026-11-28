@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { searchKey } from "@/lib/search";
 import { brand } from "@/lib/brand";
 import { Company } from "@/lib/types";
 
@@ -30,11 +31,12 @@ export function CompanySelect({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const hits = useMemo(() => {
-    const key = q.trim().toLowerCase();
+    // 空白(半角・全角)や全角/半角の違いは無視して探す
+    const key = searchKey(q);
     const byKind = companies.filter((c) => (kind === "all" ? true : kind === "web" ? c.web_signup : !c.web_signup));
     const list = key
       ? byKind.filter(
-          (c) => c.name.toLowerCase().includes(key) || (c.code ?? "").toLowerCase().includes(key)
+          (c) => searchKey(c.name).includes(key) || searchKey(c.code).includes(key)
         )
       : byKind;
     return [...list].sort((a, b) => a.name.localeCompare(b.name, "ja"));
