@@ -45,6 +45,8 @@ const toForm = (f: ContractFields): Form => ({
   hoursPerVisit: String(f.hoursPerVisit),
   fee: String(f.fee),
   coopExtraFee: String(f.coopExtraFee),
+  coopNoticeDays: String(f.coopNoticeDays),
+  coopObjectDays: String(f.coopObjectDays),
 });
 
 type Filter = "all" | "draft" | "sent" | "signed" | "closed";
@@ -231,6 +233,29 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
       </label>
     );
 
+  // 協力医師の入力(選任契約の条項・覚書で共通)。未定なら「後日指定する」で氏名なしにできる
+  const coopFields = () =>
+    editing && (
+      <div style={{ marginTop: 10 }}>
+        {check(
+          "coopDoctorTbd",
+          <>
+            協力医師は<b>後日指定する</b>(契約時は未定。乙が指定・変更するときは事前に通知し、相手は期間内に合理的な理由があれば異議を述べられる条文になります)
+          </>
+        )}
+        <div style={{ ...grid, marginTop: 8 }}>
+          {!editing.form.coopDoctorTbd && field("coopDoctorName", "協力医師の氏名")}
+          {!editing.form.coopDoctorTbd && field("coopDoctorNote", "所属・資格など(任意。氏名の後ろに括弧書きで入ります)")}
+          <label style={{ ...label, gridColumn: "1 / -1" }}>
+            協力医師が分担する業務
+            <input value={editing.form.coopDuties} onChange={(e) => setForm({ coopDuties: e.target.value })} style={input} />
+          </label>
+          {field("coopNoticeDays", "指定・変更の通知: 分担業務の開始の何日前まで", { inputMode: "numeric" })}
+          {field("coopObjectDays", "相手が異議を述べられる期間: 通知から何日以内", { inputMode: "numeric" })}
+        </div>
+      </div>
+    );
+
   const kind = (editing?.form.kind ?? "appointed") as ContractKind;
   const isMain = kind === "appointed" || kind === "advisory";
   const isMemo = kind === "memo_coop";
@@ -365,14 +390,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                 {field("fee", `原契約の報酬(${yearly ? "年額" : "月額"}・${taxWord}・円。覚書に記載しない場合は 0)`, { inputMode: "numeric" })}
               </div>
               <h4 style={h4}>協力医師</h4>
-              <div style={grid}>
-                {field("coopDoctorName", "協力医師の氏名")}
-                {field("coopDoctorNote", "所属・資格など(任意。氏名の後ろに括弧書きで入ります)")}
-                <label style={{ ...label, gridColumn: "1 / -1" }}>
-                  協力医師が分担する業務
-                  <input value={editing.form.coopDuties} onChange={(e) => setForm({ coopDuties: e.target.value })} style={input} />
-                </label>
-              </div>
+              {coopFields()}
             </>
           )}
 
@@ -475,16 +493,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                   </span>
                 </>
               )}
-              {editing.form.coopDoctor && (
-                <div style={{ ...grid, marginTop: 10 }}>
-                  {field("coopDoctorName", "協力医師の氏名")}
-                  {field("coopDoctorNote", "所属・資格など(任意。氏名の後ろに括弧書きで入ります)")}
-                  <label style={{ ...label, gridColumn: "1 / -1" }}>
-                    協力医師が分担する業務
-                    <input value={editing.form.coopDuties} onChange={(e) => setForm({ coopDuties: e.target.value })} style={input} />
-                  </label>
-                </div>
-              )}
+              {editing.form.coopDoctor && coopFields()}
             </div>
           )}
 
@@ -577,7 +586,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                         {r.kind === "memo_coop" ? `効力 ${formatJpDate(r.start_date)}` : `開始 ${formatJpDate(r.start_date)}`}
                         {r.kind === "memo_coop" && !(r.monthly_fee && r.monthly_fee > 0) ? "" : ` / ${feeShort(r.monthly_fee, r.fee_period, f?.feeTax)}`}
                         {coopRow && f?.coopClientName ? ` / 顧問先 ${f.coopClientName}` : ""}
-                        {!coopRow && f?.coopDoctor && f.coopDoctorName ? ` / 協力医師 ${f.coopDoctorName}` : ""}
+                        {!coopRow && f?.coopDoctor ? ` / 協力医師 ${f.coopDoctorTbd || !f.coopDoctorName ? "後日指定" : f.coopDoctorName}` : ""}
                         {r.kind === "coop_corporate" && f?.coopDoctorName ? ` / 担当医師 ${f.coopDoctorName}` : ""}
                         {r.sent_at ? ` / 送信 ${formatJst(r.sent_at)}` : ""}
                         {r.viewed_at && !r.signed_at ? ` / 閲覧 ${formatJst(r.viewed_at)}` : ""}

@@ -19,7 +19,7 @@ import { IMPLEMENTER, SELLER } from "@/lib/org";
 import { formatJpDate, taxIncluded } from "@/lib/plan";
 
 // 契約書の文面の版。文面(条文)を変えたときは +1 する。送信済みの契約書は送信時の文面を保存しているので影響しない
-export const CONTRACT_TEMPLATE_VERSION = 6;
+export const CONTRACT_TEMPLATE_VERSION = 7;
 
 // 署名用リンクの有効期間(日)。期限が切れたら実施者が再送する
 export const SIGN_LINK_DAYS = 14;
@@ -131,6 +131,9 @@ export type ContractFields = {
   coopDoctorName: string; // 協力医師の氏名
   coopDoctorNote: string; // 所属・資格など(任意)
   coopDuties: string; // 協力医師が分担する業務
+  coopDoctorTbd: boolean; // 協力医師は後日、乙が指定する(契約時は未定)
+  coopNoticeDays: number; // 指定・変更の通知は分担業務の開始の何日前までか
+  coopObjectDays: number; // 甲が異議を述べられる期間(通知から何日以内か)
   // 覚書(memo_coop): 原契約の特定
   originalTitle: string; // 原契約の名称(例: 産業医選任契約書)
   originalDate: string; // 原契約の締結日 YYYY-MM-DD
@@ -171,6 +174,9 @@ export const DEFAULT_FIELDS: ContractFields = {
   coopDoctorName: "",
   coopDoctorNote: "",
   coopDuties: DEFAULT_COOP_DUTIES,
+  coopDoctorTbd: false,
+  coopNoticeDays: 14,
+  coopObjectDays: 7,
   originalTitle: "産業医選任契約書",
   originalDate: "",
   coopClientName: "",
@@ -230,6 +236,9 @@ export function parseContractFields(raw: Record<string, unknown>): { ok: true; v
     coopDoctorName: str(raw.coopDoctorName, 60),
     coopDoctorNote: str(raw.coopDoctorNote, 100),
     coopDuties: str(raw.coopDuties, 300) || DEFAULT_COOP_DUTIES,
+    coopDoctorTbd: raw.coopDoctorTbd === true,
+    coopNoticeDays: Math.floor(num(raw.coopNoticeDays ?? 14)),
+    coopObjectDays: Math.floor(num(raw.coopObjectDays ?? 7)),
     originalTitle: str(raw.originalTitle, 100),
     originalDate: str(raw.originalDate, 10),
     coopClientName: str(raw.coopClientName, 150),
@@ -256,7 +265,12 @@ export function parseContractFields(raw: Record<string, unknown>): { ok: true; v
   if (memo) {
     if (!v.originalTitle) return { ok: false, error: "原契約の名称を入力してください(例: 産業医選任契約書)" };
     if (!validDate(v.originalDate)) return { ok: false, error: "原契約の締結日を入力してください" };
-    if (!v.coopDoctorName) return { ok: false, error: "協力医師の氏名を入力してください" };
+    if (v.coopDoctorTbd) {
+      v.coopDoctorName = "";
+      v.coopDoctorNote = "";
+    } else if (!v.coopDoctorName) return { ok: false, error: "協力医師の氏名を入力してください(まだ決まっていない場合は「後日指定する」にチェック)" };
+    const dErr = coopDaysError(v);
+    if (dErr) return { ok: false, error: dErr };
     if (!(v.fee >= 0 && v.fee <= 100_000_000)) return { ok: false, error: "原契約の報酬は0以上で入力してください(記載しない場合は0)" };
     v.coopDoctor = true;
     v.termMonths = 0;
@@ -302,13 +316,43 @@ export function parseContractFields(raw: Record<string, unknown>): { ok: true; v
     return { ok: false, error: "1回の訪問時間は0.5〜8時間(0.5時間刻み)で入力してください" };
   }
   if (!(v.fee >= 0 && v.fee <= 100_000_000)) return { ok: false, error: `${feePeriodLabel(v.feePeriod)}の報酬を入力してください(円)` };
-  if (v.coopDoctor && !v.coopDoctorName) return { ok: false, error: "協力医師の氏名を入力してください(協力医師の条項を入れない場合はチェックを外してください)" };
+  if (v.coopDoctor && v.coopDoctorTbd) {
+    v.coopDoctorName = "";
+    v.coopDoctorNote = "";
+  } else if (v.coopDoctor && !v.coopDoctorName) {
+    return { ok: false, error: "協力医師の氏名を入力してください(まだ決まっていない場合は「後日指定する」にチェック。条項を入れない場合はチェックを外す)" };
+  }
+  if (v.coopDoctor) {
+    const dErr = coopDaysError(v);
+    if (dErr) return { ok: false, error: dErr };
+  }
   if (!v.coopDoctor) {
     v.coopDoctorName = "";
     v.coopDoctorNote = "";
     v.coopDuties = DEFAULT_COOP_DUTIES;
   }
   return { ok: true, value: v };
+}
+
+function coopDaysError(v: Pick<ContractFields, "coopNoticeDays" | "coopObjectDays">): string | null {
+  if (!(v.coopNoticeDays >= 1 && v.coopNoticeDays <= 90)) return "協力医師の指定・変更の通知は1〜90日前の範囲で入力してください";
+  if (!(v.coopObjectDays >= 1 && v.coopObjectDays <= 30)) return "甲が異議を述べられる期間は1〜30日の範囲で入力してください";
+  return null;
+}
+
+// 協力医師の条項(選任契約・覚書で共通)の最初の3項: 承諾・指定と変更の手続・追加選任。
+// 契約時に協力医師が未定でも、乙が指定できる形にできる(その場合は事前通知と甲の異議の機会を置く)
+function coopDesignationItems(f: ContractFields, word: "本契約" | "本覚書", basis: string, lawShort: "法" | "法", ruleShort: string): ContractItem[] {
+  const tbd = f.coopDoctorTbd || !f.coopDoctorName;
+  const who = tbd ? "乙が指定する医師" : "乙が雇用しまたは業務を委託する医師";
+  const first =
+    `乙は、${basis}のうち次に掲げる業務(以下「分担業務」という)を、${who}であって${lawShort}第13条第2項の要件を備える者(以下「協力医師」という)に行わせることができ、甲は${tbd ? "あらかじめ" : ""}これを承諾する(民法第644条の2第1項の承諾を含む)。` +
+    (tbd
+      ? `${word}の締結時において協力医師は未定とし、協力医師が指定されるまでの間、分担業務は担当医師が行う。\n分担業務: ${f.coopDuties}`
+      : `${word}の締結時における協力医師および分担業務は次のとおりとする。\n協力医師: ${f.coopDoctorName}${f.coopDoctorNote ? `(${f.coopDoctorNote})` : ""}\n分担業務: ${f.coopDuties}`);
+  const notice = `乙は、協力医師を指定し、または変更するときは、分担業務の開始日の${f.coopNoticeDays}日前までに、その氏名、資格および分担業務を書面または電磁的方法により甲に通知する。甲は、通知を受けた日から${f.coopObjectDays}日以内に、合理的な理由を示して異議を述べることができ、この場合、乙は他の医師を指定する。`;
+  const appoint = `甲は、前項の通知を受けたとき(異議を述べた場合を除く)は、協力医師を${word === "本契約" ? "本事業場" : "甲の事業場"}の産業医として追加して選任し、${lawShort}第18条第2項第3号に基づき衛生委員会${word === "本契約" ? "" : "(安全衛生委員会を設ける場合はその委員会)"}の委員に指名するとともに、${ruleShort}第13条に基づき所轄労働基準監督署長に選任報告を行う。乙は、報告に必要な書面(医師免許証の写し、産業医の資格を証する書面等)を甲に提供する。協力医師が変更されたときも同様とする。`;
+  return [first, notice, appoint];
 }
 
 // アクセスコード(任意): 4〜8桁の数字。送信者が電話などで別に伝える
@@ -409,7 +453,7 @@ function renderMain(f: ContractFields, meta: { contractNo: string; templateVersi
   // 事業場の表示: 名称(所在地)の次の行に労働者数
   const site = `${partyDisplayName(f)}(${f.partyAddress})${f.workers ? `\n労働者数: 約${f.workers.toLocaleString()}名` : ""}`;
   const appointed = f.kind === "appointed";
-  const coop = appointed && f.coopDoctor && !!f.coopDoctorName;
+  const coop = appointed && f.coopDoctor && (f.coopDoctorTbd || !!f.coopDoctorName);
   const articles: ContractArticle[] = [];
   let n = 0;
   const art = (title: string, items: ContractItem[]) => articles.push({ no: ++n, title, items });
@@ -485,8 +529,7 @@ function renderMain(f: ContractFields, meta: { contractNo: string; templateVersi
       // 協力医師: 乙が雇用または業務委託する別の医師に一部の業務を分担させる。
       // 復委任(民法第644条の2)の承諾・追加選任・役割分担・料金と責任・守秘・指揮命令の禁止を1条にまとめる
       art("協力医師による業務の分担", [
-        `乙は、本業務のうち次に掲げる業務(以下「分担業務」という)を、乙が雇用しまたは業務を委託する医師であって法第13条第2項の要件を備える者(以下「協力医師」という)に行わせることができ、甲はこれを承諾する(民法第644条の2第1項の承諾を含む)。本契約の締結時における協力医師および分担業務は次のとおりとし、乙は、協力医師を変更するときは、事前に書面または電磁的方法により甲に通知する。\n協力医師: ${f.coopDoctorName}${f.coopDoctorNote ? `(${f.coopDoctorNote})` : ""}\n分担業務: ${f.coopDuties}`,
-        "甲は、協力医師を本事業場の産業医として追加して選任し、法第18条第2項第3号に基づき衛生委員会の委員に指名するとともに、規則第13条に基づき所轄労働基準監督署長に選任報告を行う。乙は、報告に必要な書面を甲に提供する。協力医師が変更されたときも同様とする。",
+        ...coopDesignationItems(f, "本契約", "本業務", "法", "規則"),
         "分担業務以外の本業務は担当医師が行う。担当医師と協力医師は、本事業場の労働者の健康管理に必要な情報を相互に共有し、乙は、両者の業務を統括して本業務の全体を履行する。",
         `協力医師が分担業務を行う場合においても、報酬は第${COOP_ARTICLE_NO + 2}条のとおりとし、本契約上の義務および責任は乙が負う。甲と協力医師との間に、別の契約または報酬は生じない。`,
         "協力医師は、秘密保持および個人情報の取扱いに関する条項に定める乙および担当医師の義務と同一の義務を負い、乙はこれを協力医師に遵守させる。甲は、協力医師に本事業場の労働者の健康情報を取り扱わせることを承諾する。",
@@ -669,13 +712,13 @@ function renderMemo(f: ContractFields, meta: { contractNo: string; templateVersi
   const articles: ContractArticle[] = [];
   let n = 0;
   const art = (title: string, items: ContractItem[]) => articles.push({ no: ++n, title, items });
+  const [consent, notice, appoint] = coopDesignationItems(f, "本覚書", "原契約に基づき乙が行う産業医の業務", "法", "労働安全衛生規則");
   art("協力医師による業務の分担の承諾", [
-    `乙は、原契約に基づき乙が行う産業医の業務のうち次に掲げる業務(以下「分担業務」という)を、乙が雇用しまたは業務を委託する医師であって労働安全衛生法(以下「法」という)第13条第2項の要件を備える者(以下「協力医師」という)に行わせることができ、甲はこれを承諾する(民法第644条の2第1項の承諾を含む)。本覚書の締結時における協力医師および分担業務は次のとおりとし、乙は、協力医師を変更するときは、事前に書面または電磁的方法により甲に通知する。\n協力医師: ${f.coopDoctorName}${f.coopDoctorNote ? `(${f.coopDoctorNote})` : ""}\n分担業務: ${f.coopDuties}`,
+    "本覚書において「法」とは労働安全衛生法をいい、「担当医師」とは原契約に定める乙の担当医師をいう。",
+    consent,
     "原契約に業務の再委託または第三者への委任を制限する定めがあるときは、分担業務については本覚書が優先する。",
   ]);
-  art("協力医師の選任", [
-    "甲は、協力医師を甲の事業場の産業医として追加して選任し、法第18条第2項第3号に基づき衛生委員会(安全衛生委員会を設ける場合はその委員会)の委員に指名するとともに、労働安全衛生規則第13条に基づき所轄労働基準監督署長に選任報告を行う。乙は、報告に必要な書面(医師免許証の写し、産業医の資格を証する書面等)を甲に提供する。協力医師が変更されたときも同様とする。",
-  ]);
+  art("協力医師の指定および選任", [notice, appoint]);
   art("役割分担", [
     `分担業務は協力医師が行い、分担業務以外の原契約に基づく業務(健康診断の結果に基づく措置、ストレスチェック、面接指導、意見書の作成等)は、原契約に定める担当医師(${IMPLEMENTER.name})が行う。`,
     "担当医師と協力医師は、甲の労働者の健康管理に必要な情報を相互に共有し、乙は、両者の業務を統括して原契約に基づく業務の全体を履行する。",

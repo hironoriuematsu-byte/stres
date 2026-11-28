@@ -175,7 +175,7 @@ function summaryLines(f: ContractFields): string[] {
       `書面: ${kindTitle(f.kind)}`,
       `顧問先: ${partyDisplayName(f)}`,
       `原契約: ${formatJpDate(f.originalDate)}付 ${f.originalTitle}`,
-      `協力医師: ${f.coopDoctorName}(${f.coopDuties})`,
+      `協力医師: ${f.coopDoctorTbd || !f.coopDoctorName ? "後日指定" : f.coopDoctorName}(${f.coopDuties})`,
       `効力発生日: ${formatJpDate(f.startDate)}`,
     ];
   }
@@ -195,7 +195,7 @@ function summaryLines(f: ContractFields): string[] {
     `契約期間: ${formatJpDate(f.startDate)} 〜 ${formatJpDate(termEndDate(f.startDate, f.termMonths))}(${f.termMonths}か月${f.autoRenew ? "・自動更新" : ""})`,
     `訪問: ${visitText(f)}`,
     `報酬: ${feeText(f.fee, f.feePeriod, f.feeTax)}`,
-    ...(f.coopDoctor && f.coopDoctorName ? [`協力医師: ${f.coopDoctorName}(${f.coopDuties})`] : []),
+    ...(f.coopDoctor ? [`協力医師: ${f.coopDoctorTbd || !f.coopDoctorName ? "後日指定" : f.coopDoctorName}(${f.coopDuties})`] : []),
   ];
 }
 

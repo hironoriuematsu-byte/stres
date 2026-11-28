@@ -192,6 +192,27 @@ describe("契約書の文面", () => {
     expect(text).toContain("月額 45,000円(消費税別)とし、甲は、これに消費税および地方消費税の相当額を加えた額を支払う");
     expect(text).not.toContain("うち消費税");
   });
+  it("協力医師を後日指定する(氏名未定): あらかじめ承諾・担当医師が行う・通知と異議の手続", () => {
+    const p = parseContractFields({ ...VALID, coopDoctor: true, coopDoctorTbd: true, coopNoticeDays: "21", coopObjectDays: "10" });
+    if (!p.ok) throw new Error(p.error);
+    expect(p.value.coopDoctorName).toBe("");
+    const text = contractText(renderContract(p.value, { contractNo: "E2026-TEST0010" }));
+    expect(text).toContain("乙が指定する医師であって法第13条第2項の要件を備える者");
+    expect(text).toContain("甲はあらかじめこれを承諾する(民法第644条の2第1項の承諾を含む)");
+    expect(text).toContain("本契約の締結時において協力医師は未定とし、協力医師が指定されるまでの間、分担業務は担当医師が行う");
+    expect(text).toContain("分担業務の開始日の21日前までに");
+    expect(text).toContain("通知を受けた日から10日以内に、合理的な理由を示して異議を述べることができ");
+    expect(text).toContain("甲は、前項の通知を受けたとき(異議を述べた場合を除く)は、協力医師を本事業場の産業医として追加して選任し");
+    expect(text).not.toContain("協力医師: ");
+    expect(parseContractFields({ ...VALID, coopDoctor: true, coopDoctorTbd: true, coopNoticeDays: "0" })).toMatchObject({ ok: false, error: expect.stringContaining("通知") });
+    // 覚書でも同じ
+    const m = parseContractFields({ ...VALID, kind: "memo_coop", originalTitle: "産業医選任契約書", originalDate: "2025-04-01", coopDoctorTbd: true, fee: "0" });
+    if (!m.ok) throw new Error(m.error);
+    const mt = contractText(renderContract(m.value, { contractNo: "E2026-TEST0011" }));
+    expect(mt).toContain("本覚書の締結時において協力医師は未定とし");
+    expect(mt).toContain("第2条(協力医師の指定および選任)");
+    expect(mt).toContain("分担業務の開始日の14日前までに");
+  });
   it("協力医師のチェックなしなら条項は入らず、氏名は保存されない。顧問契約では使えない", () => {
     const p = parseContractFields({ ...VALID, coopDoctor: false, coopDoctorName: "佐藤 一郎" });
     expect(p.ok && p.value.coopDoctorName).toBe("");
