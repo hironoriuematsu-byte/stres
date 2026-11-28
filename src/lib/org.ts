@@ -11,7 +11,7 @@ export const IMPLEMENTER = {
   title: "医師(産業医)", // 資格
   full: "医師(産業医) 上松 弘典", // 帳票の「実施者」欄に表示する表記
   officeName: "うえまつ産業医事務所", // 実施事務局(所属機関)
-  officeAddress: "京都府京都市中京区錦小路通室町西入天神山町280 4階",
+  officeAddress: "京都府京都市中京区錦小路通室町西入天神山町280 4階15号室",
   corporateName: "Mestate LLC",
 } as const;
 
