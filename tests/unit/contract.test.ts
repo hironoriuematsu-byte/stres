@@ -17,6 +17,7 @@ import {
 import { accessCodeHash, eventHash, newToken, safeEqualHex, serviceSignature, sha256, tokenHash, verifyChain, verifyServiceSignature } from "@/lib/contract-crypto";
 
 const VALID: Record<string, unknown> = {
+  kind: "appointed",
   partyName: "株式会社テスト",
   partyOfficeName: "本社",
   partyAddress: "京都市中京区1-1",
@@ -31,7 +32,8 @@ const VALID: Record<string, unknown> = {
   autoRenew: true,
   visitFrequency: "monthly",
   hoursPerVisit: "2",
-  monthlyFee: "55000",
+  feePeriod: "monthly",
+  fee: "55000",
   paymentTiming: "next_month_end",
   includeStressCheck: true,
   specialTerms: "",
@@ -49,7 +51,9 @@ describe("契約内容の入力チェック", () => {
     expect(f.workers).toBe(80);
     expect(f.termMonths).toBe(12);
     expect(f.hoursPerVisit).toBe(2);
-    expect(f.monthlyFee).toBe(55000);
+    expect(f.fee).toBe(55000);
+    expect(f.kind).toBe("appointed");
+    expect(f.feePeriod).toBe("monthly");
     expect(f.signerEmail).toBe("hanako@example.com");
   });
   it("必須項目の不足を知らせる", () => {
@@ -58,7 +62,18 @@ describe("契約内容の入力チェック", () => {
     expect(parseContractFields({ ...VALID, startDate: "2026-02-30" })).toMatchObject({ ok: false, error: expect.stringContaining("開始日") });
     expect(parseContractFields({ ...VALID, termMonths: "0" })).toMatchObject({ ok: false, error: expect.stringContaining("契約期間") });
     expect(parseContractFields({ ...VALID, hoursPerVisit: "1.25" })).toMatchObject({ ok: false, error: expect.stringContaining("訪問時間") });
-    expect(parseContractFields({ ...VALID, monthlyFee: "" })).toMatchObject({ ok: false, error: expect.stringContaining("月額報酬") });
+    expect(parseContractFields({ ...VALID, fee: "" })).toMatchObject({ ok: false, error: expect.stringContaining("月額の報酬") });
+  });
+  it("初版の形(kind なし・monthlyFee)の下書きも読める", () => {
+    const { kind, fee, feePeriod, ...old } = VALID;
+    void kind; void fee; void feePeriod;
+    const p = parseContractFields({ ...old, monthlyFee: "40000" });
+    expect(p.ok && p.value).toMatchObject({ kind: "appointed", fee: 40000, feePeriod: "monthly" });
+  });
+  it("選任契約の訪問は月1回・2か月に1回のみ。顧問契約は3か月に1回・訪問なしも選べる", () => {
+    expect(parseContractFields({ ...VALID, visitFrequency: "quarterly" })).toMatchObject({ ok: false, error: expect.stringContaining("選任契約") });
+    const p = parseContractFields({ ...VALID, kind: "advisory", visitFrequency: "on_request", hoursPerVisit: "" });
+    expect(p.ok && p.value).toMatchObject({ kind: "advisory", visitFrequency: "on_request", hoursPerVisit: 0 });
   });
   it("労働者数は空でもよい", () => {
     const p = parseContractFields({ ...VALID, workers: "" });
@@ -84,6 +99,7 @@ describe("日付・番号・金額", () => {
   });
   it("報酬の表記に消費税の内訳を含む", () => {
     expect(feeText(55000)).toBe("月額 55,000円(税込。うち消費税 5,000円)");
+    expect(feeText(600000, "yearly")).toBe("年額 600,000円(税込。うち消費税 54,545円)");
   });
   it("日本時間の日時表示", () => {
     expect(formatJst("2026-10-24T01:02:03Z")).toBe("2026年10月24日 10:02:03");
@@ -95,7 +111,7 @@ describe("契約書の文面", () => {
   it("条文に入力した条件が反映される", () => {
     const doc = renderContract(fields(), { contractNo: "E2026-TEST0001" });
     const text = contractText(doc);
-    expect(doc.title).toBe("産業医業務委託契約書");
+    expect(doc.title).toBe("産業医選任契約書");
     expect(doc.templateVersion).toBe(CONTRACT_TEMPLATE_VERSION);
     expect(text).toContain("株式会社テスト 本社(京都市中京区1-1) 労働者数 約80名");
     expect(text).toContain("月1回、1回あたり2時間");
@@ -103,7 +119,13 @@ describe("契約書の文面", () => {
     expect(text).toContain("2026年11月1日から2027年10月31日までの12か月間");
     expect(text).toContain("翌月末日までに");
     expect(text).toContain("さらに1年間更新");
-    expect(text).toContain("ストレスチェックの実施者としての業務");
+    expect(text).toContain("担当医師が実施者を務める");
+    expect(text).toContain("規則第14条第1項に定める次の事項");
+    expect(text).toContain("法第18条第2項第3号に基づき、担当医師を本事業場の衛生委員会");
+    expect(text).toContain("委員として調査審議に参画する");
+    expect(text).not.toContain("衛生委員会への出席");
+    expect(text).toContain("少なくとも毎月1回、作業場等を巡視");
+    expect(text).toContain("産業医選任報告");
     expect(text).toContain("甲: 京都市中京区1-1 / 株式会社テスト 本社 / 代表取締役 山田 太郎");
     expect(text).toContain("乙: 〒604-8221");
     expect(text).not.toContain("特記事項");
@@ -113,9 +135,10 @@ describe("契約書の文面", () => {
     const doc = renderContract(f, { contractNo: "E2026-TEST0002" });
     const text = contractText(doc);
     expect(text).toContain("2か月に1回、1回あたり2時間");
-    expect(text).toContain("少なくとも2か月に1回行う");
+    expect(text).toContain("少なくとも2か月に1回、作業場等を巡視");
+    expect(text).toContain("衛生管理者が行う巡視の結果");
     expect(text).toContain("甲乙協議のうえ定める。");
-    expect(text).not.toContain("実施者としての業務");
+    expect(text).not.toContain("担当医師が実施者を務める");
     const special = doc.articles.find((a) => a.title === "特記事項");
     expect(special?.items).toEqual(["初回訪問は11月中に行う。", "駐車場を1台分用意する。"]);
     // 条番号は通し(特記事項の次が協議・管轄)
@@ -127,8 +150,31 @@ describe("契約書の文面", () => {
     const a = contractText(renderContract(fields(), { contractNo: "E2026-TEST0001" }));
     const b = contractText(renderContract(fields(), { contractNo: "E2026-TEST0001" }));
     expect(sha256(a)).toBe(sha256(b));
-    const c = contractText(renderContract({ ...fields(), monthlyFee: 55001 }, { contractNo: "E2026-TEST0001" }));
+    const c = contractText(renderContract({ ...fields(), fee: 55001 }, { contractNo: "E2026-TEST0001" }));
     expect(sha256(c)).not.toBe(sha256(a));
+  });
+  it("顧問契約: 選任ではないこと・50人到達時の移行・訪問なし・年額の精算", () => {
+    const f: ContractFields = { ...fields(), kind: "advisory", visitFrequency: "on_request", hoursPerVisit: 0, feePeriod: "yearly", fee: 360000 };
+    const doc = renderContract(f, { contractNo: "E2026-TEST0003" });
+    const text = contractText(doc);
+    expect(doc.title).toBe("産業医顧問契約書");
+    expect(text).toContain("第13条の2の趣旨に沿って");
+    expect(text).toContain("本契約は、法第13条第1項に基づく産業医の選任ではない");
+    expect(text).toContain("産業医選任契約に移行する");
+    expect(text).toContain("本契約には定期の訪問を含まない");
+    expect(text).toContain("年額 360,000円(税込。うち消費税 32,727円)");
+    expect(text).toContain("1年分の請求書");
+    expect(text).toContain("月割りで計算した額を甲に返還");
+    expect(text).not.toContain("衛生委員会への参画");
+    expect(text).not.toContain("産業医選任報告");
+    expect(doc.articles.map((a) => a.no)).toEqual(doc.articles.map((_, i) => i + 1));
+  });
+  it("顧問契約・月1回訪問・月額", () => {
+    const f: ContractFields = { ...fields(), kind: "advisory", visitFrequency: "monthly", hoursPerVisit: 1 };
+    const text = contractText(renderContract(f, { contractNo: "E2026-TEST0004" }));
+    expect(text).toContain("月1回、1回あたり1時間");
+    expect(text).toContain("衛生推進者(法第12条の2)");
+    expect(text).toContain("第3条(訪問および相談)");
   });
   it("既定値は下書きとして成立しない(入力が必要)", () => {
     expect(parseContractFields(DEFAULT_FIELDS as unknown as Record<string, unknown>).ok).toBe(false);

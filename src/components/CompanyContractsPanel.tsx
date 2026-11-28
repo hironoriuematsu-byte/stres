@@ -5,16 +5,18 @@ import { createClient } from "@/lib/supabase/client";
 import { Badge, Card } from "@/components/ui";
 import { brand } from "@/lib/brand";
 import { formatJpDate } from "@/lib/plan";
-import { displayStatus, formatJst, STATUS_LABEL } from "@/lib/contract";
+import { displayStatus, feeShort, formatJst, kindTitle, STATUS_LABEL } from "@/lib/contract";
 
 type Row = {
   id: string;
   contract_no: string;
+  kind: string;
   status: string;
   party_name: string;
   signer_name: string;
   signer_email: string;
   monthly_fee: number | null;
+  fee_period: string | null;
   start_date: string | null;
   token_expires_at: string | null;
   sent_at: string | null;
@@ -32,7 +34,7 @@ export function CompanyContractsPanel({ companyName }: { companyName: string }) 
       const supabase = createClient();
       const { data, error } = await supabase
         .from("contracts")
-        .select("id, contract_no, status, party_name, signer_name, signer_email, monthly_fee, start_date, token_expires_at, sent_at, signed_at")
+        .select("id, contract_no, kind, status, party_name, signer_name, signer_email, monthly_fee, fee_period, start_date, token_expires_at, sent_at, signed_at")
         .order("updated_at", { ascending: false });
       if (error) setError(error.message);
       setRows((data as Row[]) ?? []);
@@ -43,7 +45,7 @@ export function CompanyContractsPanel({ companyName }: { companyName: string }) 
     <Card>
       <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>契約書(電子契約)</h3>
       <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8, margin: "0 0 14px" }}>
-        {companyName} とうえまつ産業医事務所との間の産業医業務委託契約書です。締結済みの契約書は、合意締結証明(署名の記録)とあわせていつでも閲覧・印刷(PDF保存)できます。
+        {companyName} とうえまつ産業医事務所との間の契約書(産業医選任契約・産業医顧問契約)です。締結済みの契約書は、合意締結証明(署名の記録)とあわせていつでも閲覧・印刷(PDF保存)できます。
         署名は、契約書の送付先の方がメールのリンクから行います。
       </p>
       {error && <p style={{ fontSize: 13, color: "#B02A2A" }}>読み込めませんでした: {error}</p>}
@@ -62,9 +64,9 @@ export function CompanyContractsPanel({ companyName }: { companyName: string }) 
                     <Badge tone={STATUS_LABEL[st].tone}>{STATUS_LABEL[st].label}</Badge>
                     <span style={{ fontSize: 12, color: "#7A8886" }}>{r.contract_no}</span>
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: brand.ink, marginTop: 6 }}>産業医業務委託契約書</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: brand.ink, marginTop: 6 }}>{kindTitle(r.kind)}</div>
                   <div style={{ fontSize: 13, color: "#44534F", lineHeight: 1.8 }}>
-                    契約開始 {formatJpDate(r.start_date)} / 月額 {(r.monthly_fee ?? 0).toLocaleString()}円(税込) / 署名者 {r.signer_name}
+                    契約開始 {formatJpDate(r.start_date)} / {feeShort(r.monthly_fee, r.fee_period)} / 署名者 {r.signer_name}
                     {r.signed_at ? ` / 締結 ${formatJst(r.signed_at)}` : r.sent_at ? ` / 送付 ${formatJst(r.sent_at)}` : ""}
                   </div>
                 </div>

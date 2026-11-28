@@ -39,7 +39,9 @@ export async function POST(req: Request) {
     signer_name: f.signerName,
     signer_email: f.signerEmail,
     signer_title: f.signerTitle || null,
-    monthly_fee: f.monthlyFee,
+    kind: f.kind,
+    monthly_fee: f.fee,
+    fee_period: f.feePeriod,
     start_date: f.startDate,
     note: note || null,
     updated_at: now,
@@ -60,7 +62,6 @@ export async function POST(req: Request) {
   const { error } = await admin.from("contracts").insert({
     id,
     contract_no: contractNo(id, now),
-    kind: "sanpoi",
     status: "draft",
     ...common,
     access_code_hash: code.value ? accessCodeHash(id, code.value) : null,

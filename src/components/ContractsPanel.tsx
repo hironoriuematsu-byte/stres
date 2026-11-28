@@ -11,22 +11,27 @@ import { formatJpDate } from "@/lib/plan";
 import type { Company } from "@/lib/types";
 import {
   type ContractFields,
+  type ContractKind,
   type ContractRow,
   DEFAULT_FIELDS,
   displayStatus,
+  FEE_PERIOD_OPTIONS,
+  feeShort,
   formatJst,
+  KIND_OPTIONS,
+  kindLabel,
   parseContractFields,
   PAYMENT_OPTIONS,
   renderContract,
   SIGN_LINK_DAYS,
   STATUS_LABEL,
-  VISIT_OPTIONS,
+  visitOptionsFor,
 } from "@/lib/contract";
 
 type Row = Omit<ContractRow, "document" | "template_version" | "completion_hash" | "service_signature" | "document_hash" | "signed_name" | "signed_title">;
 
 const COLS =
-  "id, contract_no, status, company_id, fields, party_name, signer_name, signer_email, signer_title, monthly_fee, start_date, token_expires_at, sent_at, viewed_at, signed_at, declined_at, decline_reason, cancelled_at, note, created_at, updated_at";
+  "id, contract_no, kind, status, company_id, fields, party_name, signer_name, signer_email, signer_title, monthly_fee, fee_period, start_date, token_expires_at, sent_at, viewed_at, signed_at, declined_at, decline_reason, cancelled_at, note, created_at, updated_at";
 
 // フォームの入力(数値も文字列のまま持ち、保存時に parseContractFields で確認する)
 type Form = { [K in keyof ContractFields]: ContractFields[K] extends boolean ? boolean : string };
@@ -35,12 +40,12 @@ const toForm = (f: ContractFields): Form => ({
   workers: f.workers == null ? "" : String(f.workers),
   termMonths: String(f.termMonths),
   hoursPerVisit: String(f.hoursPerVisit),
-  monthlyFee: String(f.monthlyFee),
+  fee: String(f.fee),
 });
 
 type Filter = "all" | "draft" | "sent" | "signed" | "closed";
 
-// 実施者: 電子契約(産業医業務委託契約)の作成・送信・状況の確認
+// 実施者: 電子契約(産業医の選任契約・顧問契約)の作成・送信・状況の確認
 export function ContractsPanel({ companies }: { companies: Company[] }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -198,7 +203,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
           <div>
-            <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>電子契約(産業医業務委託契約)</h3>
+            <h3 style={{ fontSize: 17, color: brand.ink, margin: "0 0 4px" }}>電子契約(産業医の選任契約・顧問契約)</h3>
             <p style={{ fontSize: 13, color: "#5B6B6A", lineHeight: 1.8, margin: 0 }}>
               契約内容を入力して契約先の署名者にメールで送ると、署名者はリンクを開いて内容を確認し、電子署名(同意)します。送信の時点で文面が確定し、当事務所の合意も記録されます。
               署名が完了すると双方にメールが届き、契約書と合意締結証明をいつでも閲覧・印刷できます。書面・押印・収入印紙は不要です。
@@ -224,6 +229,38 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 13, color: "#44534F", marginBottom: 4 }}>契約先の企業(登録済みなら選ぶと会社情報が入ります。未登録でも作れます)</div>
             <CompanySelect companies={companies} value={editing.companyId} onChange={pickCompany} label="" />
+          </div>
+
+          <h4 style={h4}>契約の種類</h4>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 10 }}>
+            {KIND_OPTIONS.map((k) => {
+              const sel = editing.form.kind === k.value;
+              return (
+                <button
+                  key={k.value}
+                  type="button"
+                  onClick={() => {
+                    // 顧問契約だけの訪問の選び方(3か月に1回・訪問なし)は、選任契約に切り替えたら月1回に戻す
+                    const vf = visitOptionsFor(k.value).some((o) => o.value === editing.form.visitFrequency) ? editing.form.visitFrequency : "monthly";
+                    setEditing({ ...editing, form: { ...editing.form, kind: k.value, visitFrequency: vf } });
+                  }}
+                  style={{
+                    textAlign: "left",
+                    border: sel ? `2px solid ${brand.teal}` : `1px solid ${brand.line}`,
+                    background: sel ? "#E2F3F1" : "#fff",
+                    borderRadius: 12,
+                    padding: "12px 14px",
+                    cursor: "pointer",
+                  }}
+                >
+                  <div style={{ fontSize: 15, fontWeight: 800, color: sel ? brand.tealDark : brand.ink }}>
+                    {k.label}
+                    <span style={{ fontSize: 12, fontWeight: 400, color: "#5B6B6A", marginLeft: 8 }}>{k.title}</span>
+                  </div>
+                  <div style={{ fontSize: 12.5, color: "#44534F", lineHeight: 1.7, marginTop: 4 }}>{k.desc}</div>
+                </button>
+              );
+            })}
           </div>
 
           <h4 style={h4}>甲(契約先)</h4>
@@ -272,17 +309,27 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
             <label style={label}>
               訪問の頻度
               <select value={editing.form.visitFrequency} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, visitFrequency: e.target.value as ContractFields["visitFrequency"] } })} style={input}>
-                {VISIT_OPTIONS.map((o) => (
+                {visitOptionsFor(editing.form.kind as ContractKind).map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
                 ))}
               </select>
             </label>
-            {field("hoursPerVisit", "1回の訪問時間(時間・0.5刻み)", { inputMode: "decimal" })}
-            {field("monthlyFee", "月額報酬(税込・円)", { inputMode: "numeric" })}
+            {editing.form.visitFrequency !== "on_request" && field("hoursPerVisit", "1回の訪問時間(時間・0.5刻み)", { inputMode: "decimal" })}
             <label style={label}>
-              支払期日(請求書は月末送付)
+              報酬の単位
+              <select value={editing.form.feePeriod} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, feePeriod: e.target.value as ContractFields["feePeriod"] } })} style={input}>
+                {FEE_PERIOD_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {field("fee", `${editing.form.feePeriod === "yearly" ? "年額" : "月額"}の報酬(税込・円)`, { inputMode: "numeric" })}
+            <label style={label}>
+              支払期日({editing.form.feePeriod === "yearly" ? "年1回の請求書を受け取った月を基準" : "毎月末に送る請求書の月を基準"})
               <select value={editing.form.paymentTiming} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, paymentTiming: e.target.value as ContractFields["paymentTiming"] } })} style={input}>
                 {PAYMENT_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -375,13 +422,14 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                         <Badge tone={STATUS_LABEL[st].tone}>{STATUS_LABEL[st].label}</Badge>
                         <span style={{ fontSize: 12, color: "#7A8886" }}>{r.contract_no}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: brand.tealDark }}>{kindLabel(r.kind)}</span>
                       </div>
                       <div style={{ fontSize: 16, fontWeight: 700, color: brand.ink, marginTop: 6 }}>{r.party_name}</div>
                       <div style={{ fontSize: 13, color: "#44534F", lineHeight: 1.8 }}>
                         署名者: {r.signer_name}
                         {r.signer_title ? `(${r.signer_title})` : ""} {r.signer_email}
                         <br />
-                        開始 {formatJpDate(r.start_date)} / 月額 {(r.monthly_fee ?? 0).toLocaleString()}円(税込)
+                        開始 {formatJpDate(r.start_date)} / {feeShort(r.monthly_fee, r.fee_period)}
                         {r.sent_at ? ` / 送信 ${formatJst(r.sent_at)}` : ""}
                         {r.viewed_at && !r.signed_at ? ` / 閲覧 ${formatJst(r.viewed_at)}` : ""}
                         {r.signed_at ? ` / 締結 ${formatJst(r.signed_at)}` : ""}

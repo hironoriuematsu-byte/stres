@@ -48,7 +48,7 @@ export default async function ContractPage({ params }: { params: { id: string } 
         <div>
           <Badge tone={STATUS_LABEL[st].tone}>{STATUS_LABEL[st].label}</Badge>
           <h2 style={{ fontSize: 18, color: brand.ink, margin: "8px 0 2px" }}>
-            {c.party_name} 産業医業務委託契約書(契約番号 {c.contract_no})
+            {c.party_name} {doc.title}(契約番号 {c.contract_no})
           </h2>
           <div style={{ fontSize: 13, color: "#5B6B6A" }}>
             署名者: {c.signer_name}({c.signer_email})
