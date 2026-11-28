@@ -11,7 +11,9 @@ import {
   type ContractEventKind,
   type ContractFields,
   type ContractRow,
+  feePeriodLabel,
   feeText,
+  feeUnit,
   formatJst,
   isCoopKind,
   kindTitle,
@@ -186,7 +188,7 @@ function summaryLines(f: ContractFields): string[] {
       `顧問先: ${f.coopClientName}`,
       `業務: ${f.coopDuties} / 訪問: ${visitText(f)}`,
       `契約期間: ${formatJpDate(f.startDate)} 〜 ${formatJpDate(termEndDate(f.startDate, f.termMonths))}(${f.termMonths}か月${f.autoRenew ? "・自動更新" : ""})`,
-      `報酬: ${f.kind === "coop_individual" && f.coopWithholding ? `${f.feePeriod === "yearly" ? "年額" : "月額"} ${f.fee.toLocaleString()}円(給与扱い・源泉徴収あり)` : feeText(f.fee, f.feePeriod, f.feeTax)}`,
+      `報酬: ${f.kind === "coop_individual" && f.coopWithholding ? `${feePeriodLabel(feeUnit(f))} ${f.fee.toLocaleString()}円(給与扱い・源泉徴収あり)` : feeText(f.fee, feeUnit(f), f.feeTax)}${f.coopPerVisit ? "(訪問のあった月の分として支払い)" : ""}`,
     ];
   }
   return [
