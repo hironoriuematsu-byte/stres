@@ -40,7 +40,7 @@
 2. **Organization Settings → Billing → Plan** から Pro にアップグレード
 3. **請求先情報(Billing Address / Billing Email)を会社の情報に設定**
    - 会社名: Mestate LLC(うえまつ産業医事務所)
-   - 住所: 京都府京都市中京区錦小路通室町西入天神山町280 4階
+   - 住所: 京都府京都市中京区錦小路通室町西入天神山町280 4階15
    - 請求書の宛先メール: 会社のアドレス(例: hironori.uematsu@mestate.jp)
    - 日本の適格請求書(インボイス)登録番号がある場合は Tax ID 欄に登録
 4. 支払方法を会社のカードに設定
