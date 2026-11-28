@@ -129,6 +129,7 @@ GitHubへのpushで自動デプロイされます。
 
 **流れ**
 
+0. (任意)下書きの段階で「**確認用リンクを送る(署名なし)**」を押すと、相手はログインなしで最新の案文(`/review/<トークン>`)を読み、「この内容で問題ありません / 修正を希望する(コメント)」を返せます。回答は事務所にメールで届き、一覧にも表示されます。下書きを直しても同じリンクで最新の内容が見えます。このリンクでは署名できず契約は成立しません(画面にも明記)。署名用リンクを送った時点で無効になります
 1. 実施者が officeダッシュボードの「**電子契約**」タブで契約の種類(選任 / 顧問)と契約内容(契約先・署名者・訪問頻度・報酬(月額 / 年額)・契約期間・特記事項など)を入力し、プレビューで文面を確認して「保存して署名用リンクを送信」
    - 登録済みの企業を選ぶと、会社名・事業場名・所在地・労働者数が自動で入ります
    - 任意で**アクセスコード**(4〜8桁)を設定できます。コードは電話など別の経路で署名者に伝えてください(本人確認を強めたい場合)
@@ -148,7 +149,7 @@ GitHubへのpushで自動デプロイされます。
 
 **設定**
 
-- SQL Editor で `supabase/migrations/0033_econtracts.sql`、`0034_contract_kinds.sql`、`0035_contract_more_kinds.sql` を順に実行
+- SQL Editor で `supabase/migrations/0033_econtracts.sql`、`0034_contract_kinds.sql`、`0035_contract_more_kinds.sql`、`0036_contract_review_link.sql` を順に実行
 - Vercel の環境変数に `CONTRACT_SIGNING_SECRET`(長いランダムな文字列。例: `openssl rand -hex 32`。**サーバー専用**)を追加。未設定でも締結はできますが、合意締結証明に事業者署名が付きません。**一度運用を始めたら変更しないでください**(変えると過去の契約の事業者署名が検証できなくなります)
 - メールは面接指導の通知と同じ `RESEND_API_KEY` / `SENDER_EMAIL` を使います
 
@@ -189,12 +190,13 @@ src/
     api/notify-interview/ 面接指導申出の通知メールAPI(Resend)
     api/contracts/        電子契約API(下書き保存・送信・再送・取消 / 署名・辞退・真正性の確認)
     sign/[token]          契約先の署名ページ(ログイン不要)、sign/verify 真正性の確認
+    review/[token]        案文の確認用ページ(ログイン不要・署名なし)
     contracts/[id]        契約書・合意締結証明の閲覧(office / 自社のjimu)
     login, reset-password, account/update-password, auth/callback
   components/    共有UI(結果一覧・申出一覧・集団分析グラフ・招待・ログ)
   lib/           スコアリング・年度・CSV・アクセスログ・Supabaseクライアント・電子契約(contract*.ts)
 supabase/
-  migrations/    0002_production.sql(スキーマ+RLS) / 0003・0004(必須の補正) / … / 0033〜0035(電子契約)
+  migrations/    0002_production.sql(スキーマ+RLS) / 0003・0004(必須の補正) / … / 0033〜0036(電子契約)
 tests/
   unit/          ユニットテスト
   acceptance/    受け入れテスト(実Supabase統合)

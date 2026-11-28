@@ -40,6 +40,7 @@ export async function POST(req: Request) {
       document_text: text,
       document_hash: hash,
       token_hash: tHash,
+      review_token: null, // 確認用リンクは署名用リンクを送った時点で無効
       token_expires_at: expires,
       code_attempts: 0,
       sent_at: now.toISOString(),

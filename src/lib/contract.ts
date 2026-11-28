@@ -899,7 +899,20 @@ export function displayStatus(status: string, tokenExpiresAt: string | null | un
 }
 
 // 記録(監査証跡)の事象
-export type ContractEventKind = "created" | "updated" | "sent" | "resent" | "viewed" | "signed" | "completed" | "declined" | "cancelled";
+export type ContractEventKind =
+  | "created"
+  | "updated"
+  | "sent"
+  | "resent"
+  | "viewed"
+  | "signed"
+  | "completed"
+  | "declined"
+  | "cancelled"
+  | "review_sent"
+  | "review_viewed"
+  | "review_ok"
+  | "review_revise";
 export const EVENT_LABEL: Record<ContractEventKind, string> = {
   created: "作成(下書き)",
   updated: "下書きの変更",
@@ -910,6 +923,10 @@ export const EVENT_LABEL: Record<ContractEventKind, string> = {
   completed: "締結完了・事業者署名の付与",
   declined: "{party}が辞退",
   cancelled: "送信者が取消",
+  review_sent: "確認用リンクを送付(署名なし・案文の確認)",
+  review_viewed: "{party}が案文を閲覧(確認用リンク)",
+  review_ok: "{party}が案文に「問題なし」と回答",
+  review_revise: "{party}が案文の修正を希望",
 };
 export const eventLabel = (event: string, labels: { party: string; office: string }): string =>
   (EVENT_LABEL[event as ContractEventKind] ?? event).replace("{party}", labels.party).replace("{office}", labels.office);
@@ -961,6 +978,12 @@ export type ContractRow = {
   note: string | null;
   created_at: string;
   updated_at: string;
+  // 確認用リンク(SQL 0036)
+  review_sent_at?: string | null;
+  review_viewed_at?: string | null;
+  review_feedback_at?: string | null;
+  review_feedback_kind?: "ok" | "revise" | null;
+  review_feedback?: string | null;
 };
 
 // ログイン利用者(office / jimu)が読める列。トークン・アクセスコードのハッシュなどは SQL の列権限で読めないため、
@@ -968,7 +991,7 @@ export type ContractRow = {
 export const CONTRACT_COLS =
   "id, contract_no, kind, status, company_id, fields, template_version, document, document_hash, party_name, signer_name, signer_email, signer_title, " +
   "monthly_fee, fee_period, start_date, token_expires_at, sent_at, viewed_at, signed_at, signed_name, signed_title, declined_at, decline_reason, cancelled_at, " +
-  "completion_hash, service_signature, note, created_at, updated_at";
+  "completion_hash, service_signature, note, created_at, updated_at, review_sent_at, review_viewed_at, review_feedback_at, review_feedback_kind, review_feedback";
 
 // 日本時間の日時表示(監査証跡・署名欄)
 export function formatJst(ts: string | null | undefined): string {
