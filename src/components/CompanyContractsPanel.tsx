@@ -17,6 +17,7 @@ type Row = {
   signer_email: string;
   monthly_fee: number | null;
   fee_period: string | null;
+  fields: { feeTax?: string } | null;
   start_date: string | null;
   token_expires_at: string | null;
   sent_at: string | null;
@@ -34,7 +35,7 @@ export function CompanyContractsPanel({ companyName }: { companyName: string }) 
       const supabase = createClient();
       const { data, error } = await supabase
         .from("contracts")
-        .select("id, contract_no, kind, status, party_name, signer_name, signer_email, monthly_fee, fee_period, start_date, token_expires_at, sent_at, signed_at")
+        .select("id, contract_no, kind, status, party_name, signer_name, signer_email, monthly_fee, fee_period, fields, start_date, token_expires_at, sent_at, signed_at")
         .order("updated_at", { ascending: false });
       if (error) setError(error.message);
       setRows((data as Row[]) ?? []);
@@ -66,7 +67,7 @@ export function CompanyContractsPanel({ companyName }: { companyName: string }) 
                   </div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: brand.ink, marginTop: 6 }}>{kindTitle(r.kind)}</div>
                   <div style={{ fontSize: 13, color: "#44534F", lineHeight: 1.8 }}>
-                    契約開始 {formatJpDate(r.start_date)} / {feeShort(r.monthly_fee, r.fee_period)} / 署名者 {r.signer_name}
+                    契約開始 {formatJpDate(r.start_date)} / {feeShort(r.monthly_fee, r.fee_period, r.fields?.feeTax)} / 署名者 {r.signer_name}
                     {r.signed_at ? ` / 締結 ${formatJst(r.signed_at)}` : r.sent_at ? ` / 送付 ${formatJst(r.sent_at)}` : ""}
                   </div>
                 </div>

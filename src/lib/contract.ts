@@ -19,7 +19,7 @@ import { IMPLEMENTER, SELLER } from "@/lib/org";
 import { formatJpDate, taxIncluded } from "@/lib/plan";
 
 // 契約書の文面の版。文面(条文)を変えたときは +1 する。送信済みの契約書は送信時の文面を保存しているので影響しない
-export const CONTRACT_TEMPLATE_VERSION = 2;
+export const CONTRACT_TEMPLATE_VERSION = 3;
 
 // 署名用リンクの有効期間(日)。期限が切れたら実施者が再送する
 export const SIGN_LINK_DAYS = 14;
@@ -47,6 +47,7 @@ export const kindTitle = (k: string | null | undefined): string => KIND_OPTIONS.
 export type VisitFrequency = "monthly" | "bimonthly" | "quarterly" | "on_request";
 export type PaymentTiming = "month_end" | "next_month_end";
 export type FeePeriod = "monthly" | "yearly";
+export type FeeTax = "included" | "excluded"; // 税込 / 税別
 
 export const VISIT_OPTIONS: { value: VisitFrequency; label: string; kinds: ContractKind[] }[] = [
   { value: "monthly", label: "月1回", kinds: ["appointed", "advisory"] },
@@ -66,6 +67,11 @@ export const FEE_PERIOD_OPTIONS: { value: FeePeriod; label: string }[] = [
 export const visitLabel = (v: string | null | undefined): string => VISIT_OPTIONS.find((o) => o.value === v)?.label ?? "月1回";
 export const paymentLabel = (v: string | null | undefined): string => PAYMENT_OPTIONS.find((o) => o.value === v)?.label ?? "翌月末日";
 export const feePeriodLabel = (v: string | null | undefined): string => (v === "yearly" ? "年額" : "月額");
+export const FEE_TAX_OPTIONS: { value: FeeTax; label: string }[] = [
+  { value: "included", label: "税込" },
+  { value: "excluded", label: "税別" },
+];
+export const feeTaxLabel = (v: string | null | undefined): string => (v === "excluded" ? "税別" : "税込");
 
 // 契約の内容(実施者が入力する)
 export type ContractFields = {
@@ -85,11 +91,19 @@ export type ContractFields = {
   visitFrequency: VisitFrequency; // 訪問の頻度
   hoursPerVisit: number; // 1回の訪問時間(時間)
   feePeriod: FeePeriod; // 報酬の単位(月額 / 年額)
-  fee: number; // 報酬(税込・円。feePeriod の単位)
+  fee: number; // 報酬(円。feePeriod の単位、feeTax の税込/税別)
+  feeTax: FeeTax; // 税込 / 税別
   paymentTiming: PaymentTiming; // 支払期日
   includeStressCheck: boolean; // ストレスチェックの実施者業務を含める
   specialTerms: string; // 特記事項(空なら条項を入れない)
+  // 協力医師(選任契約のみ): 乙が雇用または業務委託する別の医師に職場巡視・衛生委員会などを分担させ、甲が追加で選任する
+  coopDoctor: boolean;
+  coopDoctorName: string; // 協力医師の氏名
+  coopDoctorNote: string; // 所属・資格など(任意)
+  coopDuties: string; // 協力医師が分担する業務
 };
+
+export const DEFAULT_COOP_DUTIES = "職場巡視、衛生委員会への参画(委員としての調査審議)";
 
 export const DEFAULT_FIELDS: ContractFields = {
   kind: "appointed",
@@ -109,9 +123,14 @@ export const DEFAULT_FIELDS: ContractFields = {
   hoursPerVisit: 2,
   feePeriod: "monthly",
   fee: 55000,
+  feeTax: "included",
   paymentTiming: "next_month_end",
   includeStressCheck: true,
   specialTerms: "",
+  coopDoctor: false,
+  coopDoctorName: "",
+  coopDoctorNote: "",
+  coopDuties: DEFAULT_COOP_DUTIES,
 };
 
 const str = (v: unknown, max: number): string => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -149,9 +168,14 @@ export function parseContractFields(raw: Record<string, unknown>): { ok: true; v
     hoursPerVisit: num(raw.hoursPerVisit),
     feePeriod: raw.feePeriod === "yearly" ? "yearly" : "monthly",
     fee: Math.floor(num(raw.fee ?? raw.monthlyFee)),
+    feeTax: raw.feeTax === "excluded" ? "excluded" : "included",
     paymentTiming: raw.paymentTiming === "month_end" ? "month_end" : "next_month_end",
     includeStressCheck: raw.includeStressCheck !== false,
     specialTerms: str(raw.specialTerms, 2000),
+    coopDoctor: kind === "appointed" && raw.coopDoctor === true,
+    coopDoctorName: str(raw.coopDoctorName, 60),
+    coopDoctorNote: str(raw.coopDoctorNote, 100),
+    coopDuties: str(raw.coopDuties, 300) || DEFAULT_COOP_DUTIES,
   };
   if (!v.partyName) return { ok: false, error: "契約先の会社名を入力してください" };
   if (!v.partyAddress) return { ok: false, error: "契約先の所在地を入力してください" };
@@ -170,7 +194,13 @@ export function parseContractFields(raw: Record<string, unknown>): { ok: true; v
   } else if (!(v.hoursPerVisit >= 0.5 && v.hoursPerVisit <= 8) || Math.round(v.hoursPerVisit * 2) !== v.hoursPerVisit * 2) {
     return { ok: false, error: "1回の訪問時間は0.5〜8時間(0.5時間刻み)で入力してください" };
   }
-  if (!(v.fee >= 0 && v.fee <= 100_000_000)) return { ok: false, error: `${feePeriodLabel(v.feePeriod)}の報酬を入力してください(税込・円)` };
+  if (!(v.fee >= 0 && v.fee <= 100_000_000)) return { ok: false, error: `${feePeriodLabel(v.feePeriod)}の報酬を入力してください(円)` };
+  if (v.coopDoctor && !v.coopDoctorName) return { ok: false, error: "協力医師の氏名を入力してください(協力医師の条項を入れない場合はチェックを外してください)" };
+  if (!v.coopDoctor) {
+    v.coopDoctorName = "";
+    v.coopDoctorNote = "";
+    v.coopDuties = DEFAULT_COOP_DUTIES;
+  }
   return { ok: true, value: v };
 }
 
@@ -201,11 +231,14 @@ export function termEndDate(start: string, months: number): string {
 // 契約番号: 作成した年と id の先頭8文字(領収書番号と同じ方式)
 export const contractNo = (id: string, createdAt: string): string => `E${createdAt.slice(0, 4)}-${id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 
-export const feeText = (fee: number, period: FeePeriod = "monthly"): string =>
-  `${feePeriodLabel(period)} ${fee.toLocaleString()}円(税込。うち消費税 ${taxIncluded(fee).toLocaleString()}円)`;
+export const feeText = (fee: number, period: FeePeriod = "monthly", tax: FeeTax = "included"): string =>
+  tax === "excluded"
+    ? `${feePeriodLabel(period)} ${fee.toLocaleString()}円(消費税別)`
+    : `${feePeriodLabel(period)} ${fee.toLocaleString()}円(税込。うち消費税 ${taxIncluded(fee).toLocaleString()}円)`;
 
-// 一覧などでの短い表記(「月額 55,000円」「年額 600,000円」)
-export const feeShort = (fee: number | null | undefined, period: string | null | undefined): string => `${feePeriodLabel(period)} ${(fee ?? 0).toLocaleString()}円(税込)`;
+// 一覧などでの短い表記(「月額 55,000円(税込)」「年額 600,000円(税別)」)
+export const feeShort = (fee: number | null | undefined, period: string | null | undefined, tax?: string | null): string =>
+  `${feePeriodLabel(period)} ${(fee ?? 0).toLocaleString()}円(${feeTaxLabel(tax)})`;
 
 // 訪問の短い表記(「月1回・1回 2時間」)
 export const visitText = (f: Pick<ContractFields, "visitFrequency" | "hoursPerVisit">): string =>
@@ -253,10 +286,14 @@ const RULE14_DUTIES: string[] = [
   "労働者の健康障害の原因の調査および再発防止のための措置に関すること",
 ];
 
+// 選任契約で協力医師の条項を入れるときの条番号(1 目的・2 業務・3 訪問・4 衛生委員会 の次)
+const COOP_ARTICLE_NO = 5;
+
 export function renderContract(f: ContractFields, meta: { contractNo: string; templateVersion?: number }): ContractDoc {
   const end = termEndDate(f.startDate, f.termMonths);
   const site = `${partyDisplayName(f)}(${f.partyAddress})${f.workers ? ` 労働者数 約${f.workers.toLocaleString()}名` : ""}`;
   const appointed = f.kind === "appointed";
+  const coop = appointed && f.coopDoctor && !!f.coopDoctorName;
   const articles: ContractArticle[] = [];
   let n = 0;
   const art = (title: string, items: ContractItem[]) => articles.push({ no: ++n, title, items });
@@ -309,7 +346,7 @@ export function renderContract(f: ContractFields, meta: { contractNo: string; te
   // ---- 第3条 訪問・巡視 / 第4条 衛生委員会(選任のみ) ----
   if (appointed) {
     art("訪問および職場巡視", [
-      `乙は、担当医師を${visitLabel(f.visitFrequency)}、1回あたり${f.hoursPerVisit}時間を標準として本事業場に訪問させ、職場巡視、衛生委員会への参画、面接指導、健康相談等の本業務を行う。訪問の日時は、甲乙協議のうえ定める。`,
+      `乙は、${coop ? `担当医師(第${COOP_ARTICLE_NO}条により協力医師が分担する業務については協力医師。本条および次条において同じ)` : "担当医師"}を${visitLabel(f.visitFrequency)}、1回あたり${f.hoursPerVisit}時間を標準として本事業場に訪問させ、職場巡視、衛生委員会への参画、面接指導、健康相談等の本業務を行う。訪問の日時は、甲乙協議のうえ定める。`,
       f.visitFrequency === "monthly"
         ? "担当医師は、規則第15条第1項に基づき、少なくとも毎月1回、作業場等を巡視し、作業方法または衛生状態に有害のおそれがあるときは、直ちに、労働者の健康障害を防止するため必要な措置を講ずる。"
         : {
@@ -328,6 +365,18 @@ export function renderContract(f: ContractFields, meta: { contractNo: string; te
       "担当医師は、規則第23条第5項に基づき、労働者の健康を確保する観点から必要があると認めるときは、衛生委員会に対して必要な調査審議を求めることができる。",
       "甲は、衛生委員会の議事の概要を労働者に周知するとともに、議事録を担当医師に提供する。",
     ]);
+    if (coop) {
+      // 協力医師: 乙が雇用または業務委託する別の医師に一部の業務を分担させる。
+      // 復委任(民法第644条の2)の承諾・追加選任・役割分担・料金と責任・守秘・指揮命令の禁止を1条にまとめる
+      art("協力医師による業務の分担", [
+        `乙は、本業務のうち次に掲げる業務(以下「分担業務」という)を、乙が雇用しまたは業務を委託する医師であって法第13条第2項の要件を備える者(以下「協力医師」という)に行わせることができ、甲はこれを承諾する(民法第644条の2第1項の承諾を含む)。本契約の締結時における協力医師および分担業務は次のとおりとし、乙は、協力医師を変更するときは、事前に書面または電磁的方法により甲に通知する。\n協力医師: ${f.coopDoctorName}${f.coopDoctorNote ? `(${f.coopDoctorNote})` : ""}\n分担業務: ${f.coopDuties}`,
+        "甲は、協力医師を本事業場の産業医として追加して選任し、法第18条第2項第3号に基づき衛生委員会の委員に指名するとともに、規則第13条に基づき所轄労働基準監督署長に選任報告を行う。乙は、報告に必要な書面を甲に提供する。協力医師が変更されたときも同様とする。",
+        "分担業務以外の本業務は担当医師が行う。担当医師と協力医師は、本事業場の労働者の健康管理に必要な情報を相互に共有し、乙は、両者の業務を統括して本業務の全体を履行する。",
+        `協力医師が分担業務を行う場合においても、報酬は第${COOP_ARTICLE_NO + 2}条のとおりとし、本契約上の義務および責任は乙が負う。甲と協力医師との間に、別の契約または報酬は生じない。`,
+        "協力医師は、秘密保持および個人情報の取扱いに関する条項に定める乙および担当医師の義務と同一の義務を負い、乙はこれを協力医師に遵守させる。甲は、協力医師に本事業場の労働者の健康情報を取り扱わせることを承諾する。",
+        "甲は、協力医師に対し、業務上の指揮命令を行わない。協力医師は、産業医として法令上の職務および誠実義務を自ら負うが、分担業務の進め方に関する甲との調整は乙を通じて行う。",
+      ]);
+    }
   } else {
     const visitItems: ContractItem[] =
       f.visitFrequency === "on_request"
@@ -371,7 +420,9 @@ export function renderContract(f: ContractFields, meta: { contractNo: string; te
   // ---- 報酬 ----
   const yearly = f.feePeriod === "yearly";
   art("報酬", [
-    `本業務の報酬は、${feeText(f.fee, f.feePeriod)}とする。`,
+    f.feeTax === "excluded"
+      ? `本業務の報酬は、${feeText(f.fee, f.feePeriod, f.feeTax)}とし、甲は、これに消費税および地方消費税の相当額を加えた額を支払う。`
+      : `本業務の報酬は、${feeText(f.fee, f.feePeriod, f.feeTax)}とする。`,
     yearly
       ? `乙は、契約期間の開始日(更新後は各契約年度の初日)以降に1年分の請求書を甲に送付し、甲は、請求書を受領した月の${paymentLabel(f.paymentTiming)}までに乙の指定する銀行口座に振り込んで支払う。振込手数料は甲の負担とする。`
       : `乙は、毎月末日までに当月分の請求書を甲に送付し、甲は、${paymentLabel(f.paymentTiming)}までに乙の指定する銀行口座に振り込んで支払う。振込手数料は甲の負担とする。`,
@@ -415,7 +466,7 @@ export function renderContract(f: ContractFields, meta: { contractNo: string; te
 
   art("再委託", [
     appointed
-      ? "乙は、担当医師が疾病、休暇その他の事由により本業務を行うことができないときは、甲の承諾を得て、法第13条第2項の要件を備える他の医師に本業務の一部を代行させることができる。この場合、乙は、当該医師に本契約と同等の義務を負わせる。"
+      ? `${coop ? `第${COOP_ARTICLE_NO}条に定める場合のほか、` : ""}乙は、担当医師が疾病、休暇その他の事由により本業務を行うことができないときは、甲の承諾を得て、法第13条第2項の要件を備える他の医師に本業務の一部を代行させることができる。この場合、乙は、当該医師に本契約と同等の義務を負わせる。`
       : "乙は、担当医師が疾病、休暇その他の事由により本業務を行うことができないときは、甲の承諾を得て、産業医の要件を備える他の医師に本業務の一部を代行させることができる。この場合、乙は、当該医師に本契約と同等の義務を負わせる。",
   ]);
 

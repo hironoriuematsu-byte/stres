@@ -16,6 +16,7 @@ import {
   DEFAULT_FIELDS,
   displayStatus,
   FEE_PERIOD_OPTIONS,
+  FEE_TAX_OPTIONS,
   feeShort,
   formatJst,
   KIND_OPTIONS,
@@ -327,7 +328,17 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                 ))}
               </select>
             </label>
-            {field("fee", `${editing.form.feePeriod === "yearly" ? "年額" : "月額"}の報酬(税込・円)`, { inputMode: "numeric" })}
+            <label style={label}>
+              税込 / 税別
+              <select value={editing.form.feeTax} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, feeTax: e.target.value as ContractFields["feeTax"] } })} style={input}>
+                {FEE_TAX_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {field("fee", `${editing.form.feePeriod === "yearly" ? "年額" : "月額"}の報酬(${editing.form.feeTax === "excluded" ? "税別" : "税込"}・円)`, { inputMode: "numeric" })}
             <label style={label}>
               支払期日({editing.form.feePeriod === "yearly" ? "年1回の請求書を受け取った月を基準" : "毎月末に送る請求書の月を基準"})
               <select value={editing.form.paymentTiming} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, paymentTiming: e.target.value as ContractFields["paymentTiming"] } })} style={input}>
@@ -343,6 +354,30 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
               ストレスチェックの実施者業務を含める(Web申込の利用料は別)
             </label>
           </div>
+          {editing.form.kind === "appointed" && (
+            <div style={{ marginTop: 14, border: `1px solid ${brand.line}`, borderRadius: 12, padding: "12px 14px", background: editing.form.coopDoctor ? "#F7FBFA" : "#fff" }}>
+              <label style={{ ...label, display: "flex", gap: 8, alignItems: "flex-start", cursor: "pointer" }}>
+                <input type="checkbox" checked={editing.form.coopDoctor} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, coopDoctor: e.target.checked } })} style={{ marginTop: 3 }} />
+                <span>
+                  <b>協力医師の条項を入れる</b>(職場巡視・衛生委員会などを別の医師が分担し、契約先がその医師を産業医として追加選任する)
+                  <br />
+                  <span style={{ fontSize: 12, color: "#5B6B6A" }}>
+                    復委任の承諾(民法第644条の2)・追加選任と選任報告・役割分担・料金と責任は変わらないこと・守秘義務・指揮命令をしないことを1つの条にまとめて入れます。
+                  </span>
+                </span>
+              </label>
+              {editing.form.coopDoctor && (
+                <div style={{ ...grid, marginTop: 10 }}>
+                  {field("coopDoctorName", "協力医師の氏名")}
+                  {field("coopDoctorNote", "所属・資格など(任意。氏名の後ろに括弧書きで入ります)")}
+                  <label style={{ ...label, gridColumn: "1 / -1" }}>
+                    協力医師が分担する業務
+                    <input value={editing.form.coopDuties} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, coopDuties: e.target.value } })} style={input} />
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
           <label style={{ ...label, marginTop: 12 }}>
             特記事項(任意。契約書の条項になります。空行で項を分けます)
             <textarea value={editing.form.specialTerms} onChange={(e) => setEditing({ ...editing, form: { ...editing.form, specialTerms: e.target.value } })} rows={3} style={{ ...input, fontFamily: "inherit" }} />
@@ -429,7 +464,8 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                         署名者: {r.signer_name}
                         {r.signer_title ? `(${r.signer_title})` : ""} {r.signer_email}
                         <br />
-                        開始 {formatJpDate(r.start_date)} / {feeShort(r.monthly_fee, r.fee_period)}
+                        開始 {formatJpDate(r.start_date)} / {feeShort(r.monthly_fee, r.fee_period, r.fields?.feeTax)}
+                        {r.fields?.coopDoctor && r.fields.coopDoctorName ? ` / 協力医師 ${r.fields.coopDoctorName}` : ""}
                         {r.sent_at ? ` / 送信 ${formatJst(r.sent_at)}` : ""}
                         {r.viewed_at && !r.signed_at ? ` / 閲覧 ${formatJst(r.viewed_at)}` : ""}
                         {r.signed_at ? ` / 締結 ${formatJst(r.signed_at)}` : ""}

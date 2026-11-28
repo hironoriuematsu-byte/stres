@@ -100,6 +100,7 @@ describe("日付・番号・金額", () => {
   it("報酬の表記に消費税の内訳を含む", () => {
     expect(feeText(55000)).toBe("月額 55,000円(税込。うち消費税 5,000円)");
     expect(feeText(600000, "yearly")).toBe("年額 600,000円(税込。うち消費税 54,545円)");
+    expect(feeText(45000, "monthly", "excluded")).toBe("月額 45,000円(消費税別)");
   });
   it("日本時間の日時表示", () => {
     expect(formatJst("2026-10-24T01:02:03Z")).toBe("2026年10月24日 10:02:03");
@@ -168,6 +169,33 @@ describe("契約書の文面", () => {
     expect(text).not.toContain("衛生委員会への参画");
     expect(text).not.toContain("産業医選任報告");
     expect(doc.articles.map((a) => a.no)).toEqual(doc.articles.map((_, i) => i + 1));
+  });
+  it("選任契約・協力医師の条項(税別)", () => {
+    const f: ContractFields = { ...fields(), coopDoctor: true, coopDoctorName: "佐藤 一郎", coopDoctorNote: "○○クリニック", feeTax: "excluded", fee: 45000 };
+    const doc = renderContract(f, { contractNo: "E2026-TEST0005" });
+    const text = contractText(doc);
+    expect(doc.articles[4].title).toBe("協力医師による業務の分担");
+    expect(text).toContain("第5条(協力医師による業務の分担)");
+    expect(text).toContain("協力医師: 佐藤 一郎(○○クリニック)");
+    expect(text).toContain("分担業務: 職場巡視、衛生委員会への参画(委員としての調査審議)");
+    expect(text).toContain("民法第644条の2第1項の承諾を含む");
+    expect(text).toContain("協力医師を本事業場の産業医として追加して選任し");
+    expect(text).toContain("報酬は第7条のとおりとし、本契約上の義務および責任は乙が負う");
+    expect(doc.articles[6].title).toBe("報酬");
+    expect(text).toContain("甲は、協力医師に対し、業務上の指揮命令を行わない");
+    expect(text).toContain("第5条により協力医師が分担する業務については協力医師");
+    expect(text).toContain("第5条に定める場合のほか、乙は、担当医師が疾病");
+    expect(text).toContain("月額 45,000円(消費税別)とし、甲は、これに消費税および地方消費税の相当額を加えた額を支払う");
+    expect(text).not.toContain("うち消費税");
+  });
+  it("協力医師のチェックなしなら条項は入らず、氏名は保存されない。顧問契約では使えない", () => {
+    const p = parseContractFields({ ...VALID, coopDoctor: false, coopDoctorName: "佐藤 一郎" });
+    expect(p.ok && p.value.coopDoctorName).toBe("");
+    expect(parseContractFields({ ...VALID, coopDoctor: true })).toMatchObject({ ok: false, error: expect.stringContaining("協力医師の氏名") });
+    const q = parseContractFields({ ...VALID, kind: "advisory", coopDoctor: true, coopDoctorName: "佐藤 一郎" });
+    expect(q.ok && q.value.coopDoctor).toBe(false);
+    const text = contractText(renderContract(fields(), { contractNo: "E2026-TEST0006" }));
+    expect(text).not.toContain("協力医師");
   });
   it("顧問契約・月1回訪問・月額", () => {
     const f: ContractFields = { ...fields(), kind: "advisory", visitFrequency: "monthly", hoursPerVisit: 1 };

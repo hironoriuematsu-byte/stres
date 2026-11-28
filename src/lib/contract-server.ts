@@ -164,7 +164,8 @@ function summaryLines(f: ContractFields): string[] {
     `契約先: ${partyDisplayName(f)}`,
     `契約期間: ${formatJpDate(f.startDate)} 〜 ${formatJpDate(termEndDate(f.startDate, f.termMonths))}(${f.termMonths}か月${f.autoRenew ? "・自動更新" : ""})`,
     `訪問: ${visitText(f)}`,
-    `報酬: ${feeText(f.fee, f.feePeriod)}`,
+    `報酬: ${feeText(f.fee, f.feePeriod, f.feeTax)}`,
+    ...(f.coopDoctor && f.coopDoctorName ? [`協力医師: ${f.coopDoctorName}(${f.coopDuties})`] : []),
   ];
 }
 
