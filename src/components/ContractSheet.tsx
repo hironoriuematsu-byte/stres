@@ -34,28 +34,35 @@ export function ContractSheet({
           .contract-article { break-inside: avoid; }
         }
         @page { size: A4; margin: 18mm; }
-        @media (max-width: 560px) { .contract-sheet { padding: 20px 16px !important; } .contract-parties { grid-template-columns: 1fr !important; } }
+        @media (max-width: 560px) {
+          .contract-sheet { padding: 20px 16px !important; }
+          .contract-parties { grid-template-columns: 1fr !important; }
+          /* スマホ幅: 題名の字間を詰めて2行以内に収める */
+          .contract-title { font-size: 20px !important; letter-spacing: 0.08em !important; padding-left: 0.08em !important; line-height: 1.4; }
+        }
       `}</style>
+      {/* 透かし(下書き・案文など)は題名に重ならないよう、通常の流れの中で右寄せに置く(スマホ幅でも崩れない) */}
       {watermark && (
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: 12,
-            right: 16,
-            fontSize: 13,
-            fontWeight: 800,
-            color: "#B02A2A",
-            border: "2px solid #B02A2A",
-            borderRadius: 6,
-            padding: "2px 10px",
-            letterSpacing: "0.2em",
-          }}
-        >
-          {watermark}
+        <div style={{ textAlign: "right", marginBottom: 6 }}>
+          <span
+            aria-hidden
+            style={{
+              display: "inline-block",
+              fontSize: 12.5,
+              fontWeight: 800,
+              color: "#B02A2A",
+              border: "2px solid #B02A2A",
+              borderRadius: 6,
+              padding: "2px 10px",
+              letterSpacing: "0.12em",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {watermark}
+          </span>
         </div>
       )}
-      <h1 style={{ textAlign: "center", fontSize: 24, letterSpacing: "0.3em", margin: "0 0 6px", paddingLeft: "0.3em" }}>{doc.title}</h1>
+      <h1 className="contract-title" style={{ textAlign: "center", fontSize: 24, letterSpacing: "0.3em", margin: "0 0 6px", paddingLeft: "0.3em" }}>{doc.title}</h1>
       <div style={{ textAlign: "right", fontSize: 12, color: "#5B6B6A", marginBottom: 20 }}>契約番号 {doc.contractNo}</div>
 
       <p style={{ fontSize: 14.5, lineHeight: 1.95, margin: "0 0 18px" }}>{doc.preamble}</p>

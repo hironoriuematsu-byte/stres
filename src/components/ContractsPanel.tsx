@@ -45,6 +45,8 @@ const toForm = (f: ContractFields): Form => ({
   hoursPerVisit: String(f.hoursPerVisit),
   fee: String(f.fee),
   coopExtraFee: String(f.coopExtraFee),
+  coopNoticeDays: String(f.coopNoticeDays),
+  coopObjectDays: String(f.coopObjectDays),
 });
 
 type Filter = "all" | "draft" | "sent" | "signed" | "closed";
@@ -232,6 +234,29 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
       </label>
     );
 
+  // 協力医師の入力(選任契約の条項・覚書で共通)。未定なら「後日指定する」で氏名なしにできる
+  const coopFields = () =>
+    editing && (
+      <div style={{ marginTop: 10 }}>
+        {check(
+          "coopDoctorTbd",
+          <>
+            協力医師は<b>後日指定する</b>(契約時は未定。乙が指定・変更するときは事前に通知し、相手は期間内に合理的な理由があれば異議を述べられる条文になります)
+          </>
+        )}
+        <div style={{ ...grid, marginTop: 8 }}>
+          {!editing.form.coopDoctorTbd && field("coopDoctorName", "協力医師の氏名")}
+          {!editing.form.coopDoctorTbd && field("coopDoctorNote", "所属・資格など(任意。氏名の後ろに括弧書きで入ります)")}
+          <label style={{ ...label, gridColumn: "1 / -1" }}>
+            協力医師が分担する業務
+            <input value={editing.form.coopDuties} onChange={(e) => setForm({ coopDuties: e.target.value })} style={input} />
+          </label>
+          {field("coopNoticeDays", "指定・変更の通知: 分担業務の開始の何日前まで", { inputMode: "numeric" })}
+          {field("coopObjectDays", "相手が異議を述べられる期間: 通知から何日以内", { inputMode: "numeric" })}
+        </div>
+      </div>
+    );
+
   const kind = (editing?.form.kind ?? "appointed") as ContractKind;
   const isMain = kind === "appointed" || kind === "advisory";
   const isMemo = kind === "memo_coop";
@@ -367,14 +392,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                 {field("fee", `原契約の報酬(${yearly ? "年額" : "月額"}・${taxWord}・円。覚書に記載しない場合は 0)`, { inputMode: "numeric" })}
               </div>
               <h4 style={h4}>協力医師</h4>
-              <div style={grid}>
-                {field("coopDoctorName", "協力医師の氏名")}
-                {field("coopDoctorNote", "所属・資格など(任意。氏名の後ろに括弧書きで入ります)")}
-                <label style={{ ...label, gridColumn: "1 / -1" }}>
-                  協力医師が分担する業務
-                  <input value={editing.form.coopDuties} onChange={(e) => setForm({ coopDuties: e.target.value })} style={input} />
-                </label>
-              </div>
+              {coopFields()}
             </>
           )}
 
@@ -481,16 +499,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                   </span>
                 </>
               )}
-              {editing.form.coopDoctor && (
-                <div style={{ ...grid, marginTop: 10 }}>
-                  {field("coopDoctorName", "協力医師の氏名")}
-                  {field("coopDoctorNote", "所属・資格など(任意。氏名の後ろに括弧書きで入ります)")}
-                  <label style={{ ...label, gridColumn: "1 / -1" }}>
-                    協力医師が分担する業務
-                    <input value={editing.form.coopDuties} onChange={(e) => setForm({ coopDuties: e.target.value })} style={input} />
-                  </label>
-                </div>
-              )}
+              {editing.form.coopDoctor && coopFields()}
             </div>
           )}
 
@@ -512,7 +521,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
               下書きを保存
             </Btn>
             <Btn tone="orange" onClick={() => save(true)} disabled={busy || !parsed?.ok}>
-              保存して署名用リンクを送信
+              保存して署名用リンクを送信(署名あり)
             </Btn>
             <Btn tone="ghost" onClick={() => setEditing(null)} disabled={busy} style={{ borderColor: brand.line, color: "#5B6B6A" }}>
               閉じる
@@ -583,7 +592,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                         {r.kind === "memo_coop" ? `効力 ${formatJpDate(r.start_date)}` : `開始 ${formatJpDate(r.start_date)}`}
                         {r.kind === "memo_coop" && !(r.monthly_fee && r.monthly_fee > 0) ? "" : ` / ${feeShort(r.monthly_fee, coopRow && f?.coopPerVisit ? "per_visit" : r.fee_period, f?.feeTax)}`}
                         {coopRow && f?.coopClientName ? ` / 顧問先 ${f.coopClientName}` : ""}
-                        {!coopRow && f?.coopDoctor && f.coopDoctorName ? ` / 協力医師 ${f.coopDoctorName}` : ""}
+                        {!coopRow && f?.coopDoctor ? ` / 協力医師 ${f.coopDoctorTbd || !f.coopDoctorName ? "後日指定" : f.coopDoctorName}` : ""}
                         {r.kind === "coop_corporate" && f?.coopDoctorName ? ` / 担当医師 ${f.coopDoctorName}` : ""}
                         {r.sent_at ? ` / 送信 ${formatJst(r.sent_at)}` : ""}
                         {r.viewed_at && !r.signed_at ? ` / 閲覧 ${formatJst(r.viewed_at)}` : ""}
@@ -633,8 +642,8 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                           <button onClick={() => reviewSend(r)} disabled={busy} style={{ ...small, background: "#fff", color: "#B45415", border: `1px solid ${brand.orange}` }}>
                             {r.review_sent_at ? "確認用リンクを再送" : "確認用リンクを送る(署名なし)"}
                           </button>
-                          <button onClick={() => run("送信", "/api/contracts/send", { id: r.id }, `${r.signer_name} 様(${r.signer_email})に署名用リンクを送ります。よろしいですか？`)} disabled={busy} style={{ ...small, background: brand.orange }}>
-                            送信
+                          <button onClick={() => run("送信", "/api/contracts/send", { id: r.id }, `${r.signer_name} 様(${r.signer_email})に署名用リンクを送ります。送信すると文面が確定し、相手が署名すると契約が成立します。よろしいですか？`)} disabled={busy} style={{ ...small, background: brand.orange }}>
+                            署名用リンクを送信(署名あり)
                           </button>
                           <button onClick={() => run("削除", "/api/contracts/cancel", { id: r.id }, "この下書きを削除します。よろしいですか？")} disabled={busy} style={{ ...small, background: "#8A9694" }}>
                             削除
