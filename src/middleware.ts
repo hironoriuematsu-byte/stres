@@ -4,7 +4,7 @@ import { SS_GATE_PATH, SS_HINT_COOKIE, sessionIdOf } from "@/lib/second-step";
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
-const PROTECTED_PREFIXES = ["/exam", "/office", "/jimu", "/company", "/my", "/account", "/intake", "/paper"];
+const PROTECTED_PREFIXES = ["/exam", "/office", "/jimu", "/company", "/my", "/account", "/intake", "/paper", "/contracts"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

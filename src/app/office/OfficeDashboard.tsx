@@ -29,6 +29,7 @@ const ExamReminderPanel = dynamic(() => import("@/components/ExamReminderPanel")
 const CompanyAdminPanel = dynamic(() => import("@/components/CompanyAdminPanel").then((m) => m.CompanyAdminPanel), { loading: panelLoading, ssr: false });
 const WebCompaniesPanel = dynamic(() => import("@/components/WebCompaniesPanel").then((m) => m.WebCompaniesPanel), { loading: panelLoading, ssr: false });
 const PlanStatusPanel = dynamic(() => import("@/components/PlanStatusPanel").then((m) => m.PlanStatusPanel), { ssr: false });
+const ContractsPanel = dynamic(() => import("@/components/ContractsPanel").then((m) => m.ContractsPanel), { loading: panelLoading, ssr: false });
 const NoEmailPanel = dynamic(() => import("@/components/NoEmailPanel").then((m) => m.NoEmailPanel), { loading: panelLoading, ssr: false });
 const SecondStepPanel = dynamic(() => import("@/components/SecondStepPanel").then((m) => m.SecondStepPanel), { loading: panelLoading, ssr: false });
 const DeptAdminPanel = dynamic(() => import("@/components/DeptAdminPanel").then((m) => m.DeptAdminPanel), { loading: panelLoading, ssr: false });
@@ -36,7 +37,7 @@ const DeptAdminPanel = dynamic(() => import("@/components/DeptAdminPanel").then(
 // 企業を選ばないと表示できないタブ(ユーザー管理・企業管理・ログは企業横断)
 const NEEDS_COMPANY: readonly string[] = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "メールのない方", "部署管理"];
 
-const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "ユーザー管理", "企業管理", "部署管理", "メールのない方", "Web申込", "ログ", "二段階認証"] as const;
+const TABS = ["結果一覧", "面接指導申出", "集団分析", "配布URL・QR", "ユーザー管理", "企業管理", "部署管理", "メールのない方", "Web申込", "電子契約", "ログ", "二段階認証"] as const;
 type Tab = (typeof TABS)[number];
 
 const MENU_ITEMS: MenuItem<Tab>[] = [
@@ -50,6 +51,7 @@ const MENU_ITEMS: MenuItem<Tab>[] = [
   // 受検の基本はメール。メール・スマホのない方への対応は例外なので、メールでの案内のメニューより後ろに置く
   { key: "メールのない方", icon: "🪪", title: "メール・スマホのない方(例外の対応)", desc: "受検の基本はメールです。どうしても難しい方だけ、ログインIDの紙や紙の回答用紙で対応します" },
   { key: "Web申込", icon: "💳", title: "Web申込の企業", desc: "カード決済で利用中の企業の一覧・今年度の状況・申込と支払い・売上明細(選任・顧問とは別に管理)" },
+  { key: "電子契約", icon: "✍️", title: "電子契約", desc: "産業医業務委託契約書の作成・送信・電子署名の状況(クラウドサイン型の電子契約)" },
   { key: "ログ", icon: "📝", title: "ログ", desc: "閲覧・操作の記録(アクセスログ)の確認" },
   { key: "二段階認証", icon: "🔒", title: "二段階認証", desc: "ログイン時にメールの確認コードを求める設定(事務所・会社の担当者。健康管理Webにも効きます)" },
 ];
@@ -215,6 +217,7 @@ export function OfficeDashboard({ companies }: { companies: Company[] }) {
               }}
             />
           )}
+          {tab === "電子契約" && <ContractsPanel companies={companies} />}
           {tab === "ログ" && <AccessLogsPanel />}
           {tab === "二段階認証" && <SecondStepPanel />}
         </>
