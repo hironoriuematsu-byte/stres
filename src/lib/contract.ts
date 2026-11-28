@@ -19,7 +19,7 @@ import { IMPLEMENTER, SELLER } from "@/lib/org";
 import { formatJpDate, taxIncluded } from "@/lib/plan";
 
 // 契約書の文面の版。文面(条文)を変えたときは +1 する。送信済みの契約書は送信時の文面を保存しているので影響しない
-export const CONTRACT_TEMPLATE_VERSION = 7;
+export const CONTRACT_TEMPLATE_VERSION = 8;
 
 // 署名用リンクの有効期間(日)。期限が切れたら実施者が再送する
 export const SIGN_LINK_DAYS = 14;
@@ -656,10 +656,7 @@ function renderMain(f: ContractFields, meta: { contractNo: string; templateVersi
     art("特記事項", f.specialTerms.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean));
   }
 
-  art("協議および管轄", [
-    "本契約に定めのない事項または本契約の解釈に疑義が生じた事項は、甲乙誠意をもって協議し、解決する。",
-    "本契約に関する紛争は、京都地方裁判所を第一審の専属的合意管轄裁判所とする。",
-  ]);
+  art("協議", ["本契約に定めのない事項または本契約の解釈に疑義が生じた事項は、甲乙誠意をもって協議し、解決する。"]);
 
   art("電子契約", [
     "本契約は、電磁的記録により作成し、甲および乙がそれぞれ電子署名(電子署名及び認証業務に関する法律第2条第1項に定める電子署名)を行うことによって成立する。",
@@ -702,10 +699,8 @@ const ANTISOCIAL_ITEMS: ContractItem[] = [
   "甲および乙は、自らまたはその役員が、暴力団、暴力団員、暴力団準構成員、暴力団関係企業、総会屋その他これらに準ずる者(以下「反社会的勢力」という)に該当しないこと、および反社会的勢力と社会的に非難されるべき関係を有しないことを表明し、保証する。",
   "甲および乙は、自らまたは第三者を利用して、相手方に対し、暴力的な要求行為、法的な責任を超えた不当な要求行為、脅迫的な言動または業務を妨害する行為をしない。",
 ];
-const JURISDICTION_ITEMS = (word: string): ContractItem[] => [
-  `${word}に定めのない事項または${word}の解釈に疑義が生じた事項は、甲乙誠意をもって協議し、解決する。`,
-  `${word}に関する紛争は、京都地方裁判所を第一審の専属的合意管轄裁判所とする。`,
-];
+// 管轄裁判所の定めは置かない(協議条項のみ)
+const CONSULTATION_ITEMS = (word: string): ContractItem[] => [`${word}に定めのない事項または${word}の解釈に疑義が生じた事項は、甲乙誠意をもって協議し、解決する。`];
 
 // 既存の顧問先との覚書: 協力医師に業務を分担させることの承諾・追加選任。甲 = 顧問先、乙 = 事務所
 function renderMemo(f: ContractFields, meta: { contractNo: string; templateVersion?: number }): ContractDoc {
@@ -741,7 +736,7 @@ function renderMemo(f: ContractFields, meta: { contractNo: string; templateVersi
     "本覚書に定めのない事項は、原契約の定めによる。",
   ]);
   if (f.specialTerms) art("特記事項", f.specialTerms.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean));
-  art("協議および管轄", JURISDICTION_ITEMS("本覚書"));
+  art("協議", CONSULTATION_ITEMS("本覚書"));
   art("電子契約", E_SIGN_ITEMS("本覚書"));
   return {
     title: kindTitle(f.kind),
@@ -855,7 +850,7 @@ function renderCoop(f: ContractFields, meta: { contractNo: string; templateVersi
   ]);
   art("反社会的勢力の排除", ANTISOCIAL_ITEMS);
   if (f.specialTerms) art("特記事項", f.specialTerms.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean));
-  art("協議および管轄", JURISDICTION_ITEMS("本契約"));
+  art("協議", CONSULTATION_ITEMS("本契約"));
   art("電子契約", E_SIGN_ITEMS("本契約"));
 
   // 業務の内容の条から報酬の条を番号で参照する

@@ -148,7 +148,7 @@ describe("契約書の文面", () => {
     expect(special?.items).toEqual(["初回訪問は11月中に行う。", "駐車場を1台分用意する。"]);
     // 条番号は通し(特記事項の次が協議・管轄)
     const idx = doc.articles.findIndex((a) => a.title === "特記事項");
-    expect(doc.articles[idx + 1].title).toBe("協議および管轄");
+    expect(doc.articles[idx + 1].title).toBe("協議");
     expect(doc.articles.map((a) => a.no)).toEqual(doc.articles.map((_, i) => i + 1));
   });
   it("同じ内容からは同じ文面・同じハッシュになる", () => {
@@ -228,6 +228,7 @@ describe("契約書の文面", () => {
     expect(text).toContain("月1回、1回あたり1時間");
     expect(text).toContain("衛生推進者(法第12条の2)");
     expect(text).toContain("第3条(訪問および相談)");
+    expect(text).not.toContain("京都地方裁判所");
   });
   it("覚書: 原契約の特定・復委任の承諾・原契約と一体", () => {
     const p = parseContractFields({ ...VALID, kind: "memo_coop", originalTitle: "産業医選任契約書", originalDate: "2025-04-01", coopDoctorName: "佐藤 一郎", fee: "45000", feeTax: "excluded", termMonths: "", hoursPerVisit: "" });
