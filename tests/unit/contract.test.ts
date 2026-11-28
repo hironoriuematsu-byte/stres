@@ -131,6 +131,8 @@ describe("契約書の文面", () => {
     expect(text).toContain("産業医選任報告");
     expect(text).toContain("甲: 京都市中京区1-1 / 株式会社テスト 本社 / 代表取締役 山田 太郎");
     expect(text).toContain("乙: 〒604-8221");
+    expect(doc.otsu.name).toBe("メステート合同会社\nうえまつ産業医事務所"); // 署名欄は法人名と事務所名を2行に(括弧なし)
+    expect(text).toContain("/ メステート合同会社 うえまつ産業医事務所 / 代表社員 上松 弘典");
     expect(text).not.toContain("特記事項");
   });
   it("2か月に1回・自動更新なし・特記事項あり", () => {

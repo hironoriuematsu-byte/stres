@@ -128,7 +128,7 @@ function PartyBlock({ p, sign, role }: { p: ContractParty; sign: SignStamp | nul
         {p.label}({role})
       </div>
       <div>{p.address}</div>
-      <div style={{ fontWeight: 700, fontSize: 15 }}>{p.name}</div>
+      <div style={{ fontWeight: 700, fontSize: 15, whiteSpace: "pre-line" }}>{p.name}</div>
       <div>{p.rep}</div>
       {p.note && <div style={{ fontSize: 13, color: "#44534F" }}>{p.note}</div>}
       <div style={{ marginTop: 10 }}>
