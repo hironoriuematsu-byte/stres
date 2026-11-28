@@ -19,7 +19,7 @@ import { IMPLEMENTER, SELLER } from "@/lib/org";
 import { formatJpDate, taxIncluded } from "@/lib/plan";
 
 // 契約書の文面の版。文面(条文)を変えたときは +1 する。送信済みの契約書は送信時の文面を保存しているので影響しない
-export const CONTRACT_TEMPLATE_VERSION = 4;
+export const CONTRACT_TEMPLATE_VERSION = 5;
 
 // 署名用リンクの有効期間(日)。期限が切れたら実施者が再送する
 export const SIGN_LINK_DAYS = 14;
@@ -405,7 +405,8 @@ export function renderContract(f: ContractFields, meta: { contractNo: string; te
 // 顧問先との契約(選任 / 顧問)
 function renderMain(f: ContractFields, meta: { contractNo: string; templateVersion?: number }): ContractDoc {
   const end = termEndDate(f.startDate, f.termMonths);
-  const site = `${partyDisplayName(f)}(${f.partyAddress})${f.workers ? ` 労働者数 約${f.workers.toLocaleString()}名` : ""}`;
+  // 事業場の表示: 名称(所在地)の次の行に労働者数
+  const site = `${partyDisplayName(f)}(${f.partyAddress})${f.workers ? `\n労働者数: 約${f.workers.toLocaleString()}名` : ""}`;
   const appointed = f.kind === "appointed";
   const coop = appointed && f.coopDoctor && !!f.coopDoctorName;
   const articles: ContractArticle[] = [];

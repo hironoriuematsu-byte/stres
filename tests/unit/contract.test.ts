@@ -116,7 +116,7 @@ describe("契約書の文面", () => {
     const text = contractText(doc);
     expect(doc.title).toBe("産業医選任契約書");
     expect(doc.templateVersion).toBe(CONTRACT_TEMPLATE_VERSION);
-    expect(text).toContain("株式会社テスト 本社(京都市中京区1-1) 労働者数 約80名");
+    expect(text).toContain("株式会社テスト 本社(京都市中京区1-1)\n労働者数: 約80名");
     expect(text).toContain("月1回、1回あたり2時間");
     expect(text).toContain("月額 55,000円(税込。うち消費税 5,000円)");
     expect(text).toContain("2026年11月1日から2027年10月31日までの12か月間");
