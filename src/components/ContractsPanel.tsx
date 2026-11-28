@@ -515,7 +515,7 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
               下書きを保存
             </Btn>
             <Btn tone="orange" onClick={() => save(true)} disabled={busy || !parsed?.ok}>
-              保存して署名用リンクを送信
+              保存して署名用リンクを送信(署名あり)
             </Btn>
             <Btn tone="ghost" onClick={() => setEditing(null)} disabled={busy} style={{ borderColor: brand.line, color: "#5B6B6A" }}>
               閉じる
@@ -636,8 +636,8 @@ export function ContractsPanel({ companies }: { companies: Company[] }) {
                           <button onClick={() => reviewSend(r)} disabled={busy} style={{ ...small, background: "#fff", color: "#B45415", border: `1px solid ${brand.orange}` }}>
                             {r.review_sent_at ? "確認用リンクを再送" : "確認用リンクを送る(署名なし)"}
                           </button>
-                          <button onClick={() => run("送信", "/api/contracts/send", { id: r.id }, `${r.signer_name} 様(${r.signer_email})に署名用リンクを送ります。よろしいですか？`)} disabled={busy} style={{ ...small, background: brand.orange }}>
-                            送信
+                          <button onClick={() => run("送信", "/api/contracts/send", { id: r.id }, `${r.signer_name} 様(${r.signer_email})に署名用リンクを送ります。送信すると文面が確定し、相手が署名すると契約が成立します。よろしいですか？`)} disabled={busy} style={{ ...small, background: brand.orange }}>
+                            署名用リンクを送信(署名あり)
                           </button>
                           <button onClick={() => run("削除", "/api/contracts/cancel", { id: r.id }, "この下書きを削除します。よろしいですか？")} disabled={busy} style={{ ...small, background: "#8A9694" }}>
                             削除
